@@ -20,6 +20,6 @@ opentelemetry-instrumentation-fastapi>=0.40b0
 # Phase C4 — async Postgres + Alembic migrations (ADR-0013).
 asyncpg>=0.29
 alembic>=1.13
-psycopg2-binary>=2.9
+psycopg2-binary>=2.9.12
 # Phase D1 — model registry client (ADR-0015).
 mlflow-skinny>=2.10
