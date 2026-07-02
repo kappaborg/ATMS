@@ -14,6 +14,6 @@ python-json-logger==2.0.7
 prometheus-client==0.19.0  # Prometheus metrics (required by main.py)
 # Performance optimizations
 coremltools>=7.0  # CoreML for Apple Silicon (3-5× faster)
-onnxruntime>=1.16.0  # ONNX Runtime (2-3× faster)
+onnxruntime>=1.27.0  # ONNX Runtime (2-3× faster)
 # bytetrack>=0.0.1  # DISABLED: Using SimpleByteTracker (pure Python, no dependencies) instead
 scipy>=1.11.0  # Advanced speed calculation (WLS, statistics)
