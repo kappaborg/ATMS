@@ -22,4 +22,4 @@ asyncpg>=0.29
 alembic>=1.13
 psycopg2-binary>=2.9
 # Phase D1 — model registry client (ADR-0015). Skinny — server runs as its own pod.
-mlflow-skinny>=2.10
+mlflow-skinny>=3.14.0
