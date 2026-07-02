@@ -8,7 +8,7 @@ numpy>=1.26.0
 pyjwt[crypto]>=2.8
 prometheus_client>=0.19
 # Phase B1 — shared library deps.
-pydantic-settings>=2.0
+pydantic-settings>=2.14.2
 structlog>=24.0
 # Phase B4 — resilience (Retry primitive).
 tenacity>=8.0
