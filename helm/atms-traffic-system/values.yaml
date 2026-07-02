@@ -174,7 +174,8 @@ postgres:
   port: 5432
   database: "atms"
   user: "atms_user"
-  password: "atms_password"
+  # Password intentionally NOT set here — pods read it from the
+  # SOPS-materialised `atms-secrets` Secret (ADR-0002).
 
 # Monitoring
 monitoring:

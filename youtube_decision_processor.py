@@ -991,10 +991,14 @@ class YouTubeDecisionProcessor:
         logger.info(f"   Decision: Every {self.decision_update_interval} frames")
         logger.info(f"   Target FPS: {target_fps}")
         
-        # FIX: Add frame read retry counter
+        # Frame read retry counter + stream re-extraction. yt-dlp HLS URLs
+        # expire after a few hours; when reads keep failing we re-extract a
+        # fresh stream URL and reopen the capture instead of dying.
         consecutive_failures = 0
         max_consecutive_failures = 10
-        
+        reextract_attempts = 0
+        max_reextract_attempts = 3
+
         try:
             while cap.isOpened():
                 frame_start_time = time.time()
@@ -1002,18 +1006,48 @@ class YouTubeDecisionProcessor:
                 if not ret:
                     consecutive_failures += 1
                     if consecutive_failures >= max_consecutive_failures:
-                        logger.error(f"❌ Too many consecutive frame read failures ({consecutive_failures}). Stream may be disconnected.")
+                        if reextract_attempts >= max_reextract_attempts:
+                            logger.error(
+                                f"❌ Stream unrecoverable after {reextract_attempts} re-extractions. Stopping."
+                            )
+                            break
+                        reextract_attempts += 1
+                        logger.warning(
+                            f"⚠️ {consecutive_failures} consecutive read failures — "
+                            f"re-extracting stream URL (attempt {reextract_attempts}/{max_reextract_attempts}, "
+                            "expired HLS URLs are normal on long runs)"
+                        )
+                        new_url = self._get_youtube_stream_url(self.youtube_url)
+                        if new_url:
+                            cap.release()
+                            self.stream_url = new_url
+                            cap = cv2.VideoCapture(
+                                self.stream_url,
+                                cv2.CAP_FFMPEG,
+                                [
+                                    cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 10000,
+                                    cv2.CAP_PROP_READ_TIMEOUT_MSEC, 5000,
+                                ],
+                            )
+                            if cap.isOpened():
+                                logger.info("✅ Stream re-opened with a fresh URL")
+                                consecutive_failures = 0
+                                continue
+                        logger.error("❌ Stream URL re-extraction failed")
                         break
-                    
-                    # FIX: Exponential backoff for retries
+
+                    # Exponential backoff for transient read failures
                     wait_time = min(0.1 * (2 ** min(consecutive_failures, 5)), 2.0)  # Max 2 seconds
                     if self.frame_count % 10 == 0:  # Only log every 10 failures
                         logger.warning(f"⚠️ Failed to read frame from stream (attempt {consecutive_failures}/{max_consecutive_failures})")
                     time.sleep(wait_time)
                     continue
                 
-                # FIX: Reset failure counter on successful read
+                # Reset failure counters on successful read (a healthy stream
+                # after re-extraction earns back its re-extraction budget,
+                # so multi-day runs survive repeated URL expiries)
                 consecutive_failures = 0
+                reextract_attempts = 0
                 
                 self.frame_count += 1
                 

@@ -101,6 +101,22 @@ services:
       - atms-network
 
   # ============================================
+  # MONITORING - Alertmanager
+  # ============================================
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: atms-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./infrastructure/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+    restart: unless-stopped
+    networks:
+      - atms-network
+
+  # ============================================
   # MONITORING - Grafana
   # ============================================
   grafana:
