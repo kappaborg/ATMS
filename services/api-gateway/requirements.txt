@@ -1,0 +1,10 @@
+# ATMS API Gateway Requirements
+
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+uvloop>=0.19.0  # Low latency event loop
+httpx>=0.25.0  # HTTP client for service routing
+python-jose[cryptography]>=3.3.0  # JWT support (optional)
+pydantic>=2.0.0
+python-multipart>=0.0.6
+

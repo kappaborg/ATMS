@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Inductive-loop detectors, one per inbound approach. The runner reads
+     these via traci.inductionloop. -->
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+  <inductionLoop id="det_ns" lane="ns_in_0" pos="180" freq="1" file="NUL"/>
+  <inductionLoop id="det_ew" lane="ew_in_0" pos="180" freq="1" file="NUL"/>
+</additional>

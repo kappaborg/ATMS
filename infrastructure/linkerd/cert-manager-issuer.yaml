@@ -1,0 +1,57 @@
+---
+# Trust anchor — long-lived root. Use cert-manager to bootstrap and then
+# move the private key offline (HSM-backed in production).
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: linkerd-trust-anchor-issuer
+  namespace: linkerd
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: linkerd-trust-anchor
+  namespace: linkerd
+spec:
+  isCA: true
+  commonName: root.linkerd.cluster.local
+  secretName: linkerd-trust-anchor
+  duration: 87600h  # 10y
+  renewBefore: 720h
+  issuerRef:
+    name: linkerd-trust-anchor-issuer
+    kind: Issuer
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+---
+# Identity issuer — minted from the trust anchor, short-lived, auto-rotated.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: linkerd-identity-issuer
+  namespace: linkerd
+spec:
+  ca:
+    secretName: linkerd-trust-anchor
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: linkerd-identity-issuer
+  namespace: linkerd
+spec:
+  isCA: true
+  commonName: identity.linkerd.cluster.local
+  dnsNames: ["identity.linkerd.cluster.local"]
+  secretName: linkerd-identity-issuer
+  duration: 8760h   # 1y
+  renewBefore: 720h
+  issuerRef:
+    name: linkerd-identity-issuer
+    kind: Issuer
+  privateKey:
+    algorithm: ECDSA
+    size: 256

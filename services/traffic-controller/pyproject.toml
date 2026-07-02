@@ -1,0 +1,25 @@
+[project]
+name = "atms-traffic-controller"
+version = "2.0.0"
+description = "Failsafe-gated traffic controller microservice (ATMS)."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+markers = [
+    "integration: tests that touch real infrastructure (Kafka, Postgres, hardware)",
+    "timeout: per-test timeout (used by integration suite)",
+]
+
+[tool.ruff]
+# Inherit ignore-rules, target-version, line-length, etc. from the repo root.
+extend = "../../pyproject.toml"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true

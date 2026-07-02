@@ -1,0 +1,4562 @@
+[
+  {
+    "id": "00000",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      1020,
+      438,
+      1214,
+      614
+    ],
+    "bbox_size_px": [
+      194,
+      176
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.9,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00001",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      1,
+      343,
+      178,
+      491
+    ],
+    "bbox_size_px": [
+      177,
+      148
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.86,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00002",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      1097,
+      581,
+      1392,
+      871
+    ],
+    "bbox_size_px": [
+      295,
+      290
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.816,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00003",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      376,
+      686,
+      711,
+      995
+    ],
+    "bbox_size_px": [
+      335,
+      309
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.802,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00004",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      646,
+      421,
+      835,
+      533
+    ],
+    "bbox_size_px": [
+      189,
+      112
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.78,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00005",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      623,
+      505,
+      872,
+      713
+    ],
+    "bbox_size_px": [
+      249,
+      208
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.766,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00006",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      571,
+      655,
+      822,
+      901
+    ],
+    "bbox_size_px": [
+      251,
+      246
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.754,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00007",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      1063,
+      225,
+      1211,
+      356
+    ],
+    "bbox_size_px": [
+      148,
+      131
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.624,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00008",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      143,
+      269,
+      305,
+      435
+    ],
+    "bbox_size_px": [
+      162,
+      166
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.611,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00009",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      1112,
+      405,
+      1276,
+      531
+    ],
+    "bbox_size_px": [
+      164,
+      126
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.587,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00010",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      729,
+      384,
+      893,
+      532
+    ],
+    "bbox_size_px": [
+      164,
+      148
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.523,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00011",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      1141,
+      859,
+      1658,
+      1075
+    ],
+    "bbox_size_px": [
+      517,
+      216
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.472,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00012",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      1130,
+      860,
+      1662,
+      1072
+    ],
+    "bbox_size_px": [
+      532,
+      212
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.407,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00013",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      1163,
+      408,
+      1279,
+      532
+    ],
+    "bbox_size_px": [
+      116,
+      124
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.313,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00014",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      538,
+      606,
+      851,
+      851
+    ],
+    "bbox_size_px": [
+      313,
+      245
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.89,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00015",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      1122,
+      735,
+      1477,
+      1071
+    ],
+    "bbox_size_px": [
+      355,
+      336
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.837,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00016",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      1029,
+      496,
+      1253,
+      697
+    ],
+    "bbox_size_px": [
+      224,
+      201
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.83,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00017",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      459,
+      860,
+      779,
+      1076
+    ],
+    "bbox_size_px": [
+      320,
+      216
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.802,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00018",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      143,
+      310,
+      298,
+      433
+    ],
+    "bbox_size_px": [
+      155,
+      123
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.776,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00019",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      243,
+      915,
+      651,
+      1073
+    ],
+    "bbox_size_px": [
+      408,
+      158
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.764,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00020",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      621,
+      467,
+      829,
+      654
+    ],
+    "bbox_size_px": [
+      208,
+      187
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.696,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00021",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      1109,
+      623,
+      1392,
+      856
+    ],
+    "bbox_size_px": [
+      283,
+      233
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.688,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00022",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      1,
+      335,
+      161,
+      486
+    ],
+    "bbox_size_px": [
+      160,
+      151
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.684,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00023",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      697,
+      423,
+      881,
+      596
+    ],
+    "bbox_size_px": [
+      184,
+      173
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.663,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00024",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      1115,
+      436,
+      1311,
+      608
+    ],
+    "bbox_size_px": [
+      196,
+      172
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.555,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00025",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      223,
+      256,
+      391,
+      398
+    ],
+    "bbox_size_px": [
+      168,
+      142
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.509,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00026",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      1041,
+      373,
+      1249,
+      503
+    ],
+    "bbox_size_px": [
+      208,
+      130
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.504,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00027",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      1082,
+      233,
+      1252,
+      424
+    ],
+    "bbox_size_px": [
+      170,
+      191
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.485,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00028",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      1082,
+      382,
+      1247,
+      485
+    ],
+    "bbox_size_px": [
+      165,
+      103
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.35,
+    "added_at": "2026-06-13T15:28:31"
+  },
+  {
+    "id": "00029",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      440,
+      772,
+      825,
+      1068
+    ],
+    "bbox_size_px": [
+      385,
+      296
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.896,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00030",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      1116,
+      784,
+      1465,
+      1056
+    ],
+    "bbox_size_px": [
+      349,
+      272
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.885,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00031",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      12,
+      337,
+      183,
+      462
+    ],
+    "bbox_size_px": [
+      171,
+      125
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.853,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00032",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      1025,
+      580,
+      1294,
+      812
+    ],
+    "bbox_size_px": [
+      269,
+      232
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.833,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00033",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      567,
+      541,
+      810,
+      749
+    ],
+    "bbox_size_px": [
+      243,
+      208
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.795,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00034",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      668,
+      473,
+      857,
+      672
+    ],
+    "bbox_size_px": [
+      189,
+      199
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.749,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00035",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      1135,
+      497,
+      1341,
+      687
+    ],
+    "bbox_size_px": [
+      206,
+      190
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.671,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00036",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      134,
+      303,
+      266,
+      432
+    ],
+    "bbox_size_px": [
+      132,
+      129
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.623,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00037",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      252,
+      289,
+      384,
+      395
+    ],
+    "bbox_size_px": [
+      132,
+      106
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.607,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00038",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      1108,
+      247,
+      1289,
+      428
+    ],
+    "bbox_size_px": [
+      181,
+      181
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.581,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00039",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      1109,
+      247,
+      1287,
+      426
+    ],
+    "bbox_size_px": [
+      178,
+      179
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.553,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00040",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      1099,
+      417,
+      1305,
+      565
+    ],
+    "bbox_size_px": [
+      206,
+      148
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.539,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00041",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      719,
+      314,
+      886,
+      444
+    ],
+    "bbox_size_px": [
+      167,
+      130
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.445,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00042",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      308,
+      257,
+      446,
+      359
+    ],
+    "bbox_size_px": [
+      138,
+      102
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.337,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00043",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      634,
+      392,
+      815,
+      517
+    ],
+    "bbox_size_px": [
+      181,
+      125
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.33,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00044",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.01,
+    "bbox": [
+      1045,
+      404,
+      1166,
+      540
+    ],
+    "bbox_size_px": [
+      121,
+      136
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.306,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00045",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      1046,
+      711,
+      1365,
+      992
+    ],
+    "bbox_size_px": [
+      319,
+      281
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.883,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00046",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      492,
+      642,
+      772,
+      888
+    ],
+    "bbox_size_px": [
+      280,
+      246
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.827,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00047",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      0,
+      359,
+      119,
+      501
+    ],
+    "bbox_size_px": [
+      119,
+      142
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.822,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00048",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      70,
+      318,
+      219,
+      440
+    ],
+    "bbox_size_px": [
+      149,
+      122
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.804,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00049",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      1094,
+      272,
+      1313,
+      468
+    ],
+    "bbox_size_px": [
+      219,
+      196
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.784,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00050",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      1135,
+      575,
+      1391,
+      805
+    ],
+    "bbox_size_px": [
+      256,
+      230
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.755,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00051",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      186,
+      310,
+      298,
+      415
+    ],
+    "bbox_size_px": [
+      112,
+      105
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.748,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00052",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      583,
+      549,
+      839,
+      766
+    ],
+    "bbox_size_px": [
+      256,
+      217
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.747,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00053",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      1060,
+      447,
+      1241,
+      609
+    ],
+    "bbox_size_px": [
+      181,
+      162
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.696,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00054",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      1142,
+      468,
+      1362,
+      619
+    ],
+    "bbox_size_px": [
+      220,
+      151
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.614,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00055",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      688,
+      334,
+      872,
+      475
+    ],
+    "bbox_size_px": [
+      184,
+      141
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.59,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00056",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      1158,
+      469,
+      1357,
+      585
+    ],
+    "bbox_size_px": [
+      199,
+      116
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.567,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00057",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      243,
+      287,
+      354,
+      402
+    ],
+    "bbox_size_px": [
+      111,
+      115
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.418,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00058",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      801,
+      290,
+      936,
+      392
+    ],
+    "bbox_size_px": [
+      135,
+      102
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.412,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00059",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      609,
+      431,
+      818,
+      565
+    ],
+    "bbox_size_px": [
+      209,
+      134
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.396,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00060",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      246,
+      284,
+      431,
+      390
+    ],
+    "bbox_size_px": [
+      185,
+      106
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.356,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00061",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      997,
+      275,
+      1112,
+      387
+    ],
+    "bbox_size_px": [
+      115,
+      112
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.351,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00062",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 180,
+    "time_in_video_s": 6.01,
+    "bbox": [
+      628,
+      496,
+      841,
+      622
+    ],
+    "bbox_size_px": [
+      213,
+      126
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.342,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00063",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.02,
+    "bbox": [
+      500,
+      662,
+      798,
+      925
+    ],
+    "bbox_size_px": [
+      298,
+      263
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.864,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00064",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.02,
+    "bbox": [
+      20,
+      341,
+      184,
+      469
+    ],
+    "bbox_size_px": [
+      164,
+      128
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.847,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00065",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.02,
+    "bbox": [
+      366,
+      817,
+      726,
+      1071
+    ],
+    "bbox_size_px": [
+      360,
+      254
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.817,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00066",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.02,
+    "bbox": [
+      1083,
+      498,
+      1293,
+      691
+    ],
+    "bbox_size_px": [
+      210,
+      193
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.791,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00067",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.02,
+    "bbox": [
+      601,
+      564,
+      843,
+      811
+    ],
+    "bbox_size_px": [
+      242,
+      247
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.771,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00068",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.02,
+    "bbox": [
+      1125,
+      702,
+      1435,
+      960
+    ],
+    "bbox_size_px": [
+      310,
+      258
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.749,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00069",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.02,
+    "bbox": [
+      1098,
+      932,
+      1479,
+      1072
+    ],
+    "bbox_size_px": [
+      381,
+      140
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.742,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00070",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.02,
+    "bbox": [
+      92,
+      323,
+      229,
+      442
+    ],
+    "bbox_size_px": [
+      137,
+      119
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.63,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00071",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.02,
+    "bbox": [
+      1106,
+      303,
+      1355,
+      550
+    ],
+    "bbox_size_px": [
+      249,
+      247
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.622,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00072",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.02,
+    "bbox": [
+      1149,
+      542,
+      1427,
+      783
+    ],
+    "bbox_size_px": [
+      278,
+      241
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.542,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00073",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.02,
+    "bbox": [
+      573,
+      487,
+      797,
+      661
+    ],
+    "bbox_size_px": [
+      224,
+      174
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.513,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00074",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.02,
+    "bbox": [
+      666,
+      369,
+      852,
+      505
+    ],
+    "bbox_size_px": [
+      186,
+      136
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.416,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00075",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.02,
+    "bbox": [
+      667,
+      453,
+      828,
+      577
+    ],
+    "bbox_size_px": [
+      161,
+      124
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.389,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00076",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.02,
+    "bbox": [
+      793,
+      291,
+      912,
+      407
+    ],
+    "bbox_size_px": [
+      119,
+      116
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.333,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00077",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.02,
+    "bbox": [
+      817,
+      218,
+      937,
+      325
+    ],
+    "bbox_size_px": [
+      120,
+      107
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.329,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00078",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 300,
+    "time_in_video_s": 10.02,
+    "bbox": [
+      398,
+      844,
+      754,
+      1077
+    ],
+    "bbox_size_px": [
+      356,
+      233
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.927,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00079",
+    "source_video": "videos/TEST.mp4",
+    "frame_idx": 300,
+    "time_in_video_s": 10.02,
+    "bbox": [
+      1182,
+      925,
+      1556,
+      1069
+    ],
+    "bbox_size_px": [
+      374,
+      144
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.877,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00080",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      338,
+      415,
+      478,
+      545
+    ],
+    "bbox_size_px": [
+      140,
+      130
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.677,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00081",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 0,
+    "time_in_video_s": 0.0,
+    "bbox": [
+      895,
+      434,
+      1012,
+      603
+    ],
+    "bbox_size_px": [
+      117,
+      169
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.471,
+    "added_at": "2026-06-13T15:28:32"
+  },
+  {
+    "id": "00082",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      1434,
+      596,
+      1664,
+      830
+    ],
+    "bbox_size_px": [
+      230,
+      234
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.715,
+    "added_at": "2026-06-13T15:28:33"
+  },
+  {
+    "id": "00083",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      184,
+      533,
+      407,
+      758
+    ],
+    "bbox_size_px": [
+      223,
+      225
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.36,
+    "added_at": "2026-06-13T15:28:33"
+  },
+  {
+    "id": "00084",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 60,
+    "time_in_video_s": 2.0,
+    "bbox": [
+      185,
+      532,
+      409,
+      757
+    ],
+    "bbox_size_px": [
+      224,
+      225
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.335,
+    "added_at": "2026-06-13T15:28:33"
+  },
+  {
+    "id": "00085",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.0,
+    "bbox": [
+      929,
+      978,
+      1115,
+      1080
+    ],
+    "bbox_size_px": [
+      186,
+      102
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.531,
+    "added_at": "2026-06-13T15:28:33"
+  },
+  {
+    "id": "00086",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 120,
+    "time_in_video_s": 4.0,
+    "bbox": [
+      878,
+      570,
+      1000,
+      705
+    ],
+    "bbox_size_px": [
+      122,
+      135
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.321,
+    "added_at": "2026-06-13T15:28:33"
+  },
+  {
+    "id": "00087",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.0,
+    "bbox": [
+      506,
+      471,
+      628,
+      618
+    ],
+    "bbox_size_px": [
+      122,
+      147
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.501,
+    "added_at": "2026-06-13T15:28:33"
+  },
+  {
+    "id": "00088",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 240,
+    "time_in_video_s": 8.0,
+    "bbox": [
+      854,
+      322,
+      955,
+      440
+    ],
+    "bbox_size_px": [
+      101,
+      118
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.41,
+    "added_at": "2026-06-13T15:28:33"
+  },
+  {
+    "id": "00089",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 300,
+    "time_in_video_s": 10.0,
+    "bbox": [
+      859,
+      801,
+      1041,
+      1069
+    ],
+    "bbox_size_px": [
+      182,
+      268
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.746,
+    "added_at": "2026-06-13T15:28:33"
+  },
+  {
+    "id": "00090",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 300,
+    "time_in_video_s": 10.0,
+    "bbox": [
+      883,
+      377,
+      985,
+      510
+    ],
+    "bbox_size_px": [
+      102,
+      133
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.612,
+    "added_at": "2026-06-13T15:28:33"
+  },
+  {
+    "id": "00091",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 360,
+    "time_in_video_s": 12.0,
+    "bbox": [
+      911,
+      401,
+      1019,
+      529
+    ],
+    "bbox_size_px": [
+      108,
+      128
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.505,
+    "added_at": "2026-06-13T15:28:34"
+  },
+  {
+    "id": "00092",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 360,
+    "time_in_video_s": 12.0,
+    "bbox": [
+      355,
+      421,
+      482,
+      555
+    ],
+    "bbox_size_px": [
+      127,
+      134
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.457,
+    "added_at": "2026-06-13T15:28:34"
+  },
+  {
+    "id": "00093",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 360,
+    "time_in_video_s": 12.0,
+    "bbox": [
+      448,
+      633,
+      592,
+      737
+    ],
+    "bbox_size_px": [
+      144,
+      104
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.438,
+    "added_at": "2026-06-13T15:28:34"
+  },
+  {
+    "id": "00094",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 360,
+    "time_in_video_s": 12.0,
+    "bbox": [
+      451,
+      545,
+      614,
+      735
+    ],
+    "bbox_size_px": [
+      163,
+      190
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.388,
+    "added_at": "2026-06-13T15:28:34"
+  },
+  {
+    "id": "00095",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 420,
+    "time_in_video_s": 14.0,
+    "bbox": [
+      253,
+      738,
+      523,
+      1080
+    ],
+    "bbox_size_px": [
+      270,
+      342
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.486,
+    "added_at": "2026-06-13T15:28:34"
+  },
+  {
+    "id": "00096",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 420,
+    "time_in_video_s": 14.0,
+    "bbox": [
+      902,
+      454,
+      1015,
+      596
+    ],
+    "bbox_size_px": [
+      113,
+      142
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.314,
+    "added_at": "2026-06-13T15:28:34"
+  },
+  {
+    "id": "00097",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 540,
+    "time_in_video_s": 18.0,
+    "bbox": [
+      58,
+      622,
+      345,
+      947
+    ],
+    "bbox_size_px": [
+      287,
+      325
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.477,
+    "added_at": "2026-06-13T15:28:34"
+  },
+  {
+    "id": "00098",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 540,
+    "time_in_video_s": 18.0,
+    "bbox": [
+      489,
+      160,
+      596,
+      309
+    ],
+    "bbox_size_px": [
+      107,
+      149
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.409,
+    "added_at": "2026-06-13T15:28:34"
+  },
+  {
+    "id": "00099",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 600,
+    "time_in_video_s": 20.0,
+    "bbox": [
+      49,
+      498,
+      399,
+      928
+    ],
+    "bbox_size_px": [
+      350,
+      430
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.88,
+    "added_at": "2026-06-13T15:28:34"
+  },
+  {
+    "id": "00100",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 600,
+    "time_in_video_s": 20.0,
+    "bbox": [
+      350,
+      671,
+      571,
+      950
+    ],
+    "bbox_size_px": [
+      221,
+      279
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.422,
+    "added_at": "2026-06-13T15:28:34"
+  },
+  {
+    "id": "00101",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 600,
+    "time_in_video_s": 20.0,
+    "bbox": [
+      348,
+      663,
+      570,
+      950
+    ],
+    "bbox_size_px": [
+      222,
+      287
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.339,
+    "added_at": "2026-06-13T15:28:34"
+  },
+  {
+    "id": "00102",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 660,
+    "time_in_video_s": 22.0,
+    "bbox": [
+      482,
+      463,
+      628,
+      652
+    ],
+    "bbox_size_px": [
+      146,
+      189
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.384,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00103",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 660,
+    "time_in_video_s": 22.0,
+    "bbox": [
+      481,
+      463,
+      628,
+      654
+    ],
+    "bbox_size_px": [
+      147,
+      191
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.323,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00104",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 720,
+    "time_in_video_s": 24.0,
+    "bbox": [
+      554,
+      357,
+      669,
+      514
+    ],
+    "bbox_size_px": [
+      115,
+      157
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.474,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00105",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 720,
+    "time_in_video_s": 24.0,
+    "bbox": [
+      483,
+      153,
+      597,
+      305
+    ],
+    "bbox_size_px": [
+      114,
+      152
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.35,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00106",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 720,
+    "time_in_video_s": 24.0,
+    "bbox": [
+      485,
+      80,
+      604,
+      305
+    ],
+    "bbox_size_px": [
+      119,
+      225
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.335,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00107",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 720,
+    "time_in_video_s": 24.0,
+    "bbox": [
+      554,
+      354,
+      671,
+      515
+    ],
+    "bbox_size_px": [
+      117,
+      161
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.331,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00108",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 780,
+    "time_in_video_s": 26.0,
+    "bbox": [
+      257,
+      211,
+      570,
+      599
+    ],
+    "bbox_size_px": [
+      313,
+      388
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.365,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00109",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 840,
+    "time_in_video_s": 28.0,
+    "bbox": [
+      0,
+      442,
+      450,
+      1069
+    ],
+    "bbox_size_px": [
+      450,
+      627
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.836,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00110",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 840,
+    "time_in_video_s": 28.0,
+    "bbox": [
+      300,
+      844,
+      556,
+      1076
+    ],
+    "bbox_size_px": [
+      256,
+      232
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.666,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00111",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 840,
+    "time_in_video_s": 28.0,
+    "bbox": [
+      512,
+      436,
+      630,
+      583
+    ],
+    "bbox_size_px": [
+      118,
+      147
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.628,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00112",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 840,
+    "time_in_video_s": 28.0,
+    "bbox": [
+      881,
+      392,
+      990,
+      562
+    ],
+    "bbox_size_px": [
+      109,
+      170
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.549,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00113",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 840,
+    "time_in_video_s": 28.0,
+    "bbox": [
+      1712,
+      513,
+      1911,
+      620
+    ],
+    "bbox_size_px": [
+      199,
+      107
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.422,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00114",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 900,
+    "time_in_video_s": 30.0,
+    "bbox": [
+      537,
+      354,
+      688,
+      627
+    ],
+    "bbox_size_px": [
+      151,
+      273
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.804,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00115",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 900,
+    "time_in_video_s": 30.0,
+    "bbox": [
+      423,
+      640,
+      605,
+      872
+    ],
+    "bbox_size_px": [
+      182,
+      232
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.759,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00116",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 900,
+    "time_in_video_s": 30.0,
+    "bbox": [
+      894,
+      525,
+      1027,
+      759
+    ],
+    "bbox_size_px": [
+      133,
+      234
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.66,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00117",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 900,
+    "time_in_video_s": 30.0,
+    "bbox": [
+      0,
+      617,
+      317,
+      1072
+    ],
+    "bbox_size_px": [
+      317,
+      455
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.627,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00118",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 900,
+    "time_in_video_s": 30.0,
+    "bbox": [
+      398,
+      398,
+      507,
+      529
+    ],
+    "bbox_size_px": [
+      109,
+      131
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.514,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00119",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 900,
+    "time_in_video_s": 30.0,
+    "bbox": [
+      894,
+      526,
+      1025,
+      758
+    ],
+    "bbox_size_px": [
+      131,
+      232
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.425,
+    "added_at": "2026-06-13T15:28:35"
+  },
+  {
+    "id": "00120",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 960,
+    "time_in_video_s": 32.0,
+    "bbox": [
+      381,
+      721,
+      587,
+      1002
+    ],
+    "bbox_size_px": [
+      206,
+      281
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.843,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00121",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 960,
+    "time_in_video_s": 32.0,
+    "bbox": [
+      498,
+      395,
+      676,
+      707
+    ],
+    "bbox_size_px": [
+      178,
+      312
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.765,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00122",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 960,
+    "time_in_video_s": 32.0,
+    "bbox": [
+      894,
+      580,
+      1040,
+      846
+    ],
+    "bbox_size_px": [
+      146,
+      266
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.678,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00123",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 960,
+    "time_in_video_s": 32.0,
+    "bbox": [
+      594,
+      284,
+      699,
+      418
+    ],
+    "bbox_size_px": [
+      105,
+      134
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.572,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00124",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 960,
+    "time_in_video_s": 32.0,
+    "bbox": [
+      163,
+      594,
+      399,
+      834
+    ],
+    "bbox_size_px": [
+      236,
+      240
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.354,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00125",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1020,
+    "time_in_video_s": 34.0,
+    "bbox": [
+      288,
+      917,
+      533,
+      1080
+    ],
+    "bbox_size_px": [
+      245,
+      163
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.841,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00126",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1020,
+    "time_in_video_s": 34.0,
+    "bbox": [
+      877,
+      396,
+      977,
+      535
+    ],
+    "bbox_size_px": [
+      100,
+      139
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.734,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00127",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1020,
+    "time_in_video_s": 34.0,
+    "bbox": [
+      0,
+      855,
+      213,
+      1078
+    ],
+    "bbox_size_px": [
+      213,
+      223
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.727,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00128",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1020,
+    "time_in_video_s": 34.0,
+    "bbox": [
+      424,
+      299,
+      543,
+      436
+    ],
+    "bbox_size_px": [
+      119,
+      137
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.662,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00129",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1020,
+    "time_in_video_s": 34.0,
+    "bbox": [
+      895,
+      596,
+      1043,
+      868
+    ],
+    "bbox_size_px": [
+      148,
+      272
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.583,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00130",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1020,
+    "time_in_video_s": 34.0,
+    "bbox": [
+      769,
+      160,
+      870,
+      267
+    ],
+    "bbox_size_px": [
+      101,
+      107
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.415,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00131",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1020,
+    "time_in_video_s": 34.0,
+    "bbox": [
+      584,
+      310,
+      695,
+      461
+    ],
+    "bbox_size_px": [
+      111,
+      151
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.36,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00132",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1020,
+    "time_in_video_s": 34.0,
+    "bbox": [
+      583,
+      311,
+      695,
+      459
+    ],
+    "bbox_size_px": [
+      112,
+      148
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.349,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00133",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1020,
+    "time_in_video_s": 34.0,
+    "bbox": [
+      468,
+      423,
+      673,
+      759
+    ],
+    "bbox_size_px": [
+      205,
+      336
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.335,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00134",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1020,
+    "time_in_video_s": 34.0,
+    "bbox": [
+      769,
+      159,
+      872,
+      264
+    ],
+    "bbox_size_px": [
+      103,
+      105
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.328,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00135",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1080,
+    "time_in_video_s": 36.0,
+    "bbox": [
+      327,
+      544,
+      629,
+      1035
+    ],
+    "bbox_size_px": [
+      302,
+      491
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.732,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00136",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1080,
+    "time_in_video_s": 36.0,
+    "bbox": [
+      876,
+      430,
+      982,
+      578
+    ],
+    "bbox_size_px": [
+      106,
+      148
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.643,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00137",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1080,
+    "time_in_video_s": 36.0,
+    "bbox": [
+      554,
+      370,
+      687,
+      543
+    ],
+    "bbox_size_px": [
+      133,
+      173
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.599,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00138",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1080,
+    "time_in_video_s": 36.0,
+    "bbox": [
+      1391,
+      973,
+      1590,
+      1080
+    ],
+    "bbox_size_px": [
+      199,
+      107
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.58,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00139",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1080,
+    "time_in_video_s": 36.0,
+    "bbox": [
+      776,
+      177,
+      879,
+      284
+    ],
+    "bbox_size_px": [
+      103,
+      107
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.5,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00140",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1080,
+    "time_in_video_s": 36.0,
+    "bbox": [
+      282,
+      438,
+      466,
+      637
+    ],
+    "bbox_size_px": [
+      184,
+      199
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.473,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00141",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1080,
+    "time_in_video_s": 36.0,
+    "bbox": [
+      839,
+      300,
+      943,
+      435
+    ],
+    "bbox_size_px": [
+      104,
+      135
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.456,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00142",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1080,
+    "time_in_video_s": 36.0,
+    "bbox": [
+      895,
+      620,
+      1050,
+      907
+    ],
+    "bbox_size_px": [
+      155,
+      287
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.422,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00143",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1080,
+    "time_in_video_s": 36.0,
+    "bbox": [
+      282,
+      440,
+      467,
+      639
+    ],
+    "bbox_size_px": [
+      185,
+      199
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.407,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00144",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1140,
+    "time_in_video_s": 38.0,
+    "bbox": [
+      423,
+      515,
+      642,
+      793
+    ],
+    "bbox_size_px": [
+      219,
+      278
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.737,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00145",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1140,
+    "time_in_video_s": 38.0,
+    "bbox": [
+      385,
+      373,
+      509,
+      495
+    ],
+    "bbox_size_px": [
+      124,
+      122
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.513,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00146",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1140,
+    "time_in_video_s": 38.0,
+    "bbox": [
+      113,
+      962,
+      431,
+      1078
+    ],
+    "bbox_size_px": [
+      318,
+      116
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.504,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00147",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1140,
+    "time_in_video_s": 38.0,
+    "bbox": [
+      875,
+      517,
+      1000,
+      702
+    ],
+    "bbox_size_px": [
+      125,
+      185
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.475,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00148",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1140,
+    "time_in_video_s": 38.0,
+    "bbox": [
+      857,
+      335,
+      968,
+      498
+    ],
+    "bbox_size_px": [
+      111,
+      163
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.454,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00149",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1140,
+    "time_in_video_s": 38.0,
+    "bbox": [
+      21,
+      643,
+      327,
+      968
+    ],
+    "bbox_size_px": [
+      306,
+      325
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.444,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00150",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1140,
+    "time_in_video_s": 38.0,
+    "bbox": [
+      785,
+      178,
+      896,
+      308
+    ],
+    "bbox_size_px": [
+      111,
+      130
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.376,
+    "added_at": "2026-06-13T15:28:36"
+  },
+  {
+    "id": "00151",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1200,
+    "time_in_video_s": 40.0,
+    "bbox": [
+      1580,
+      503,
+      1796,
+      715
+    ],
+    "bbox_size_px": [
+      216,
+      212
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.725,
+    "added_at": "2026-06-13T15:28:37"
+  },
+  {
+    "id": "00152",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1200,
+    "time_in_video_s": 40.0,
+    "bbox": [
+      162,
+      573,
+      379,
+      784
+    ],
+    "bbox_size_px": [
+      217,
+      211
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.671,
+    "added_at": "2026-06-13T15:28:37"
+  },
+  {
+    "id": "00153",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1200,
+    "time_in_video_s": 40.0,
+    "bbox": [
+      525,
+      542,
+      675,
+      745
+    ],
+    "bbox_size_px": [
+      150,
+      203
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.633,
+    "added_at": "2026-06-13T15:28:37"
+  },
+  {
+    "id": "00154",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1200,
+    "time_in_video_s": 40.0,
+    "bbox": [
+      866,
+      564,
+      1003,
+      772
+    ],
+    "bbox_size_px": [
+      137,
+      208
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.521,
+    "added_at": "2026-06-13T15:28:37"
+  },
+  {
+    "id": "00155",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1200,
+    "time_in_video_s": 40.0,
+    "bbox": [
+      797,
+      207,
+      927,
+      354
+    ],
+    "bbox_size_px": [
+      130,
+      147
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.323,
+    "added_at": "2026-06-13T15:28:37"
+  },
+  {
+    "id": "00156",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1200,
+    "time_in_video_s": 40.0,
+    "bbox": [
+      876,
+      404,
+      997,
+      578
+    ],
+    "bbox_size_px": [
+      121,
+      174
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.32,
+    "added_at": "2026-06-13T15:28:37"
+  },
+  {
+    "id": "00157",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1260,
+    "time_in_video_s": 42.0,
+    "bbox": [
+      831,
+      252,
+      962,
+      418
+    ],
+    "bbox_size_px": [
+      131,
+      166
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.686,
+    "added_at": "2026-06-13T15:28:37"
+  },
+  {
+    "id": "00158",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1260,
+    "time_in_video_s": 42.0,
+    "bbox": [
+      467,
+      287,
+      567,
+      391
+    ],
+    "bbox_size_px": [
+      100,
+      104
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.679,
+    "added_at": "2026-06-13T15:28:37"
+  },
+  {
+    "id": "00159",
+    "source_video": "videos/youtube_MNn9qKG2UFI_full.mp4",
+    "frame_idx": 1260,
+    "time_in_video_s": 42.0,
+    "bbox": [
+      877,
+      405,
+      998,
+      579
+    ],
+    "bbox_size_px": [
+      121,
+      174
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.674,
+    "added_at": "2026-06-13T15:28:37"
+  },
+  {
+    "id": "00160",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 300,
+    "time_in_video_s": 10.01,
+    "bbox": [
+      635,
+      419,
+      1272,
+      704
+    ],
+    "bbox_size_px": [
+      637,
+      285
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.336,
+    "added_at": "2026-06-13T15:28:37"
+  },
+  {
+    "id": "00161",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 360,
+    "time_in_video_s": 12.01,
+    "bbox": [
+      344,
+      319,
+      509,
+      428
+    ],
+    "bbox_size_px": [
+      165,
+      109
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.648,
+    "added_at": "2026-06-13T15:28:37"
+  },
+  {
+    "id": "00162",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 360,
+    "time_in_video_s": 12.01,
+    "bbox": [
+      172,
+      347,
+      483,
+      562
+    ],
+    "bbox_size_px": [
+      311,
+      215
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.527,
+    "added_at": "2026-06-13T15:28:37"
+  },
+  {
+    "id": "00163",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 420,
+    "time_in_video_s": 14.01,
+    "bbox": [
+      1037,
+      426,
+      1279,
+      718
+    ],
+    "bbox_size_px": [
+      242,
+      292
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.775,
+    "added_at": "2026-06-13T15:28:37"
+  },
+  {
+    "id": "00164",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 420,
+    "time_in_video_s": 14.01,
+    "bbox": [
+      11,
+      259,
+      180,
+      418
+    ],
+    "bbox_size_px": [
+      169,
+      159
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.506,
+    "added_at": "2026-06-13T15:28:37"
+  },
+  {
+    "id": "00165",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 480,
+    "time_in_video_s": 16.02,
+    "bbox": [
+      339,
+      348,
+      1275,
+      690
+    ],
+    "bbox_size_px": [
+      936,
+      342
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.42,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00166",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 540,
+    "time_in_video_s": 18.02,
+    "bbox": [
+      1031,
+      476,
+      1279,
+      623
+    ],
+    "bbox_size_px": [
+      248,
+      147
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.86,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00167",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 540,
+    "time_in_video_s": 18.02,
+    "bbox": [
+      137,
+      275,
+      784,
+      632
+    ],
+    "bbox_size_px": [
+      647,
+      357
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.651,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00168",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 600,
+    "time_in_video_s": 20.02,
+    "bbox": [
+      533,
+      493,
+      847,
+      627
+    ],
+    "bbox_size_px": [
+      314,
+      134
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.879,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00169",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 600,
+    "time_in_video_s": 20.02,
+    "bbox": [
+      601,
+      403,
+      857,
+      524
+    ],
+    "bbox_size_px": [
+      256,
+      121
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.799,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00170",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 600,
+    "time_in_video_s": 20.02,
+    "bbox": [
+      129,
+      189,
+      345,
+      433
+    ],
+    "bbox_size_px": [
+      216,
+      244
+    ],
+    "vehicle_class": "bus",
+    "yolo_conf": 0.514,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00171",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 600,
+    "time_in_video_s": 20.02,
+    "bbox": [
+      129,
+      197,
+      345,
+      434
+    ],
+    "bbox_size_px": [
+      216,
+      237
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.42,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00172",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 660,
+    "time_in_video_s": 22.02,
+    "bbox": [
+      606,
+      435,
+      960,
+      634
+    ],
+    "bbox_size_px": [
+      354,
+      199
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.894,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00173",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 660,
+    "time_in_video_s": 22.02,
+    "bbox": [
+      76,
+      368,
+      238,
+      469
+    ],
+    "bbox_size_px": [
+      162,
+      101
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.856,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00174",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 660,
+    "time_in_video_s": 22.02,
+    "bbox": [
+      456,
+      297,
+      567,
+      397
+    ],
+    "bbox_size_px": [
+      111,
+      100
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.779,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00175",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 660,
+    "time_in_video_s": 22.02,
+    "bbox": [
+      146,
+      182,
+      252,
+      301
+    ],
+    "bbox_size_px": [
+      106,
+      119
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.356,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00176",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 720,
+    "time_in_video_s": 24.02,
+    "bbox": [
+      314,
+      313,
+      463,
+      462
+    ],
+    "bbox_size_px": [
+      149,
+      149
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.808,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00177",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 720,
+    "time_in_video_s": 24.02,
+    "bbox": [
+      415,
+      466,
+      747,
+      615
+    ],
+    "bbox_size_px": [
+      332,
+      149
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.748,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00178",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 780,
+    "time_in_video_s": 26.03,
+    "bbox": [
+      54,
+      328,
+      208,
+      436
+    ],
+    "bbox_size_px": [
+      154,
+      108
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.762,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00179",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 780,
+    "time_in_video_s": 26.03,
+    "bbox": [
+      793,
+      333,
+      924,
+      433
+    ],
+    "bbox_size_px": [
+      131,
+      100
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.675,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00180",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 780,
+    "time_in_video_s": 26.03,
+    "bbox": [
+      713,
+      244,
+      823,
+      356
+    ],
+    "bbox_size_px": [
+      110,
+      112
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.576,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00181",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 780,
+    "time_in_video_s": 26.03,
+    "bbox": [
+      666,
+      452,
+      854,
+      568
+    ],
+    "bbox_size_px": [
+      188,
+      116
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.562,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00182",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 780,
+    "time_in_video_s": 26.03,
+    "bbox": [
+      521,
+      464,
+      852,
+      621
+    ],
+    "bbox_size_px": [
+      331,
+      157
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.541,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00183",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 840,
+    "time_in_video_s": 28.03,
+    "bbox": [
+      332,
+      458,
+      607,
+      584
+    ],
+    "bbox_size_px": [
+      275,
+      126
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.874,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00184",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 840,
+    "time_in_video_s": 28.03,
+    "bbox": [
+      729,
+      256,
+      845,
+      369
+    ],
+    "bbox_size_px": [
+      116,
+      113
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.562,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00185",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 840,
+    "time_in_video_s": 28.03,
+    "bbox": [
+      151,
+      315,
+      301,
+      437
+    ],
+    "bbox_size_px": [
+      150,
+      122
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.49,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00186",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 840,
+    "time_in_video_s": 28.03,
+    "bbox": [
+      151,
+      314,
+      302,
+      437
+    ],
+    "bbox_size_px": [
+      151,
+      123
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.374,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00187",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 900,
+    "time_in_video_s": 30.03,
+    "bbox": [
+      727,
+      257,
+      845,
+      370
+    ],
+    "bbox_size_px": [
+      118,
+      113
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.479,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00188",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 960,
+    "time_in_video_s": 32.03,
+    "bbox": [
+      834,
+      571,
+      1217,
+      718
+    ],
+    "bbox_size_px": [
+      383,
+      147
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.889,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00189",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 960,
+    "time_in_video_s": 32.03,
+    "bbox": [
+      792,
+      334,
+      924,
+      434
+    ],
+    "bbox_size_px": [
+      132,
+      100
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.781,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00190",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 960,
+    "time_in_video_s": 32.03,
+    "bbox": [
+      565,
+      445,
+      894,
+      591
+    ],
+    "bbox_size_px": [
+      329,
+      146
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.574,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00191",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 960,
+    "time_in_video_s": 32.03,
+    "bbox": [
+      563,
+      444,
+      895,
+      591
+    ],
+    "bbox_size_px": [
+      332,
+      147
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.57,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00192",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 960,
+    "time_in_video_s": 32.03,
+    "bbox": [
+      727,
+      256,
+      842,
+      369
+    ],
+    "bbox_size_px": [
+      115,
+      113
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.537,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00193",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1020,
+    "time_in_video_s": 34.03,
+    "bbox": [
+      84,
+      422,
+      307,
+      550
+    ],
+    "bbox_size_px": [
+      223,
+      128
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.854,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00194",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1020,
+    "time_in_video_s": 34.03,
+    "bbox": [
+      937,
+      330,
+      1061,
+      432
+    ],
+    "bbox_size_px": [
+      124,
+      102
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.725,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00195",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1020,
+    "time_in_video_s": 34.03,
+    "bbox": [
+      481,
+      464,
+      827,
+      620
+    ],
+    "bbox_size_px": [
+      346,
+      156
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.681,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00196",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1020,
+    "time_in_video_s": 34.03,
+    "bbox": [
+      189,
+      351,
+      385,
+      462
+    ],
+    "bbox_size_px": [
+      196,
+      111
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.588,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00197",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1020,
+    "time_in_video_s": 34.03,
+    "bbox": [
+      728,
+      256,
+      845,
+      369
+    ],
+    "bbox_size_px": [
+      117,
+      113
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.525,
+    "added_at": "2026-06-13T15:28:38"
+  },
+  {
+    "id": "00198",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1080,
+    "time_in_video_s": 36.04,
+    "bbox": [
+      802,
+      342,
+      933,
+      442
+    ],
+    "bbox_size_px": [
+      131,
+      100
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.758,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00199",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1080,
+    "time_in_video_s": 36.04,
+    "bbox": [
+      1020,
+      386,
+      1169,
+      503
+    ],
+    "bbox_size_px": [
+      149,
+      117
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.748,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00200",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1080,
+    "time_in_video_s": 36.04,
+    "bbox": [
+      96,
+      324,
+      261,
+      438
+    ],
+    "bbox_size_px": [
+      165,
+      114
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.506,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00201",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1080,
+    "time_in_video_s": 36.04,
+    "bbox": [
+      728,
+      257,
+      842,
+      369
+    ],
+    "bbox_size_px": [
+      114,
+      112
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.444,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00202",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1080,
+    "time_in_video_s": 36.04,
+    "bbox": [
+      728,
+      257,
+      843,
+      369
+    ],
+    "bbox_size_px": [
+      115,
+      112
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.347,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00203",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1140,
+    "time_in_video_s": 38.04,
+    "bbox": [
+      890,
+      417,
+      1050,
+      540
+    ],
+    "bbox_size_px": [
+      160,
+      123
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.743,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00204",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1140,
+    "time_in_video_s": 38.04,
+    "bbox": [
+      0,
+      571,
+      112,
+      719
+    ],
+    "bbox_size_px": [
+      112,
+      148
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.636,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00205",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1140,
+    "time_in_video_s": 38.04,
+    "bbox": [
+      1012,
+      372,
+      1163,
+      484
+    ],
+    "bbox_size_px": [
+      151,
+      112
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.585,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00206",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1140,
+    "time_in_video_s": 38.04,
+    "bbox": [
+      756,
+      275,
+      880,
+      402
+    ],
+    "bbox_size_px": [
+      124,
+      127
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.56,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00207",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1140,
+    "time_in_video_s": 38.04,
+    "bbox": [
+      1129,
+      349,
+      1279,
+      474
+    ],
+    "bbox_size_px": [
+      150,
+      125
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.459,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00208",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1140,
+    "time_in_video_s": 38.04,
+    "bbox": [
+      0,
+      572,
+      113,
+      718
+    ],
+    "bbox_size_px": [
+      113,
+      146
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.419,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00209",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1140,
+    "time_in_video_s": 38.04,
+    "bbox": [
+      757,
+      276,
+      880,
+      402
+    ],
+    "bbox_size_px": [
+      123,
+      126
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.39,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00210",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1200,
+    "time_in_video_s": 40.04,
+    "bbox": [
+      282,
+      444,
+      397,
+      560
+    ],
+    "bbox_size_px": [
+      115,
+      116
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.832,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00211",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1200,
+    "time_in_video_s": 40.04,
+    "bbox": [
+      32,
+      319,
+      144,
+      436
+    ],
+    "bbox_size_px": [
+      112,
+      117
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.788,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00212",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1200,
+    "time_in_video_s": 40.04,
+    "bbox": [
+      894,
+      289,
+      1023,
+      390
+    ],
+    "bbox_size_px": [
+      129,
+      101
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.585,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00213",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1200,
+    "time_in_video_s": 40.04,
+    "bbox": [
+      854,
+      353,
+      1022,
+      519
+    ],
+    "bbox_size_px": [
+      168,
+      166
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.466,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00214",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1200,
+    "time_in_video_s": 40.04,
+    "bbox": [
+      1153,
+      325,
+      1279,
+      449
+    ],
+    "bbox_size_px": [
+      126,
+      124
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.354,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00215",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1260,
+    "time_in_video_s": 42.04,
+    "bbox": [
+      875,
+      488,
+      992,
+      616
+    ],
+    "bbox_size_px": [
+      117,
+      128
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.619,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00216",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1260,
+    "time_in_video_s": 42.04,
+    "bbox": [
+      1134,
+      465,
+      1256,
+      578
+    ],
+    "bbox_size_px": [
+      122,
+      113
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.478,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00217",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1260,
+    "time_in_video_s": 42.04,
+    "bbox": [
+      1134,
+      464,
+      1255,
+      578
+    ],
+    "bbox_size_px": [
+      121,
+      114
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.467,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00218",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1320,
+    "time_in_video_s": 44.04,
+    "bbox": [
+      1096,
+      601,
+      1251,
+      720
+    ],
+    "bbox_size_px": [
+      155,
+      119
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.75,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00219",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1320,
+    "time_in_video_s": 44.04,
+    "bbox": [
+      1015,
+      478,
+      1132,
+      586
+    ],
+    "bbox_size_px": [
+      117,
+      108
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.571,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00220",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1320,
+    "time_in_video_s": 44.04,
+    "bbox": [
+      414,
+      545,
+      571,
+      719
+    ],
+    "bbox_size_px": [
+      157,
+      174
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.514,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00221",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1380,
+    "time_in_video_s": 46.05,
+    "bbox": [
+      235,
+      583,
+      378,
+      695
+    ],
+    "bbox_size_px": [
+      143,
+      112
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.804,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00222",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1380,
+    "time_in_video_s": 46.05,
+    "bbox": [
+      1090,
+      593,
+      1253,
+      720
+    ],
+    "bbox_size_px": [
+      163,
+      127
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.634,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00223",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1380,
+    "time_in_video_s": 46.05,
+    "bbox": [
+      1099,
+      422,
+      1224,
+      550
+    ],
+    "bbox_size_px": [
+      125,
+      128
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.422,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00224",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1440,
+    "time_in_video_s": 48.05,
+    "bbox": [
+      1052,
+      544,
+      1205,
+      673
+    ],
+    "bbox_size_px": [
+      153,
+      129
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.506,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00225",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1500,
+    "time_in_video_s": 50.05,
+    "bbox": [
+      232,
+      561,
+      384,
+      697
+    ],
+    "bbox_size_px": [
+      152,
+      136
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.747,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00226",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1500,
+    "time_in_video_s": 50.05,
+    "bbox": [
+      1040,
+      550,
+      1163,
+      666
+    ],
+    "bbox_size_px": [
+      123,
+      116
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.738,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00227",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1500,
+    "time_in_video_s": 50.05,
+    "bbox": [
+      1177,
+      504,
+      1279,
+      633
+    ],
+    "bbox_size_px": [
+      102,
+      129
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.581,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00228",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1560,
+    "time_in_video_s": 52.05,
+    "bbox": [
+      975,
+      444,
+      1088,
+      546
+    ],
+    "bbox_size_px": [
+      113,
+      102
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.479,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00229",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1560,
+    "time_in_video_s": 52.05,
+    "bbox": [
+      481,
+      545,
+      603,
+      668
+    ],
+    "bbox_size_px": [
+      122,
+      123
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.455,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00230",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1560,
+    "time_in_video_s": 52.05,
+    "bbox": [
+      103,
+      472,
+      228,
+      574
+    ],
+    "bbox_size_px": [
+      125,
+      102
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.392,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00231",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1560,
+    "time_in_video_s": 52.05,
+    "bbox": [
+      976,
+      444,
+      1089,
+      545
+    ],
+    "bbox_size_px": [
+      113,
+      101
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.381,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00232",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1620,
+    "time_in_video_s": 54.05,
+    "bbox": [
+      860,
+      512,
+      979,
+      627
+    ],
+    "bbox_size_px": [
+      119,
+      115
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.829,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00233",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1620,
+    "time_in_video_s": 54.05,
+    "bbox": [
+      64,
+      516,
+      236,
+      633
+    ],
+    "bbox_size_px": [
+      172,
+      117
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.776,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00234",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1620,
+    "time_in_video_s": 54.05,
+    "bbox": [
+      286,
+      539,
+      433,
+      659
+    ],
+    "bbox_size_px": [
+      147,
+      120
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.555,
+    "added_at": "2026-06-13T15:28:39"
+  },
+  {
+    "id": "00235",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1680,
+    "time_in_video_s": 56.06,
+    "bbox": [
+      522,
+      591,
+      797,
+      714
+    ],
+    "bbox_size_px": [
+      275,
+      123
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.446,
+    "added_at": "2026-06-13T15:28:40"
+  },
+  {
+    "id": "00236",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1680,
+    "time_in_video_s": 56.06,
+    "bbox": [
+      523,
+      590,
+      796,
+      715
+    ],
+    "bbox_size_px": [
+      273,
+      125
+    ],
+    "vehicle_class": "car",
+    "yolo_conf": 0.435,
+    "added_at": "2026-06-13T15:28:40"
+  },
+  {
+    "id": "00237",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1740,
+    "time_in_video_s": 58.06,
+    "bbox": [
+      299,
+      563,
+      586,
+      718
+    ],
+    "bbox_size_px": [
+      287,
+      155
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.568,
+    "added_at": "2026-06-13T15:28:40"
+  },
+  {
+    "id": "00238",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1800,
+    "time_in_video_s": 60.06,
+    "bbox": [
+      57,
+      475,
+      1181,
+      714
+    ],
+    "bbox_size_px": [
+      1124,
+      239
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.595,
+    "added_at": "2026-06-13T15:28:40"
+  },
+  {
+    "id": "00239",
+    "source_video": "videos/youtube_cJatWBDNabE_full.mp4",
+    "frame_idx": 1860,
+    "time_in_video_s": 62.06,
+    "bbox": [
+      1,
+      420,
+      567,
+      718
+    ],
+    "bbox_size_px": [
+      566,
+      298
+    ],
+    "vehicle_class": "truck",
+    "yolo_conf": 0.911,
+    "added_at": "2026-06-13T15:28:40"
+  }
+]

@@ -1,0 +1,360 @@
+name: CI
+
+# Runs on every PR and on push to main. The aggregator job `ci-required` is the
+# single status check that branch protection should require on `main`.
+#
+# Adding a new gate? Wire it into `ci-required.needs` so PRs cannot merge until
+# it passes.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
+  # Pin tool versions so a tool-side regression doesn't break CI silently.
+  RUFF_VERSION: "0.6.9"
+  MYPY_VERSION: "1.11.2"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Path filter: skip expensive jobs when only docs / archived files change.
+  # ---------------------------------------------------------------------------
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      python: ${{ steps.filter.outputs.python }}
+      docker: ${{ steps.filter.outputs.docker }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+      docs_only: ${{ steps.filter.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            python:
+              - '**/*.py'
+              - 'pyproject.toml'
+              - '**/pyproject.toml'
+              - '**/requirements*.txt'
+            docker:
+              - '**/Dockerfile'
+              - '**/docker-compose*.yml'
+              - '**/*.py'
+              - '**/requirements*.txt'
+            workflows:
+              - '.github/workflows/**'
+            docs_only:
+              - 'docs/**'
+              - '**/*.md'
+
+  # ---------------------------------------------------------------------------
+  # Lint + format check (ruff)
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Ruff lint + format
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.python == 'true' || github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install ruff
+        run: pip install "ruff==${{ env.RUFF_VERSION }}"
+      - name: Ruff check
+        run: ruff check shared/atms_common services/traffic-controller/src services/decision-engine/src services/v2x-interface/src tools
+      - name: Ruff format check
+        run: ruff format --check shared/atms_common services/traffic-controller/src services/decision-engine/src services/v2x-interface/src tools
+      - name: Safety-clock lint (ADR-0017 §rule)
+        run: python tools/lint_safety_clock.py
+
+  # ---------------------------------------------------------------------------
+  # Type-check (mypy, strict on Phase A code only)
+  # ---------------------------------------------------------------------------
+  typecheck:
+    name: Mypy
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.python == 'true' || github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install mypy
+        run: pip install "mypy==${{ env.MYPY_VERSION }}"
+      # Per-root invocations: each service defines a top-level `main.py`, so
+      # mypy can't see them in the same invocation without treating them as
+      # duplicate modules. One mypy call per root.
+      - name: Mypy — shared/atms_common
+        run: mypy shared/atms_common
+      - name: Mypy — traffic-controller
+        run: mypy services/traffic-controller/src
+      - name: Mypy — decision-engine
+        run: mypy services/decision-engine/src
+      - name: Mypy — v2x-interface
+        run: mypy services/v2x-interface/src
+
+  # ---------------------------------------------------------------------------
+  # Unit + integration tests with coverage gate
+  # ---------------------------------------------------------------------------
+  test:
+    name: Tests ${{ matrix.service }} (Py ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.python == 'true' || github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+        service: [traffic-controller, decision-engine]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install deps
+        working-directory: services/${{ matrix.service }}
+        run: pip install -r requirements-dev.txt
+      - name: Run tests with coverage
+        working-directory: services/${{ matrix.service }}
+        run: |
+          coverage run --rcfile=../../pyproject.toml -m pytest tests/ -v
+          coverage report --rcfile=../../pyproject.toml
+          coverage xml --rcfile=../../pyproject.toml
+      - name: Upload coverage
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml-${{ matrix.service }}
+          path: services/${{ matrix.service }}/coverage.xml
+          retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # Secrets / credential scan — never let a key reach main.
+  # ---------------------------------------------------------------------------
+  secrets-scan:
+    name: Gitleaks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # gitleaks needs full history on push events
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Project-specific rules + allowlists (Phase A5 / ADR-0002).
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  # ---------------------------------------------------------------------------
+  # Phase A5 — verify committed SOPS files actually look encrypted.
+  # Runs without sops installed.
+  # ---------------------------------------------------------------------------
+  secrets-check:
+    name: Verify SOPS files are encrypted
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make secrets-check
+        run: make secrets-check
+
+  # ---------------------------------------------------------------------------
+  # Build every service image (matrix). No push from CI — release.yml handles
+  # tagging + publishing + signing.
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build ${{ matrix.service }} image
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.docker == 'true' || github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - ai-perception
+          - analytics
+          - api-gateway
+          - dashboard
+          - data-aggregator
+          - decision-engine
+          - intersection-coordinator
+          - ntcip-interface
+          - sensor-fusion
+          - traffic-controller
+          - video-processor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/${{ matrix.service }}/Dockerfile
+          push: false
+          load: true
+          tags: |
+            atms/${{ matrix.service }}:ci-${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+      - name: Save image for downstream scan job
+        run: |
+          mkdir -p /tmp/images
+          docker save atms/${{ matrix.service }}:ci-${{ github.sha }} \
+            -o /tmp/images/${{ matrix.service }}.tar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.service }}
+          path: /tmp/images/${{ matrix.service }}.tar
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Vulnerability scan (Trivy) — fails CI on HIGH/CRITICAL.
+  # ---------------------------------------------------------------------------
+  image-scan:
+    name: Trivy scan ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: build
+    if: needs.changes.outputs.docker == 'true' || github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - ai-perception
+          - analytics
+          - api-gateway
+          - dashboard
+          - data-aggregator
+          - decision-engine
+          - intersection-coordinator
+          - ntcip-interface
+          - sensor-fusion
+          - traffic-controller
+          - video-processor
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: image-${{ matrix.service }}
+          path: /tmp/images
+      - name: Load image
+        run: docker load -i /tmp/images/${{ matrix.service }}.tar
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: atms/${{ matrix.service }}:ci-${{ github.sha }}
+          format: sarif
+          output: trivy-${{ matrix.service }}.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Upload SARIF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-${{ matrix.service }}
+          path: trivy-${{ matrix.service }}.sarif
+          retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # SBOM per service (Syft) — uploaded as artifact; release.yml re-uses these
+  # to produce signed attestations.
+  # ---------------------------------------------------------------------------
+  sbom:
+    name: SBOM ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: build
+    if: needs.changes.outputs.docker == 'true' || github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - ai-perception
+          - analytics
+          - api-gateway
+          - dashboard
+          - data-aggregator
+          - decision-engine
+          - intersection-coordinator
+          - ntcip-interface
+          - sensor-fusion
+          - traffic-controller
+          - video-processor
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: image-${{ matrix.service }}
+          path: /tmp/images
+      - name: Load image
+        run: docker load -i /tmp/images/${{ matrix.service }}.tar
+      - uses: anchore/sbom-action@v0
+        with:
+          image: atms/${{ matrix.service }}:ci-${{ github.sha }}
+          format: spdx-json
+          output-file: sbom-${{ matrix.service }}.spdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.service }}
+          path: sbom-${{ matrix.service }}.spdx.json
+          retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # Aggregator — the ONLY required status check on `main`. If you add a job,
+  # add it to `needs` here.
+  # ---------------------------------------------------------------------------
+  ci-required:
+    name: CI required
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - changes
+      - lint
+      - typecheck
+      - test
+      - secrets-scan
+      - secrets-check
+      - build
+      - image-scan
+      - sbom
+    steps:
+      - name: Verify all jobs succeeded or were intentionally skipped
+        run: |
+          set -e
+          fail=0
+          # Each tuple: <job-name> <result>
+          declare -A R=(
+            [changes]='${{ needs.changes.result }}'
+            [lint]='${{ needs.lint.result }}'
+            [typecheck]='${{ needs.typecheck.result }}'
+            [test]='${{ needs.test.result }}'
+            [secrets-scan]='${{ needs.secrets-scan.result }}'
+            [secrets-check]='${{ needs.secrets-check.result }}'
+            [build]='${{ needs.build.result }}'
+            [image-scan]='${{ needs.image-scan.result }}'
+            [sbom]='${{ needs.sbom.result }}'
+          )
+          for job in "${!R[@]}"; do
+            result="${R[$job]}"
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              echo "::error::Job '$job' did not pass (result: $result)"
+              fail=1
+            else
+              echo "✓ $job ($result)"
+            fi
+          done
+          exit $fail

@@ -1,0 +1,184 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "graphTooltip": 0,
+  "schemaVersion": 38,
+  "tags": ["atms", "decision-chamber", "traffic"],
+  "templating": {
+    "list": [
+      {
+        "name": "intersection",
+        "type": "query",
+        "label": "Intersection",
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "query": "label_values(atms_chamber_decisions_total, intersection)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true
+      }
+    ]
+  },
+  "time": {"from": "now-15m", "to": "now"},
+  "refresh": "5s",
+  "title": "ATMS — Decision Chamber",
+  "uid": "atms-chamber",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Current phase per intersection",
+      "type": "stat",
+      "gridPos": {"x": 0, "y": 0, "w": 8, "h": 4},
+      "targets": [{
+        "expr": "atms_chamber_seconds_in_phase{intersection=~\"$intersection\"}",
+        "legendFormat": "{{intersection}} — {{phase}}"
+      }]
+    },
+    {
+      "id": 2,
+      "title": "Decisions / minute (by dominant factor)",
+      "type": "timeseries",
+      "gridPos": {"x": 8, "y": 0, "w": 16, "h": 8},
+      "targets": [{
+        "expr": "sum by (dominant) (rate(atms_chamber_decisions_total{intersection=~\"$intersection\"}[1m])) * 60",
+        "legendFormat": "{{dominant}}"
+      }]
+    },
+    {
+      "id": 3,
+      "title": "Phase transitions",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 4, "w": 8, "h": 4},
+      "targets": [{
+        "expr": "sum by (to) (rate(atms_chamber_phase_transitions_total{intersection=~\"$intersection\"}[5m])) * 60",
+        "legendFormat": "→ {{to}}"
+      }]
+    },
+    {
+      "id": 4,
+      "title": "Emission rate per direction (g CO2 / min)",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "targets": [{
+        "expr": "atms_chamber_emission_g_per_min{intersection=~\"$intersection\"}",
+        "legendFormat": "{{intersection}} — {{direction}}"
+      }],
+      "fieldConfig": {
+        "defaults": {"unit": "short", "decimals": 0}
+      }
+    },
+    {
+      "id": 5,
+      "title": "Queue size per direction",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+      "targets": [{
+        "expr": "atms_chamber_vehicle_count{intersection=~\"$intersection\"}",
+        "legendFormat": "{{intersection}} — {{direction}}"
+      }]
+    },
+    {
+      "id": 6,
+      "title": "Priority scores (last L3 result)",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8},
+      "targets": [{
+        "expr": "atms_chamber_priority_score{intersection=~\"$intersection\"}",
+        "legendFormat": "{{intersection}} — {{direction}}"
+      }],
+      "fieldConfig": {
+        "defaults": {"min": 0, "max": 1, "decimals": 2}
+      }
+    },
+    {
+      "id": 7,
+      "title": "Emergency preemptions (cumulative)",
+      "type": "stat",
+      "gridPos": {"x": 12, "y": 16, "w": 12, "h": 4},
+      "targets": [{
+        "expr": "sum by (source) (atms_chamber_preemptions_total{intersection=~\"$intersection\"})",
+        "legendFormat": "{{source}}"
+      }]
+    },
+    {
+      "id": 8,
+      "title": "Pedestrian phases served (cumulative)",
+      "type": "stat",
+      "gridPos": {"x": 12, "y": 20, "w": 12, "h": 4},
+      "targets": [{
+        "expr": "sum by (direction) (atms_chamber_pedestrian_phases_total{intersection=~\"$intersection\"})",
+        "legendFormat": "{{direction}}"
+      }]
+    },
+    {
+      "id": 9,
+      "title": "A/B test — shadow divergence rate",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 24, "w": 12, "h": 8},
+      "description": "Fraction of ticks where each shadow chamber's commanded_phase differs from the primary. Persistent divergence > 30% indicates the shadow config would meaningfully change traffic patterns; cross-reference with throughput + emission metrics before promoting shadow → primary.",
+      "targets": [{
+        "expr": "(rate(atms_ab_divergences_total{intersection=~\"$intersection\"}[5m]) / clamp_min(rate(atms_ab_observations_total{intersection=~\"$intersection\"}[5m]), 0.0001)) * 100",
+        "legendFormat": "{{shadow_label}}"
+      }],
+      "fieldConfig": {
+        "defaults": {"unit": "percent", "min": 0, "max": 100, "decimals": 1}
+      }
+    },
+    {
+      "id": 10,
+      "title": "A/B test — divergence heatmap (primary phase → shadow phase)",
+      "type": "table",
+      "gridPos": {"x": 12, "y": 24, "w": 12, "h": 8},
+      "description": "When the primary commanded north_south_green, what did each shadow want? Persistent shadow_phase != primary_phase pairs suggest a different operating regime.",
+      "targets": [{
+        "expr": "sum by (shadow_label, primary_phase, shadow_phase) (atms_ab_divergences_total{intersection=~\"$intersection\"})",
+        "format": "table"
+      }]
+    },
+    {
+      "id": 11,
+      "title": "Controller divergence (commanded vs actual)",
+      "type": "stat",
+      "gridPos": {"x": 0, "y": 32, "w": 12, "h": 4},
+      "description": "Cumulative count of ticks where the NTCIP controller didn't honour the chamber's commanded phase for 3+ consecutive ticks. Should be zero in steady-state operation. Non-zero = controller fallback engaged or chamber/controller communication broken.",
+      "targets": [{
+        "expr": "sum by (commanded) (atms_chamber_controller_divergence_total{intersection=~\"$intersection\"})",
+        "legendFormat": "{{commanded}}"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 1}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "Scene change alert (homography may be invalid)",
+      "type": "stat",
+      "gridPos": {"x": 12, "y": 32, "w": 12, "h": 4},
+      "description": "Phase 8 auto-recalibration trigger. When a chamber's camera scene has shifted persistently (mount drift, construction, etc.), the homography becomes silently wrong and speeds + emissions get biased. Non-zero alerts = operator should re-run scripts/calibrate_camera_homography.py.",
+      "targets": [{
+        "expr": "max by (intersection) (atms_scene_change_alert_active{intersection=~\"$intersection\"})",
+        "legendFormat": "{{intersection}}"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 1}
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Rush-hour vehicle flows. North-south traffic is roughly 2× east-west,
+     reflecting a typical commuter pattern on the major arterial. Both flows
+     run for the full simulation length (3600s = 1h). -->
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+  <vType id="car" accel="2.5" decel="4.5" length="5.0" maxSpeed="13.89" sigma="0.5"/>
+
+  <route id="r_ns" edges="ns_in ns_out"/>
+  <route id="r_ew" edges="ew_in ew_out"/>
+
+  <!-- vehiclesPerHour: NS = 800, EW = 400. Random-seeded by the harness. -->
+  <flow id="flow_ns" type="car" route="r_ns" begin="0" end="3600" vehsPerHour="800"/>
+  <flow id="flow_ew" type="car" route="r_ew" begin="0" end="3600" vehsPerHour="400"/>
+</routes>

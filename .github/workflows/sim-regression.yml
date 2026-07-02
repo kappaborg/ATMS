@@ -1,0 +1,111 @@
+# SUMO sim-regression workflow.
+#
+# Runs every committed SUMO scenario against its baseline and posts the KPI
+# diff as a PR comment. Fails the workflow on regression.
+#
+# Runner requirements (see docs/runbooks/sim-regression.md):
+#   - Self-hosted Linux runner labelled `sumo-runner`.
+#   - SUMO >= 1.18 installed at `SUMO_HOME=/usr/share/sumo` (or override via env).
+#   - Python 3.11+ with the repo's simulation deps installed.
+#
+# Triggered by:
+#   - PRs that touch simulation/, services/decision-engine/, services/traffic-controller/, or shared/atms_common/.
+#   - Manual dispatch (workflow_dispatch).
+#
+# Per-scenario steps:
+#   1. Run `python -m simulation <name>` to produce simulation/out/<name>/kpis.json.
+#   2. Run `python -m simulation.compare_kpis ...` against the committed baseline.
+#   3. Post the formatted markdown diff as a PR comment.
+#   4. Fail the job if any scenario regresses.
+
+name: SUMO sim-regression
+
+on:
+  pull_request:
+    paths:
+      - "simulation/**"
+      - "services/decision-engine/**"
+      - "services/traffic-controller/**"
+      - "shared/atms_common/**"
+      - "ai_decision_system.py"
+      - ".github/workflows/sim-regression.yml"
+  workflow_dispatch:
+    inputs:
+      scenarios:
+        description: "Comma-separated scenario names (defaults to all under simulation/scenarios/)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  pull-requests: write  # for posting the PR comment
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  sim-regression:
+    name: ${{ matrix.scenario }}
+    runs-on: [self-hosted, sumo-runner]
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [rush-hour]  # extend as new scenarios land under simulation/scenarios/
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install simulation deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r services/decision-engine/requirements.txt
+          # `traci` and `sumolib` are bundled with SUMO; the python wheels
+          # `eclipse-sumo` carry compatible Python bindings if the runner
+          # does not have native SUMO at the right version.
+          if ! command -v sumo > /dev/null; then
+            python -m pip install eclipse-sumo
+          fi
+
+      - name: Verify SUMO available
+        run: |
+          sumo --version || (echo "SUMO not on PATH; install via apt-get install sumo or pip install eclipse-sumo" && exit 1)
+
+      - name: Run scenario
+        env:
+          GIT_SHA: ${{ github.sha }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: python -m simulation ${{ matrix.scenario }} --max-steps 3600 --seed 42
+
+      - name: Compare against baseline
+        id: compare
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -m simulation.compare_kpis \
+            --scenario ${{ matrix.scenario }} \
+            --kpis simulation/out/${{ matrix.scenario }}/kpis.json \
+            --baseline simulation/baselines/${{ matrix.scenario }}.json \
+            --format markdown \
+            --out sim-diff-${{ matrix.scenario }}.md
+
+      - name: Upload run artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-${{ matrix.scenario }}-${{ github.sha }}
+          path: |
+            simulation/out/${{ matrix.scenario }}/
+            sim-diff-${{ matrix.scenario }}.md
+          retention-days: 14
+
+      - name: Post diff to PR
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: sim-regression-${{ matrix.scenario }}
+          path: sim-diff-${{ matrix.scenario }}.md

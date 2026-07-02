@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-05-31T23:57:33.176136+01:00 by Eclipse SUMO netconvert 1.27.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="plain.nod.xml"/>
+        <edge-files value="plain.edg.xml"/>
+        <connection-files value="plain.con.xml"/>
+        <tllogic-files value="plain.tll.xml"/>
+    </input>
+
+    <output>
+        <output-file value="network.net.xml"/>
+    </output>
+
+    <junctions>
+        <no-internal-links value="false"/>
+    </junctions>
+
+</netconvertConfiguration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="200.00,200.00" convBoundary="0.00,0.00,400.00,400.00" origBoundary="-200.00,-200.00,200.00,200.00" projParameter="!"/>
+
+    <edge id=":intersection_0" function="internal">
+        <lane id=":intersection_0_0" index="0" speed="13.89" length="11.20" shape="198.40,207.20 198.40,196.00"/>
+    </edge>
+    <edge id=":intersection_1" function="internal">
+        <lane id=":intersection_1_0" index="0" speed="13.89" length="11.20" shape="204.00,201.60 192.80,201.60"/>
+    </edge>
+
+    <edge id="ew_in" from="n_east" to="intersection" priority="-1">
+        <lane id="ew_in_0" index="0" speed="13.89" length="196.00" shape="400.00,201.60 204.00,201.60"/>
+    </edge>
+    <edge id="ew_out" from="intersection" to="n_west" priority="-1">
+        <lane id="ew_out_0" index="0" speed="13.89" length="192.80" shape="192.80,201.60 0.00,201.60"/>
+    </edge>
+    <edge id="ns_in" from="n_north" to="intersection" priority="-1">
+        <lane id="ns_in_0" index="0" speed="13.89" length="192.80" shape="198.40,400.00 198.40,207.20"/>
+    </edge>
+    <edge id="ns_out" from="intersection" to="n_south" priority="-1">
+        <lane id="ns_out_0" index="0" speed="13.89" length="196.00" shape="198.40,196.00 198.40,0.00"/>
+    </edge>
+
+    <tlLogic id="intersection" type="static" programID="0" offset="0">
+        <phase duration="32" state="Gr"/>
+        <phase duration="3"  state="yr"/>
+        <phase duration="32" state="rG"/>
+        <phase duration="3"  state="ry"/>
+    </tlLogic>
+
+    <junction id="intersection" type="traffic_light" x="200.00" y="200.00" incLanes="ns_in_0 ew_in_0" intLanes=":intersection_0_0 :intersection_1_0" shape="196.80,207.20 200.00,207.20 200.44,204.98 201.00,204.20 201.78,203.64 202.78,203.31 204.00,203.20 204.00,200.00 201.78,199.56 201.00,199.00 200.44,198.22 200.11,197.22 200.00,196.00 196.80,196.00 196.36,198.22 195.80,199.00 195.02,199.56 194.02,199.89 192.80,200.00 192.80,203.20 195.02,203.64 195.80,204.20 196.36,204.98 196.69,205.98">
+        <request index="0" response="00" foes="10" cont="0"/>
+        <request index="1" response="01" foes="01" cont="0"/>
+    </junction>
+    <junction id="n_east" type="dead_end" x="400.00" y="200.00" incLanes="" intLanes="" shape="400.00,200.00 400.00,203.20"/>
+    <junction id="n_north" type="dead_end" x="200.00" y="400.00" incLanes="" intLanes="" shape="200.00,400.00 196.80,400.00"/>
+    <junction id="n_south" type="dead_end" x="200.00" y="0.00" incLanes="ns_out_0" intLanes="" shape="196.80,0.00 200.00,0.00"/>
+    <junction id="n_west" type="dead_end" x="0.00" y="200.00" incLanes="ew_out_0" intLanes="" shape="0.00,203.20 0.00,200.00"/>
+
+    <connection from="ew_in" to="ew_out" fromLane="0" toLane="0" via=":intersection_1_0" tl="intersection" linkIndex="1" dir="s" state="o"/>
+    <connection from="ns_in" to="ns_out" fromLane="0" toLane="0" via=":intersection_0_0" tl="intersection" linkIndex="0" dir="s" state="O"/>
+
+    <connection from=":intersection_0" to="ns_out" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":intersection_1" to="ew_out" fromLane="0" toLane="0" dir="s" state="M"/>
+
+</net>

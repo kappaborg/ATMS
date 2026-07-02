@@ -1,0 +1,121 @@
+# Secrets and certificates (DO NOT COMMIT!)
+certs/
+config/secrets.json
+*.key
+*.crt
+*.pem
+*.p12
+.env
+.env.*
+!.env.example
+# SOPS workflow (Phase A5): only the .sops-suffixed files are committed.
+deploy/secrets/**/atms.env
+deploy/secrets/**/*.plaintext
+# Personal age keys must never be committed.
+**/age/keys.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Data
+*.db
+*.sqlite
+*.sqlite3
+
+# Models (large files)
+*.pt
+*.onnx
+*.mlpackage
+
+# Videos
+Processed_Videos/
+*.mp4
+*.avi
+
+# Temporary
+tmp/
+temp/
+*.tmp
+experiments_out/
+
+# Build artifacts (should already be ignored, but ensuring)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Type checking
+.mypy_cache/
+.ruff_cache/
+
+# Debug files
+debug_frame.jpg
+output.mp4
+*_result.jpg
+test_frame.jpg
+
+# Old test results
+archived_tests/
+
+# --- Large data / model / video assets (track via DVC/LFS or artifact store, not git) ---
+Car_Recognition/
+multiview_training_data/
+multiview_models/
+multiview_dataset/
+data/dvm-car-raw/
+data/dvm-other-raw/
+data/license_plate_dataset/
+data/car_brand_dataset/
+data/car_brand_dataset_dvm/
+data/detections/
+data/ground_truth/frames/
+data/ground_truth/crops/
+models/
+videos/
+datasets/
+*.zip
+*.pth
+*.mlmodel
+labels.cache
+
+# Property-test example database (regenerated locally)
+.hypothesis/
+
+# In-tree virtualenvs (use `make venv` per service instead)
+services/*/venv/
+services/*/.venv/

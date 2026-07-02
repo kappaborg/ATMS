@@ -1,0 +1,49 @@
+# OpenTelemetry collector — receives OTLP from services (B2) and exports to
+# Tempo. Lightweight deployment, not the contrib distribution.
+# Chart: open-telemetry/opentelemetry-collector
+
+mode: deployment
+replicaCount: 2
+
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+  processors:
+    batch:
+      send_batch_size: 1024
+      timeout: 5s
+    memory_limiter:
+      limit_mib: 512
+      spike_limit_mib: 128
+      check_interval: 5s
+
+  exporters:
+    otlp/tempo:
+      endpoint: tempo.observability.svc.cluster.local:4317
+      tls:
+        insecure: true
+
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, batch]
+        exporters: [otlp/tempo]
+
+service:
+  enabled: true
+  type: ClusterIP
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 768Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi

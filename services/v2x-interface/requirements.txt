@@ -1,0 +1,20 @@
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0
+python-json-logger>=2.0
+# Phase A6 — JWT/RBAC.
+pyjwt[crypto]>=2.8
+prometheus_client>=0.19
+# Phase B1 — shared library deps.
+pydantic-settings>=2.0
+structlog>=24.0
+# Phase B2 — OpenTelemetry tracing.
+opentelemetry-api>=1.20
+opentelemetry-sdk>=1.20
+opentelemetry-exporter-otlp-proto-grpc>=1.20
+opentelemetry-instrumentation-fastapi>=0.40b0
+# Phase B4 — resilience.
+tenacity>=8.0
+# Phase C8 — MQTT consumer for production (stub doesn't use it locally).
+paho-mqtt>=2.0
+aiokafka>=0.10

@@ -1,0 +1,127 @@
+# Repo-root config — shared by every service and by CI.
+# Per-service overrides go in `services/<name>/pyproject.toml`.
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = [
+    "**/venv",
+    "**/.venv",
+    "**/__pycache__",
+    "**/migrations",
+    "docs/archived",
+    "experiments_out",
+    # Legacy code paths cleaned up progressively in later phases.
+    "Car_Recognition",
+    "multiview_models",
+    "multiview_training_data",
+    "infrastructure",
+    "ai_decision_system.py",
+    "youtube_decision_processor.py",
+    "realtime_video_processor.py",
+]
+
+[tool.ruff.lint]
+# External lint codes ruff should recognise (and not warn about) in `# noqa: <CODE>`
+# comments. ATMS-CLOCK is matched by tools/lint_safety_clock.py (ADR-0017 §rule).
+external = ["ATMS-CLOCK"]
+# Conservative ruleset — production-grade without being noisy for the legacy code
+# we have not yet migrated. New code (Phase A onward) gets the stricter overrides
+# under `[tool.ruff.lint.per-file-ignores]` below.
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific
+    "PL",   # pylint subset
+]
+ignore = [
+    "E501",    # line length handled by formatter
+    "PLR0913", # too many arguments (matter of taste)
+    "PLR2004", # magic value compare — too noisy on legacy
+    "PLR0911", # too many returns
+    "PLR0912", # too many branches
+    "PLR0915", # too many statements
+    # `class X(str, Enum)` is the conventional pattern used across the codebase
+    # and produces `value` strings that JSON-serialize directly. StrEnum changes
+    # __str__ semantics — keep the explicit pattern for now.
+    "UP042",
+    # contextlib.suppress vs try/except/pass — stylistic; allow both.
+    "SIM105",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests are allowed to poke private attributes and use magic numbers.
+"**/tests/**" = ["SLF001", "PLR2004", "S101"]
+"**/conftest.py" = ["SLF001"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# --------------------------------------------------------------------------- #
+# Mypy: strict on the Phase A code; lenient elsewhere until later phases.
+# --------------------------------------------------------------------------- #
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+strict_optional = true
+explicit_package_bases = true
+namespace_packages = true
+# We DON'T set `files = [...]` at repo level because two services both have a
+# top-level `main.py` and mypy treats them as duplicate modules when invoked
+# together. CI runs mypy three times (one per Phase A code root); locally use
+# `make typecheck` or invoke as documented in CONTRIBUTING.md.
+exclude = [
+    "venv",
+    "\\.venv",
+    "__pycache__",
+    "tests/.*",   # tests use fixtures/private-attr access; we don't need strict types there
+    "docs/archived",
+]
+
+# Allow legacy modules to import without forcing types yet.
+[[tool.mypy.overrides]]
+module = [
+    "ai_decision_system",
+    "ai.*",
+    "atms_core.*",
+    "youtube_decision_processor",
+    "realtime_video_processor",
+]
+ignore_errors = true
+
+# --------------------------------------------------------------------------- #
+# Coverage
+# --------------------------------------------------------------------------- #
+
+[tool.coverage.run]
+branch = true
+source = [
+    "shared/atms_common",
+    "services/traffic-controller/src",
+    "services/decision-engine/src",
+]
+omit = [
+    "*/tests/*",
+    "*/venv/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]

@@ -1,0 +1,19 @@
+fastapi==0.104.1
+uvicorn==0.24.0
+python-multipart==0.0.6  # Required for FastAPI form data handling
+opencv-python==4.8.1.78
+numpy>=1.26.0,<2.0.0  # Python 3.12 compatible (1.24.3 doesn't have wheels for 3.12)
+ultralytics==8.0.200
+aiokafka==0.8.1
+asyncpg==0.29.0
+redis[hiredis]==5.0.1
+pydantic==2.5.0
+pydantic-settings==2.1.0  # Required by shared module
+torch>=2.2.0  # Python 3.12 compatible (2.1.0 not available for 3.12)
+python-json-logger==2.0.7
+prometheus-client==0.19.0  # Prometheus metrics (required by main.py)
+# Performance optimizations
+coremltools>=7.0  # CoreML for Apple Silicon (3-5× faster)
+onnxruntime>=1.16.0  # ONNX Runtime (2-3× faster)
+# bytetrack>=0.0.1  # DISABLED: Using SimpleByteTracker (pure Python, no dependencies) instead
+scipy>=1.11.0  # Advanced speed calculation (WLS, statistics)

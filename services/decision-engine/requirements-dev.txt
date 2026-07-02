@@ -1,0 +1,8 @@
+# Test/dev dependencies for decision-engine.
+-r requirements.txt
+pytest>=8,<10
+pytest-asyncio>=0.23
+hypothesis>=6.100
+coverage>=7
+prometheus_client>=0.19
+pyjwt[crypto]>=2.8

@@ -1,0 +1,83 @@
+{
+  "title": "ATMS — Logs",
+  "description": "Cross-service log volume, error rate, top events. Click any trace_id field to jump to Tempo (configured via Loki derived field).",
+  "tags": ["atms", "phase-b3"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {"from": "now-1h", "to": "now"},
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": "Loki",
+        "query": "label_values({namespace=\"atms\"}, service)",
+        "current": {"text": "All", "value": "$__all"},
+        "includeAll": true
+      },
+      {
+        "name": "level",
+        "type": "custom",
+        "options": [
+          {"text": "All", "value": ".*"},
+          {"text": "warn+", "value": "warning|error|critical"},
+          {"text": "error+", "value": "error|critical"}
+        ]
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Log volume by service/level",
+      "targets": [
+        {
+          "datasource": "Loki",
+          "expr": "sum by (service, level) (rate({namespace=\"atms\", service=~\"$service\"} | json | level=~\"$level\" [5m]))"
+        }
+      ],
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 8}
+    },
+    {
+      "id": 2,
+      "type": "bargauge",
+      "title": "Top events (last 1h)",
+      "targets": [
+        {
+          "datasource": "Loki",
+          "expr": "topk(20, sum by (event) (count_over_time({namespace=\"atms\", service=~\"$service\"} | json | event != \"\" [1h])))"
+        }
+      ],
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 10}
+    },
+    {
+      "id": 3,
+      "type": "logs",
+      "title": "Recent errors+",
+      "targets": [
+        {
+          "datasource": "Loki",
+          "expr": "{namespace=\"atms\", service=~\"$service\"} | json | level=~\"error|critical\""
+        }
+      ],
+      "options": {"showTime": true, "wrapLogMessage": true, "enableLogDetails": true},
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 10}
+    },
+    {
+      "id": 4,
+      "type": "logs",
+      "title": "Live tail (filtered)",
+      "targets": [
+        {
+          "datasource": "Loki",
+          "expr": "{namespace=\"atms\", service=~\"$service\"} | json | level=~\"$level\""
+        }
+      ],
+      "options": {"showTime": true, "wrapLogMessage": false, "enableLogDetails": true},
+      "gridPos": {"x": 0, "y": 18, "w": 24, "h": 14}
+    }
+  ]
+}

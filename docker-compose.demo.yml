@@ -1,0 +1,155 @@
+# docker-compose.demo.yml
+#
+# Single-command bring-up of the full ATMS demo stack for the pilot-pitch
+# flow (docs/demos/pilot-pitch.md). Composes the production-shaped pieces
+# already defined in:
+#
+#   docker-compose.dev.yml        — Postgres (TimescaleDB) + Redis + Kafka
+#   docker-compose.kafka.yml      — Kafka broker + zookeeper (subset used here)
+#   docker-compose.services.yml   — FastAPI service images
+#   docker-compose.keycloak.yml   — Keycloak + Postgres backing for OIDC
+#
+# This file overlays observability (Loki / Promtail / Tempo / Grafana) and
+# wires the demo Grafana dashboards in. It does NOT launch sumo-gui — that
+# runs on the host because of X11/Wayland forwarding complexity. The demo
+# orchestrator (`python -m simulation.demo --gui --live`) launches sumo-gui
+# locally and hits the live services over the host network.
+#
+# Usage (from repo root):
+#
+#   docker compose \
+#     -f docker-compose.dev.yml \
+#     -f docker-compose.services.yml \
+#     -f docker-compose.keycloak.yml \
+#     -f docker-compose.demo.yml \
+#     up -d
+#
+#   # Wait ~30 seconds for Kafka + Keycloak. Then:
+#   open http://localhost:3000              # Grafana (admin/admin)
+#   open http://localhost:8080/realms/atms  # Keycloak realm
+#
+#   python -m simulation.demo --gui --live
+#
+# NEVER use this configuration in production. Passwords are dev defaults;
+# observability is wide open on localhost; no TLS termination.
+
+services:
+  # -------------------------------------------------------------------------
+  # Observability stack
+  # -------------------------------------------------------------------------
+
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: atms-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    networks:
+      - atms-network
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:2.9.4
+    container_name: atms-promtail
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./infrastructure/observability/promtail/config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - atms-network
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:2.4.1
+    container_name: atms-tempo
+    command: -config.file=/etc/tempo/tempo.yaml
+    ports:
+      - "3200:3200"   # Tempo HTTP
+      - "4318:4318"   # OTLP HTTP
+      - "4317:4317"   # OTLP gRPC
+    volumes:
+      - ./infrastructure/observability/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+    networks:
+      - atms-network
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    container_name: atms-otel-collector
+    command: --config=/etc/otel-collector/config.yaml
+    volumes:
+      - ./infrastructure/observability/otel/config.yaml:/etc/otel-collector/config.yaml:ro
+    networks:
+      - atms-network
+    depends_on:
+      - tempo
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.1
+    container_name: atms-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true     # demo: viewer access without login
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./infrastructure/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./infrastructure/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - atms-network
+    depends_on:
+      - loki
+      - tempo
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------------
+  # Demo-specific overrides for the existing services so they ship logs to
+  # the local Loki/OTel collector and run in HS256 mode (the dev Keycloak
+  # is up too, but the demo defaults to HS256 to remove one moving piece).
+  # Override AUTH_ALGORITHM=RS256 and AUTH_JWKS_URI on the env if you want to
+  # showcase the OIDC flow live.
+  # -------------------------------------------------------------------------
+
+  traffic-controller:
+    environment:
+      - LOG_LEVEL=INFO
+      - ATMS_LOG_DEV=0
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_TRACES_SAMPLER_ARG=1.0
+      - AUTH_ALGORITHM=HS256
+      - AUTH_HS256_SECRET=demo-only-secret-32-chars-minimum-ok
+      - AUTH_ISSUER=atms-demo
+      - AUTH_AUDIENCE=atms-traffic-controller
+    depends_on:
+      - kafka
+      - otel-collector
+
+  decision-engine:
+    environment:
+      - LOG_LEVEL=INFO
+      - ATMS_LOG_DEV=0
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_TRACES_SAMPLER_ARG=1.0
+      - AUTH_ALGORITHM=HS256
+      - AUTH_HS256_SECRET=demo-only-secret-32-chars-minimum-ok
+      - AUTH_ISSUER=atms-demo
+      - AUTH_AUDIENCE=atms-decision-engine
+    depends_on:
+      - kafka
+      - otel-collector
+
+volumes:
+  grafana_data:
+
+networks:
+  atms-network:
+    external: true   # provisioned by docker-compose.dev.yml

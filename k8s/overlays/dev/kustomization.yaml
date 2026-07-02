@@ -1,0 +1,34 @@
+# Dev overlay.
+#
+# Secrets (Phase A5 / ADR-0002): the SOPS-encrypted source lives in
+# `deploy/secrets/dev/`. There are two production patterns supported:
+#
+#  A) Flux + native SOPS decryption (recommended on-prem; ADR-0003).
+#     Flux's `kustomize-controller` decrypts files matching `decryption:`
+#     in the parent `Kustomization` resource, using an age key stored as
+#     a Kubernetes Secret named `sops-age` in the Flux namespace.
+#     See: docs/runbooks/secrets.md §Flux integration.
+#
+#  B) kustomize-sops plugin (ArgoCD or plain kubectl with KSOPS).
+#     Replace this resources list with:
+#         generators:
+#           - secret-generator.yaml
+#     where secret-generator.yaml references the SOPS files via the
+#     `viaduct.ai/v1/ksops` Generator kind.
+#
+# This file shows pattern (A). Concrete Flux Kustomization resource lives
+# alongside the cluster bootstrap, not in this repo.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: atms-system
+
+resources:
+  - ../../base
+  # SOPS-encrypted Kubernetes Secret manifest. Flux decrypts at sync time.
+  - ../../../deploy/secrets/dev/atms-k8s-secret.sops.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: atms
+  app.kubernetes.io/environment: dev

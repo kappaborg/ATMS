@@ -1,0 +1,71 @@
+# ATMS site config — example per-intersection deployment.
+#
+# Copy this to your intersection-<id>.yaml, fill in the real values from
+# the site survey + ops handoff, and pass the path to the chamber bootstrap:
+#
+#     python3 -m simulation.demo --site-config services/observability/intersection-005.yaml
+#
+# Every section below maps to a SiteConfig dataclass field in
+# simulation/decision_chamber/site_config.py.
+
+intersection_id: demo-001
+description: "Demo intersection — TEST.mp4 footage"
+
+camera:
+  # CALIBRATE THIS per camera. See docs/demos/brand-perception-dossier.md
+  # "Speed estimation accuracy" → calibration procedure.
+  pixels_per_meter: 25.0
+  # For dev: file path; for production: rtsp://10.x.x.x:554/streamN
+  source: "videos/TEST.mp4"
+  width: 1920
+  height: 1080
+
+crosswalk_zones:
+  # x1, y1, x2, y2 in camera pixel coords. People detected with bbox
+  # centre inside one of these zones counts as pedestrian demand for
+  # that direction. Site survey output.
+  north_south: [0, 810, 1920, 1080]   # bottom 25% of 1080-tall frame
+  east_west:   [0, 0, 480, 1080]      # left 25% of 1920-wide frame
+
+ntcip:
+  controller_host: 127.0.0.1
+  controller_port: 1611                # use 161 with sudo in production
+  community: public                    # SNMPv1 community
+  closed_loop_poll_seconds: 1.5
+
+mqtt:
+  # Leave broker_host empty to disable mesh — chamber runs standalone.
+  broker_host: ""
+  broker_port: 1883
+  upstream_neighbors: []               # list intersection_ids for green wave
+
+# green_wave entries are loaded ONLY if mqtt.broker_host is set.
+green_wave: []
+# Example for an arterial corridor:
+# green_wave:
+#   - intersection_id: demo-002
+#     offset_seconds: 18.0
+#     through_direction: north_south
+
+transit_priority:
+  # Empty feed_url disables TSP. Production: city GTFS-RT endpoint.
+  feed_url: ""
+  delay_threshold_s: 60.0
+  poll_interval_s: 10.0
+  bonus_per_late_bus: 0.10
+  routes: {}
+  # Example for İstanbul:
+  # feed_url: "https://api.ibb.gov.tr/iett/gtfs-rt/vehicles"
+  # routes:
+  #   metrobus-34: east_west
+  #   metrobus-500T: north_south
+
+prometheus:
+  listen_host: 0.0.0.0
+  listen_port: 9090
+
+audit:
+  # SQLite path with rotation + retention. Empty → falls back to JSONL.
+  db_path: /tmp/atms-chamber-audit.db
+  max_size_mb: 200
+  retention_days: 90
