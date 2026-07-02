@@ -234,6 +234,14 @@ class ATMSPipeline:
             # 2) Tracking
             tracked_results = self.tracker.update(yolo_results)
 
+            # Release per-track state for tracks the tracker expired this
+            # frame — otherwise speed filters and trajectory dicts grow
+            # unboundedly on long/live runs.
+            for removed_id in getattr(self.tracker, "last_removed_ids", []):
+                self.trajectory_history.pop(removed_id, None)
+                if self.speed_calculator and hasattr(self.speed_calculator, "remove_track"):
+                    self.speed_calculator.remove_track(removed_id)
+
             tracked_objects: List[Dict] = []
             for tracked_det in tracked_results:
                 track_id = tracked_det.get("track_id", frame_idx)

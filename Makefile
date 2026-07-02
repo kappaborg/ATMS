@@ -3,7 +3,7 @@
 
 .PHONY: help setup dev-up dev-down test lint format clean install-service \
         secrets-decrypt secrets-encrypt secrets-edit secrets-rotate-recipients \
-        secrets-check simulate
+        secrets-check simulate backup-db
 
 # Colors
 BLUE := \033[0;34m
@@ -234,4 +234,8 @@ secrets-check:
 	done; \
 	if [ $$bad -eq 0 ]; then echo "$(GREEN)✓ all secrets files look encrypted (or are explicit placeholders)$(NC)"; fi; \
 	exit $$bad
+
+backup-db:
+	@echo "$(YELLOW)Backing up Postgres (BACKUP_DIR/RETENTION_DAYS overridable)...$(NC)"
+	@./scripts/backup_postgres.sh
 

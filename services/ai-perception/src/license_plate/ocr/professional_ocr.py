@@ -422,7 +422,7 @@ class ProfessionalPlateOCR:
             
             if result and result.text:
                 all_results.append(result)
-                logger.debug(f"✅ {method.value} on original: '{result.text}' (conf: {result.confidence:.3f})")
+                logger.debug(f"✅ {method.value} on original: {len(result.text)} chars (conf: {result.confidence:.3f})")
         
         # Try enhanced versions
         for name, enhanced_img in enhanced_images:
@@ -441,19 +441,19 @@ class ProfessionalPlateOCR:
                 
                 if result and result.text:
                     all_results.append(result)
-                    logger.debug(f"✅ {method.value} on {name}: '{result.text}' (conf: {result.confidence:.3f}, len: {len(result.text)})")
+                    logger.debug(f"✅ {method.value} on {name}: (conf: {result.confidence:.3f}, len: {len(result.text)})")
         
         # Fuse results for best accuracy
         fused_result = self._fuse_results(all_results)
         
         if fused_result and fused_result.text:
-            logger.info(f"✅ Professional OCR: '{fused_result.text}' (conf: {fused_result.confidence:.3f}, method: {fused_result.method.value})")
+            logger.info(f"✅ Professional OCR: {len(fused_result.text)} chars (conf: {fused_result.confidence:.3f}, method: {fused_result.method.value})")
             return fused_result
         else:
             # Return best single result if fusion failed
             if all_results:
                 best = max(all_results, key=lambda r: r.confidence)
-                logger.info(f"✅ Best single result: '{best.text}' (conf: {best.confidence:.3f}, method: {best.method.value})")
+                logger.info(f"✅ Best single result: {len(best.text)} chars (conf: {best.confidence:.3f}, method: {best.method.value})")
                 return best
             
             logger.warning(f"❌ Professional OCR failed: No text recognized")

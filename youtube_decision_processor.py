@@ -13,6 +13,7 @@ import argparse
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timezone
+import contextlib
 import logging
 import subprocess
 import json
@@ -520,13 +521,22 @@ class YouTubeDecisionProcessor:
         try:
             import os
             kafka_servers = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092").split(",")
-            
-            # Initialize AIOKafkaProducer for decisions
-            self.kafka_producer = AIOKafkaProducer(
+
+            # Assign to self only AFTER start() succeeds — if the caller's
+            # wait_for() cancels a slow start, a half-initialized producer
+            # must not be left behind for the frame loop / shutdown to trip on.
+            producer = AIOKafkaProducer(
                 bootstrap_servers=kafka_servers,
                 value_serializer=lambda v: json.dumps(v).encode('utf-8')
             )
-            await self.kafka_producer.start()
+            try:
+                await producer.start()
+            except BaseException:
+                # Covers CancelledError from the caller's timeout as well.
+                with contextlib.suppress(Exception):
+                    await producer.stop()
+                raise
+            self.kafka_producer = producer
             logger.info("✅ Kafka producer initialized for decisions")
             
             # Initialize KafkaDetectionProducer for detections
@@ -553,6 +563,7 @@ class YouTubeDecisionProcessor:
             return True
         except Exception as e:
             logger.warning(f"⚠️ Kafka producer initialization failed: {e}")
+            self.kafka_producer = None
             return False
     
     async def make_traffic_decision(self, detections: List[Dict], frame_width: int = 1920, frame_height: int = 1080) -> Optional[Dict]:
@@ -860,12 +871,18 @@ class YouTubeDecisionProcessor:
             logger.error(f"❌ Failed to extract YouTube stream URL")
             return False
         
-        # Open stream - FIX: Add timeout and retry logic
+        # Open stream. FFmpeg timeouts MUST be passed at open time —
+        # cap.set() after opening silently ignores them, which lets a
+        # stalled HLS stream block cap.read() forever.
         logger.info(f"📺 Opening YouTube stream...")
-        cap = cv2.VideoCapture(self.stream_url)
-        # FIX: Set OpenCV timeout to prevent hanging
-        cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 10000)  # 10 second timeout
-        cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 5000)   # 5 second read timeout
+        cap = cv2.VideoCapture(
+            self.stream_url,
+            cv2.CAP_FFMPEG,
+            [
+                cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 10000,  # 10 s open timeout
+                cv2.CAP_PROP_READ_TIMEOUT_MSEC, 5000,   # 5 s read timeout
+            ],
+        )
         
         if not cap.isOpened():
             logger.error(f"❌ Cannot open YouTube stream")

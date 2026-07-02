@@ -14,13 +14,15 @@ Architecture decisions: [`adr/`](./adr/).
 | ID | Item | Status | Owner | Date |
 |----|------|--------|-------|------|
 | H1 | `.env` in `.gitignore` + `.env.example` shipped | `[DONE]` | — | 2026-05-29 |
-| H2 | Untrack stale `venv/`, `__pycache__/`, `*.pt`, `Processed_Videos/` from git | `[BLOCKED]` not a git repo yet | — | — |
+| H2 | Untrack stale `venv/`, `__pycache__/`, `*.pt`, `Processed_Videos/` from git | `[DONE]` — repo initialised 2026-07-02; large assets/venvs excluded via .gitignore (756 files / 23 MB tracked) | — | 2026-07-02 |
 | H3 | Consolidate `realtime_video_processor.py` + `youtube_decision_processor.py` into `services/video-processor/` | `[TODO]` | — | — |
 | H4 | Archive stale `docs/PHASE*`, `WEEK*`, `*COMPLETE*`, `*STATUS*` | `[DONE]` (37 files moved) | — | 2026-05-29 |
 | H5 | ADR template + `docs/PRODUCTION_GAPS.md` | `[DONE]` | — | 2026-05-29 |
 | H7 | Repo-root `pyproject.toml` (ruff + mypy + coverage) | `[DONE]` (A4) | — | 2026-05-29 |
 | H8 | `CONTRIBUTING.md`, `.github/CODEOWNERS`, `.github/dependabot.yml` | `[DONE]` (A4) | — | 2026-05-29 |
 | H6 | `.gitignore` covers `*.pt`, `*.onnx`, `*.mlpackage`, `Processed_Videos/`, `experiments_out/`, `debug_frame.jpg` | `[DONE]` | — | 2026-05-29 |
+| H9 | Helm chart `templates/` is empty — `helm install` deploys zero resources (README now warns; use `kubectl apply -k k8s/overlays/<env>/`) | `[TODO]` | — | — |
+| H10 | Postgres backup with rotation (`scripts/backup_postgres.sh`, `make backup-db`); WAL archiving / offsite still open | `[PARTIAL]` | — | 2026-07-02 |
 
 ## Phase A — Make It Safe
 

@@ -393,11 +393,11 @@ class AdvancedPlateOCR:
                 if result and result.confidence > best_confidence:
                     best_result = result
                     best_confidence = result.confidence
-                    logger.debug(f"✅ Better result from {method.value} on {name}: '{result.text}' (conf: {result.confidence:.3f})")
+                    logger.debug(f"✅ Better result from {method.value} on {name}: {len(result.text)} chars (conf: {result.confidence:.3f})")
         
         # Return best result or empty result
         if best_result and best_result.text:
-            logger.info(f"✅ OCR Success: '{best_result.text}' (conf: {best_result.confidence:.3f}, method: {best_result.method.value})")
+            logger.info(f"✅ OCR Success: {len(best_result.text)} chars (conf: {best_result.confidence:.3f}, method: {best_result.method.value})")
             return best_result
         else:
             logger.warning(f"❌ OCR Failed: No text recognized")

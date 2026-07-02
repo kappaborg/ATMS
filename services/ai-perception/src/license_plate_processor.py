@@ -195,12 +195,13 @@ class LicensePlateProcessor:
                     try:
                         plate_text = self.ocr_engine.recognize_text(detection.plate_image)
                         
-                        # Log OCR result for debugging
+                        # Log OCR outcome WITHOUT plate text — raw plates are
+                        # PII and must never reach application logs (ADR-0014:
+                        # anonymisation-by-default; logs have their own retention).
                         if not plate_text.text or plate_text.text.strip() == '':
                             logger.warning(f"❌ OCR failed for plate (detection_conf: {detection.confidence:.3f}, ocr_conf: {plate_text.confidence:.3f}, size: {plate_width}x{plate_height})")
-                            logger.warning(f"   Raw text: '{plate_text.raw_text}', Cleaned: '{plate_text.cleaned_text}'")
                         else:
-                            logger.info(f"✅ OCR success: '{plate_text.text}' (confidence: {plate_text.confidence:.3f}, raw: '{plate_text.raw_text}')")
+                            logger.info(f"✅ OCR success: {len(plate_text.text)} chars (confidence: {plate_text.confidence:.3f})")
                     except Exception as ocr_error:
                         logger.error(f"❌ OCR exception: {ocr_error}", exc_info=True)
                         # Create empty result
@@ -240,7 +241,7 @@ class LicensePlateProcessor:
                     
                     recognition_results.append(result)
                     
-                    logger.debug(f"Plate recognized: '{plate_text.text}' (confidence: {overall_confidence:.2f})")
+                    logger.debug(f"Plate recognized: '{anonymized_text}' (confidence: {overall_confidence:.2f})")
                     
                 except Exception as e:
                     import traceback

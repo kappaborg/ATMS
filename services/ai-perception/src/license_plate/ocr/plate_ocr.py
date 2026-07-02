@@ -725,7 +725,7 @@ class HybridOCR:
         self.method_usage[method_name] = self.method_usage.get(method_name, 0) + 1
         
         method_display = result.method_used.value if hasattr(result.method_used, 'value') else str(result.method_used)
-        logger.debug(f"Hybrid OCR: '{result.text}' (confidence: {result.confidence:.2f}, method: {method_display}) in {processing_time*1000:.2f}ms")
+        logger.debug(f"Hybrid OCR: {len(result.text)} chars (confidence: {result.confidence:.2f}, method: {method_display}) in {processing_time*1000:.2f}ms")
         
         return result
     
