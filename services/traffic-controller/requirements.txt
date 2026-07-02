@@ -15,7 +15,7 @@ tenacity>=8.0
 # Phase B2 — OpenTelemetry tracing (ADR-0010).
 opentelemetry-api>=1.20
 opentelemetry-sdk>=1.20
-opentelemetry-exporter-otlp-proto-grpc>=1.20
+opentelemetry-exporter-otlp-proto-grpc>=1.43.0
 opentelemetry-instrumentation-fastapi>=0.40b0
 # Phase C4 — async Postgres + Alembic migrations (ADR-0013).
 asyncpg>=0.29
