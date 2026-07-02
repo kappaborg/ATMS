@@ -1,0 +1,30 @@
+{
+  "standard": {
+    "test_name": "Standard Detector",
+    "num_iterations": 50,
+    "total_time_s": 0.81,
+    "fps": 61.55,
+    "avg_inference_time_ms": 16.24,
+    "min_latency_ms": 11.7,
+    "max_latency_ms": 20.01,
+    "p95_latency_ms": 19.17,
+    "total_detections": 0,
+    "avg_detections_per_frame": 0.0
+  },
+  "optimized": {
+    "test_name": "Optimized Detector",
+    "num_iterations": 50,
+    "total_time_s": 0.64,
+    "fps": 78.52,
+    "avg_inference_time_ms": 12.73,
+    "min_latency_ms": 11.66,
+    "max_latency_ms": 14.11,
+    "p95_latency_ms": 13.9,
+    "total_detections": 0,
+    "avg_detections_per_frame": 0.0
+  },
+  "improvement": {
+    "speedup": 1.2757266300078554,
+    "fps_improvement": 1.275710804224208
+  }
+}

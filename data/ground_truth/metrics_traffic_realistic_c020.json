@@ -1,0 +1,270 @@
+{
+  "weights": "models/car_brand_classification/outputs/traffic_realistic/weights/best.pt",
+  "conf_threshold": 0.2,
+  "total_labelled": 240,
+  "skipped_unsure_or_other_brand": 56,
+  "overall": {
+    "true_positive": 1,
+    "false_positive": 55,
+    "false_negative": 127,
+    "true_negative": 1,
+    "precision": 0.018,
+    "recall": 0.008,
+    "f1": 0.011
+  },
+  "per_brand": [
+    {
+      "brand": "alfa romeo",
+      "labelled": 2,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "audi",
+      "labelled": 9,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "bmw",
+      "labelled": 13,
+      "predictions": 3,
+      "correct": 1,
+      "precision": 0.333,
+      "recall": 0.077
+    },
+    {
+      "brand": "byd",
+      "labelled": 0,
+      "predictions": 53,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "citroen",
+      "labelled": 13,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "daihatsu",
+      "labelled": 11,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "fiat",
+      "labelled": 3,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "ford",
+      "labelled": 18,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "honda",
+      "labelled": 2,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "isuzu",
+      "labelled": 8,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "mazda",
+      "labelled": 2,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "mercedes-benz",
+      "labelled": 12,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "mitsubishi",
+      "labelled": 4,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "nissan",
+      "labelled": 13,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "peugeot",
+      "labelled": 1,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "renault",
+      "labelled": 6,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "skoda",
+      "labelled": 3,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "ssangyong",
+      "labelled": 1,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "suzuki",
+      "labelled": 4,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "toyota",
+      "labelled": 25,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "vauxhall",
+      "labelled": 15,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    {
+      "brand": "volkswagen",
+      "labelled": 18,
+      "predictions": 0,
+      "correct": 0,
+      "precision": 0.0,
+      "recall": 0.0
+    }
+  ],
+  "top_confusions": [
+    {
+      "label": "toyota",
+      "predicted": "(no commit)",
+      "count": 17
+    },
+    {
+      "label": "ford",
+      "predicted": "(no commit)",
+      "count": 16
+    },
+    {
+      "label": "vauxhall",
+      "predicted": "(no commit)",
+      "count": 12
+    },
+    {
+      "label": "volkswagen",
+      "predicted": "(no commit)",
+      "count": 11
+    },
+    {
+      "label": "mercedes-benz",
+      "predicted": "(no commit)",
+      "count": 11
+    },
+    {
+      "label": "daihatsu",
+      "predicted": "byd",
+      "count": 11
+    },
+    {
+      "label": "bmw",
+      "predicted": "(no commit)",
+      "count": 10
+    },
+    {
+      "label": "nissan",
+      "predicted": "(no commit)",
+      "count": 10
+    },
+    {
+      "label": "citroen",
+      "predicted": "(no commit)",
+      "count": 9
+    },
+    {
+      "label": "toyota",
+      "predicted": "byd",
+      "count": 8
+    },
+    {
+      "label": "audi",
+      "predicted": "(no commit)",
+      "count": 7
+    },
+    {
+      "label": "volkswagen",
+      "predicted": "byd",
+      "count": 6
+    },
+    {
+      "label": "isuzu",
+      "predicted": "(no commit)",
+      "count": 5
+    },
+    {
+      "label": "renault",
+      "predicted": "(no commit)",
+      "count": 4
+    },
+    {
+      "label": "citroen",
+      "predicted": "byd",
+      "count": 4
+    }
+  ]
+}

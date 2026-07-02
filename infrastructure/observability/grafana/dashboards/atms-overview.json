@@ -1,0 +1,90 @@
+{
+  "title": "ATMS — Overview",
+  "description": "Top-level health: request rate, error rate, p95 latency per service. Cross-link to per-service dashboards.",
+  "tags": ["atms", "phase-b"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {"from": "now-6h", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "HTTP request rate per service",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum by (service_name) (rate(http_server_duration_milliseconds_count{namespace=\"atms\"}[5m]))",
+          "legendFormat": "{{service_name}}"
+        }
+      ],
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "HTTP P95 latency per service",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum by (service_name, le) (rate(http_server_duration_milliseconds_bucket{namespace=\"atms\"}[5m])))",
+          "legendFormat": "{{service_name}} p95"
+        }
+      ],
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8}
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Kafka send timeouts",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum by (name) (rate(atms_operation_timeouts_total{name=~\"kafka_send.*\"}[5m]))",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8}
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Circuit breaker transitions",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum by (name, from, to) (rate(atms_circuit_breaker_transitions_total[5m]))",
+          "legendFormat": "{{name}}: {{from}} → {{to}}"
+        }
+      ],
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8}
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Open circuit breakers",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "atms_circuit_breaker_state{state=\"open\"} == 1",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "gridPos": {"x": 0, "y": 16, "w": 12, "h": 6}
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Failsafe modes",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "atms_controller_mode == 1",
+          "legendFormat": "i#{{intersection_id}} → {{mode}}"
+        }
+      ],
+      "gridPos": {"x": 12, "y": 16, "w": 12, "h": 6}
+    }
+  ]
+}

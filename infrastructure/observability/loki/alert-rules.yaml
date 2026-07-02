@@ -1,0 +1,82 @@
+# Loki alerting rules — LogQL.
+# Loaded via the ruler component (single-binary Loki includes it).
+# Apply: kubectl -n observability create configmap loki-alert-rules \
+#         --from-file=alert-rules.yaml
+
+groups:
+  - name: atms_critical
+    interval: 30s
+    rules:
+
+      - alert: ControllerStuckInAllRedFlash
+        expr: |
+          count_over_time(
+            {service="traffic-controller"} |= "controller_mode_transition"
+              | json
+              | to_mode="all_red_flash"
+            [5m]
+          ) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: traffic-ops
+        annotations:
+          summary: "Intersection {{ $labels.intersection_id }} entered ALL_RED_FLASH"
+          runbook: "https://docs.atms/runbooks/failsafe#4-recovering-from-all_red_flash"
+
+      - alert: ControllerFlapEscalation
+        expr: |
+          rate(
+            {service="traffic-controller"} |= "controller_mode_transition"
+              | json
+              | reason="flap_threshold"
+            [15m]
+          ) > 0
+        for: 0m
+        labels:
+          severity: critical
+          team: traffic-ops
+        annotations:
+          summary: "Flap escalation on intersection {{ $labels.intersection_id }}"
+
+      - alert: LogErrorBurst
+        expr: |
+          sum by (service) (
+            rate({namespace="atms"} | json | level="error" [5m])
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "Error log rate elevated on {{ $labels.service }} (>0.5/s for 5m)"
+
+      - alert: InvalidDecisionBurst
+        expr: |
+          count_over_time(
+            {service="traffic-controller"} | json | event="invalid_decision" [10m]
+          ) > 30
+        for: 0m
+        labels:
+          severity: warning
+          team: traffic-ops
+        annotations:
+          summary: "Decision validation failures spiking on {{ $labels.intersection_id }}"
+
+  - name: atms_security
+    interval: 1m
+    rules:
+
+      - alert: AuthDenialSpike
+        expr: |
+          sum by (service) (
+            rate(
+              {namespace="atms"} | json | event="operator_action" | outcome="denied" [10m]
+            )
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "Auth denial rate > 1/s on {{ $labels.service }} — possible brute force"

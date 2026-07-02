@@ -1,0 +1,32 @@
+{
+  "_comment": "Baseline KPIs for the rush-hour scenario. Update procedure: docs/runbooks/sim-regression.md §3. The numbers below are PLACEHOLDERS captured before the first real SUMO bench run — the CI workflow will fail every PR until they are replaced with a captured-from-SUMO baseline (or the workflow is gated to optional until then).",
+  "scenario": "rush-hour",
+  "captured_at": "2026-05-30",
+  "captured_git_sha": "PLACEHOLDER",
+  "captured_sumo_version": "PLACEHOLDER",
+  "captured_seed": 42,
+  "captured_max_steps": 3600,
+  "kpis": {
+    "scenario": "rush-hour",
+    "sim_duration_s": 3600.0,
+    "sim_steps": 3600,
+    "avg_delay_s": 22.0,
+    "max_queue_length": 18,
+    "throughput_vph": 1100.0,
+    "conflicts": 0,
+    "mode_dwell_s": {
+      "ai_adaptive": 3540.0,
+      "fixed_time": 60.0,
+      "all_red_flash": 0.0
+    },
+    "preempt_events": 0,
+    "ped_calls_served": 0
+  },
+  "tolerances": {
+    "delay_pct_tolerance": 0.10,
+    "queue_pct_tolerance": 0.10,
+    "throughput_pct_tolerance": 0.05,
+    "preempt_abs_tolerance": 1,
+    "ped_abs_tolerance": 1
+  }
+}

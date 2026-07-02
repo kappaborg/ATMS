@@ -1,0 +1,39 @@
+# Tempo Helm values — single-binary trace TSDB.
+# Chart: grafana/tempo
+
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9095
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+
+ingester:
+  trace_idle_period: 10s
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    block_retention: 168h  # 7d dev; prod overlay sets 2160h (90d)
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /var/tempo/traces
+
+persistence:
+  enabled: true
+  size: 50Gi
+
+resources:
+  limits:
+    cpu: 1
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 256Mi

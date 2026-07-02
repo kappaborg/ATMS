@@ -1,0 +1,66 @@
+# Bosnia and Herzegovina fleet emission multiplier overlay.
+#
+# Layered on top of `shared/atms_common/emissions._DEFAULT_BRAND_MULTIPLIERS`
+# (which is UK/DVM-Car-leaning). Numbers here reflect:
+#
+# 1. The BiH passenger-car fleet's high share of OLDER imported used vehicles
+#    from Germany/Austria/Italy. Average fleet age in BiH ≈ 16 years (vs
+#    ~9 in UK/DE) → systematically higher per-brand emission factors than
+#    the global average.
+#
+# 2. Heavy diesel share — used-import market favours diesels with longer
+#    legacy lifetimes than UK petrol fleet.
+#
+# 3. Legacy brands still on the road but absent from the default table:
+#    Zastava/Yugo (1980s-90s domestic; rare but counted), Lada (Russian
+#    imports), Dacia (Renault subsidiary, common new), Yugo M-series.
+#
+# 4. Brands the default table already covers stay at the same multiplier
+#    unless BiH-specific deviation is significant.
+#
+# Sources for the multipliers (not exact, calibrate per pilot):
+# - EEA "EU vehicle fleet emission factors" reports (latest available)
+# - BiH Federation Statistical Office vehicle registrations
+# - WLTP-equivalent estimates for older import cohorts
+#
+# Override per pilot via SiteConfig (Phase 6+) or by editing this file
+# and pointing the chamber at it.
+
+# Brands added (not in default UK table):
+new_brands:
+  zastava: 1.40   # Yugo-era domestic; 1980s-90s technology
+  lada: 1.35      # Russian; older imports common in BiH
+  yugo: 1.40      # Same family as Zastava but kept distinct for telemetry
+  jagua-land-rover: 1.20  # operator alias for legacy fleets
+
+# Brands present in default table but adjusted upward for BiH (older
+# imported cohort). The multiplier here REPLACES the default at runtime.
+adjustments:
+  # Diesel-heavy fleets — BiH imports skew toward 5-15 year old EU diesels
+  volkswagen: 1.10   # was 1.00 — adjusted for older TDI fleet share
+  skoda: 1.05        # was 1.00 — same reasoning, slightly less skew
+  audi: 1.20         # was 1.10 — premium-old TDI imports
+  opel: 1.10         # was 1.00 — Vectra/Astra older TDI fleet
+  ford: 1.10         # was 1.05 — Mondeo TDCi older fleet
+  citroen: 1.05      # was 0.95 — older HDi diesels common
+  peugeot: 1.05      # was 0.95 — same as Citroen
+  renault: 1.00      # was 0.95 — dCi older fleet but newer than VAG
+  fiat: 1.00         # was 0.90 — older diesels less efficient than new
+  # Premium older imports skew worse
+  bmw: 1.20          # was 1.10 — older 3-series, 5-series TDI imports
+  mercedes-benz: 1.20 # was 1.10 — older C/E-class CDI fleet
+  # Eastern European brands well-represented in BiH
+  dacia: 0.95        # was 1.00 — Logan/Sandero newer + efficient
+
+# Region notes (informational, no runtime effect):
+region:
+  country_code: BA
+  pilot_city: Sarajevo
+  fleet_year_avg: 16     # years; from BiH stats 2024
+  diesel_share_pct: 56   # passenger cars; BiH stats 2024
+  notes: |
+    Sarajevo specific: significant transit (GRAS trolleybuses + buses)
+    so TSP coverage matters more than in smaller BiH cities. Centar +
+    Stari Grad districts have legacy intersection signals — pilot
+    candidate is Marijin Dvor or Skenderija junction where Swarco
+    controllers have been installed in the last 5 years.

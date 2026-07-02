@@ -1,0 +1,25 @@
+# CODEOWNERS — gates safety-critical paths.
+#
+# Branch protection should require approval from a code owner for any PR
+# touching the paths listed here. Until concrete teams exist, the placeholders
+# below should be replaced with the real GitHub usernames / teams during
+# repo setup. Search for `@OWNER-` to find every placeholder.
+
+# --- Phase A safety-critical core ---
+/services/traffic-controller/                    @OWNER-traffic-safety
+/shared/atms_common/                             @OWNER-traffic-safety
+/services/decision-engine/                       @OWNER-traffic-safety
+
+# --- ADRs and runbooks are change-controlled docs ---
+/docs/adr/                                       @OWNER-traffic-safety @OWNER-architecture
+/docs/runbooks/                                  @OWNER-traffic-safety @OWNER-sre
+/docs/PRODUCTION_GAPS.md                         @OWNER-architecture
+/docs/assumptions.md                             @OWNER-architecture
+/docs/SENIOR_ENGINEER_PROMPT.md                  @OWNER-architecture
+
+# --- CI / release pipeline ---
+/.github/                                        @OWNER-sre @OWNER-security
+/pyproject.toml                                  @OWNER-sre
+
+# --- Default owner for anything else ---
+*                                                @OWNER-engineering

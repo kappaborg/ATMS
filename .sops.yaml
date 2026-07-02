@@ -1,0 +1,42 @@
+# SOPS configuration — see ADR-0002.
+#
+# Each `creation_rules` entry pins one or more age recipients (public keys) to
+# a file path pattern. `sops` will encrypt new files matching the regex to
+# those recipients; decryption requires the corresponding private key.
+#
+# To rotate a recipient (revoke or add a developer):
+#   1. Edit the relevant recipient list below.
+#   2. `make secrets-rotate-recipients` re-encrypts every matching file.
+#   3. Commit the result. Old recipients can no longer decrypt new commits.
+#
+# Bootstrap (one-time, per developer):
+#   age-keygen -o ~/.config/sops/age/keys.txt
+#   # Share the PUBLIC key (the "# public key: ..." line) with the project
+#   # owner and have them add it under the relevant `age:` block here.
+#
+# IMPORTANT: never check the private key into git. Only public keys
+# (`age1...`) go in this file.
+
+creation_rules:
+  # --- Dev secrets: every engineer on the project can decrypt ---
+  - path_regex: deploy/secrets/dev/.*\.(env|yaml|yml|json)$
+    encrypted_regex: ^(data|stringData|.*PASSWORD|.*SECRET|.*TOKEN|.*KEY)$
+    age: >-
+      age1_REPLACE_WITH_DEV_TEAM_PUBLIC_KEY_FROM_AGE_KEYGEN
+
+  # --- Staging: ops + on-call only ---
+  - path_regex: deploy/secrets/staging/.*\.(env|yaml|yml|json)$
+    encrypted_regex: ^(data|stringData|.*PASSWORD|.*SECRET|.*TOKEN|.*KEY)$
+    age: >-
+      age1_REPLACE_WITH_STAGING_OPS_PUBLIC_KEY
+
+  # --- Production: prod ops + cluster-bound key (HSM-backed) ---
+  - path_regex: deploy/secrets/prod/.*\.(env|yaml|yml|json)$
+    encrypted_regex: ^(data|stringData|.*PASSWORD|.*SECRET|.*TOKEN|.*KEY)$
+    age: >-
+      age1_REPLACE_WITH_PROD_OPS_PUBLIC_KEY,age1_REPLACE_WITH_CLUSTER_BOUND_PUBLIC_KEY
+
+  # --- Catch-all: any other *.sops.* file under deploy/secrets/ ---
+  - path_regex: deploy/secrets/.*\.sops\.(env|yaml|yml|json)$
+    age: >-
+      age1_REPLACE_WITH_PROJECT_OWNER_PUBLIC_KEY

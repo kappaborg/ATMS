@@ -1,0 +1,30 @@
+# Linkerd control-plane Helm values.
+# Chart: linkerd/linkerd-control-plane
+
+identity:
+  externalCA: true            # trust anchor lives in `linkerd-trust-anchor` Secret
+  issuer:
+    scheme: kubernetes.io/tls
+    # cert-manager populates these Secrets via cert-manager-issuer.yaml
+    secretName: linkerd-identity-issuer
+
+# Proxy resource hints — apply to every injected sidecar.
+proxy:
+  resources:
+    cpu:
+      request: 5m
+      limit: 200m
+    memory:
+      request: 15Mi
+      limit: 256Mi
+  # Sample 1% of mesh-internal HTTP requests for the linkerd-viz dashboard.
+  # We get the rest from OTel (B2).
+  inboundConnectTimeout: 100ms
+  outboundConnectTimeout: 1000ms
+
+# Default deny — pod identity required before linkerd-proxy accepts a
+# connection. Matched by the Kubernetes NetworkPolicies under
+# k8s/base/network-policies/.
+proxyInit:
+  ignoreInboundPorts: ""
+  ignoreOutboundPorts: ""

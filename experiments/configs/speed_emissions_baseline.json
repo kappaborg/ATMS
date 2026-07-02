@@ -1,0 +1,41 @@
+{
+  "run_id": "speed_emissions_baseline",
+  "description": "Baseline offline run: speed + emissions, distance-aware filtering on, no OCR/brand/multiview.",
+  "input": {
+    "frame_stride": 1,
+    "max_frames": 0
+  },
+  "model": {
+    "device": "cpu",
+    "yolo_model_path": "yolov8n.pt",
+    "yolo_timeout_seconds": 1.0,
+    "max_yolo_detections": 200
+  },
+  "pipeline": {
+    "process_plates": false,
+    "process_brand": false,
+    "process_multiview": false,
+    "run_atms_prediction": false,
+    "return_all_tracked_objects": true,
+    "max_tracked_objects": 200,
+    "speed_confidence_threshold": 0.5,
+    "low_confidence_speed_to_none": true,
+    "compute_emissions_for_all_tracked_objects": true,
+    "use_distance_aware_filtering": true
+  },
+  "speed": {
+    "fps_override": 0,
+    "pixel_to_meter_ratio": 0.05,
+    "min_track_length": 5,
+    "max_track_history": 30,
+    "use_kalman": true,
+    "use_cvm": true,
+    "use_wls": true
+  },
+  "output": {
+    "results_dir": "experiments/results",
+    "write_csv": true,
+    "write_summary_json": true
+  }
+}
+

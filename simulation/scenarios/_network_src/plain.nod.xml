@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Plain node spec for the shared single-intersection ATMS network.
+     Regenerate network.net.xml with:
+       netconvert -c simulation/scenarios/_network_src/netconvert.cfg
+     The resulting network.net.xml is consumed by both the `rush-hour` and
+     `demo` scenarios (copied into each). -->
+<nodes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/nodes_file.xsd">
+  <node id="intersection" x="0"   y="0"    type="traffic_light" tl="intersection"/>
+  <node id="n_north"      x="0"   y="200"  type="priority"/>
+  <node id="n_south"      x="0"   y="-200" type="priority"/>
+  <node id="n_east"       x="200" y="0"    type="priority"/>
+  <node id="n_west"       x="-200" y="0"   type="priority"/>
+</nodes>

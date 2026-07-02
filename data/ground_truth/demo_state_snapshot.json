@@ -1,0 +1,67 @@
+{
+  "sim_time_s": 36.1,
+  "step": 1082,
+  "mode": "AI_ADAPTIVE",
+  "commanded_phase": "real_video",
+  "source": "video",
+  "video_path": "videos/TEST.mp4",
+  "brand_classifier_enabled": true,
+  "brand_classifier_model": "trained:dvm_car_v1",
+  "per_direction": {
+    "north_south": {
+      "vehicle_count": 3,
+      "average_emission": 225.6,
+      "average_waiting_time": 0.0,
+      "average_velocity": 40.97,
+      "total_emission": 676.8,
+      "environmental_impact_score": 100.0,
+      "emissions": {
+        "direction": "north_south",
+        "vehicle_count": 3,
+        "average_emission_g_per_km": 225.6,
+        "instantaneous_co2_g_per_min": 312.88
+      },
+      "emissions_baseline": {
+        "direction": "north_south",
+        "vehicle_count": 3,
+        "average_emission_g_per_km": 228.0,
+        "instantaneous_co2_g_per_min": 326.93
+      },
+      "brand_breakdown": {
+        "citroen": 1
+      },
+      "brand_confidence_by_brand": {
+        "citroen": 0.965
+      },
+      "brand_identified_count": 1
+    },
+    "east_west": {
+      "vehicle_count": 14,
+      "average_emission": 161.75,
+      "average_waiting_time": 0.0,
+      "average_velocity": 95.8,
+      "total_emission": 2264.53,
+      "environmental_impact_score": 97.05,
+      "emissions": {
+        "direction": "east_west",
+        "vehicle_count": 14,
+        "average_emission_g_per_km": 161.75,
+        "instantaneous_co2_g_per_min": 3407.07
+      },
+      "emissions_baseline": {
+        "direction": "east_west",
+        "vehicle_count": 14,
+        "average_emission_g_per_km": 163.42,
+        "instantaneous_co2_g_per_min": 3476.82
+      },
+      "brand_breakdown": {
+        "toyota": 1
+      },
+      "brand_confidence_by_brand": {
+        "toyota": 0.96
+      },
+      "brand_identified_count": 1
+    }
+  },
+  "recent_events": []
+}

@@ -1,0 +1,18 @@
+[project]
+name = "atms-decision-engine"
+version = "1.0.0"
+description = "AI-powered adaptive traffic decision engine (ATMS)."
+requires-python = ">=3.11"
+
+[tool.ruff]
+extend = "../../pyproject.toml"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+markers = [
+    "integration: tests that touch real infrastructure",
+]

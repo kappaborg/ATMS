@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- sumo-gui view settings for the demo scenario.
+
+     The view CENTRING happens via TraCI at simulation startup (see
+     simulation/demo/__main__.py:traci.gui.setBoundary). The XML <viewport>
+     element's `zoom` value is interpreted differently across SUMO versions
+     (it broke in 1.27), so we set the boundary programmatically and use
+     this file only for the visual SCHEME (vehicle size, colour, etc.).
+
+     Vehicle scale is slightly enlarged so individual cars are readable when
+     the demo is projected in a meeting room. -->
+<viewsettings>
+  <scheme name="real world">
+    <vehicles vehicleQuality="2"
+              vehicle_minSize="2"
+              vehicle_exaggeration="3"
+              vehicle_constantSize="0"
+              showBlinker="1"
+              drawMinGap="1"
+              vehicleName_show="0"/>
+    <junctions junctionMode="0" drawShape="1" drawCrossings="1" drawWalkingareas="1"/>
+    <edges laneEdgeMode="0" scaleMode="0" drawLinkTLIndex="0" drawLinkJunctionIndex="0"/>
+  </scheme>
+</viewsettings>

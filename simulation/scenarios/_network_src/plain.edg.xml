@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Plain edge spec — four legs, one lane each, 50 km/h (13.89 m/s) speed
+     limit. Names match the harness expectations:
+       ns_in / ns_out — north-south through movement
+       ew_in / ew_out — east-west through movement -->
+<edges xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/edges_file.xsd">
+  <edge id="ns_in"  from="n_north" to="intersection" numLanes="1" speed="13.89"/>
+  <edge id="ns_out" from="intersection" to="n_south" numLanes="1" speed="13.89"/>
+  <edge id="ew_in"  from="n_east"  to="intersection" numLanes="1" speed="13.89"/>
+  <edge id="ew_out" from="intersection" to="n_west"  numLanes="1" speed="13.89"/>
+</edges>

@@ -1,0 +1,47 @@
+# Custom gitleaks rules for ATMS.
+# Inherits the default ruleset; the additions below catch ATMS-specific
+# patterns that the defaults miss.
+#
+# Allowlist any file path that is *intended* to be encrypted (the `*.sops*`
+# convention) — gitleaks would otherwise yell about the wrapped ciphertext.
+
+[extend]
+useDefault = true
+
+# --- Custom rules ---
+
+[[rules]]
+id = "atms-hs256-secret"
+description = "Plaintext AUTH_HS256_SECRET assignment"
+regex = '''(?i)AUTH_HS256_SECRET\s*[:=]\s*['"]?[A-Za-z0-9+/_\-]{8,}['"]?'''
+keywords = ["AUTH_HS256_SECRET"]
+
+[[rules]]
+id = "atms-postgres-password"
+description = "Plaintext POSTGRES_PASSWORD assignment"
+regex = '''(?i)POSTGRES_PASSWORD\s*[:=]\s*['"]?[^\s\$]{4,}['"]?'''
+keywords = ["POSTGRES_PASSWORD"]
+
+[[rules]]
+id = "atms-age-private-key"
+description = "Age private key (must never be committed)"
+regex = '''AGE-SECRET-KEY-1[0-9A-Z]+'''
+keywords = ["AGE-SECRET-KEY"]
+
+# --- Global allowlist ---
+# SOPS-encrypted files contain high-entropy ciphertext that the default
+# entropy rules will flag. They are *meant* to be encrypted; let them pass.
+[allowlist]
+paths = [
+    '''deploy/secrets/.*\.sops($|\..*)''',
+    '''.*\.sops\.(env|yaml|yml|json)$''',
+    '''docs/archived/.*''',
+]
+
+# Exclude the env template and ADR examples (intentional placeholder values).
+regexes = [
+    '''AUTH_HS256_SECRET\s*=\s*$''',                    # .env.example empty value
+    '''POSTGRES_PASSWORD\s*=\s*$''',                    # .env.example empty value
+    '''age1_REPLACE_WITH_.*_PUBLIC_KEY''',              # .sops.yaml placeholders
+    '''(?i)example|placeholder|dummy|sample|fake''',    # docs / examples
+]

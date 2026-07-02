@@ -1,0 +1,14 @@
+# Linkerd Viz — dashboard + Prometheus integration.
+# Lightweight defaults. Pin per env via Flux overlay.
+
+prometheusUrl: http://prometheus-server.observability.svc.cluster.local
+tap:
+  enabled: true
+metricsAPI:
+  resources:
+    cpu:
+      request: 50m
+      limit: 500m
+    memory:
+      request: 64Mi
+      limit: 512Mi

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Traffic-light logic for the intersection.
+
+     State string is 2 chars long: one per controlled connection in linkIndex
+     order (NS through, EW through). Phase indices align with
+     simulation/harness/runner.py:_PHASE_TO_TLPROGRAM and
+     simulation/demo/__main__.py's wire_to_tl_phase():
+       0 = ns_green   (NS through, EW red)
+       1 = ns_yellow  (NS clearing — used as the all_red intergreen as well)
+       2 = ew_green
+       3 = ew_yellow -->
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+  <tlLogic id="intersection" type="static" programID="0" offset="0">
+    <phase duration="32" state="Gr"/>
+    <phase duration="3"  state="yr"/>
+    <phase duration="32" state="rG"/>
+    <phase duration="3"  state="ry"/>
+  </tlLogic>
+</additional>

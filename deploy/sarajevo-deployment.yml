@@ -1,0 +1,232 @@
+---
+# Ansible playbook — ATMS pilot deployment to Sarajevo edge nodes.
+#
+# Phase 12.2 deliverable. Usage:
+#
+#     ansible-playbook -i deploy/inventory-sarajevo.ini \
+#         deploy/sarajevo-deployment.yml
+#
+# Inventory file `deploy/inventory-sarajevo.ini` defines the per-
+# intersection edge hosts; KJP networks team owns that file.
+#
+# This playbook:
+# 1. Provisions the atms user, install dirs, secrets dir
+# 2. Installs Python deps (no system-level pollution)
+# 3. Drops site config + secrets template (operator fills passphrases)
+# 4. Installs systemd units (chamber + console + audit forwarder timer)
+# 5. Enables + starts services
+# 6. Runs acceptance + failover tests as smoke check
+
+- name: ATMS pilot deployment — Sarajevo
+  hosts: atms_edge
+  become: true
+  vars:
+    atms_user: atms
+    atms_group: atms
+    atms_install_dir: /opt/atms/current
+    atms_config_dir: /etc/atms
+    atms_lib_dir: /var/lib/atms
+    atms_log_dir: /var/log/atms
+    python_version: "3.12"
+
+  tasks:
+    - name: Ensure atms group exists
+      ansible.builtin.group:
+        name: "{{ atms_group }}"
+        system: yes
+
+    - name: Ensure atms user exists
+      ansible.builtin.user:
+        name: "{{ atms_user }}"
+        group: "{{ atms_group }}"
+        system: yes
+        shell: /usr/sbin/nologin
+        home: "{{ atms_install_dir }}"
+
+    - name: Create install / state / log dirs
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ atms_user }}"
+        group: "{{ atms_group }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { path: "{{ atms_install_dir }}", mode: "0755" }
+        - { path: "{{ atms_config_dir }}",  mode: "0750" }
+        - { path: "{{ atms_lib_dir }}",     mode: "0750" }
+        - { path: "{{ atms_log_dir }}",     mode: "0750" }
+
+    - name: Install system packages
+      ansible.builtin.apt:
+        name:
+          - "python{{ python_version }}"
+          - "python{{ python_version }}-venv"
+          - "python{{ python_version }}-dev"
+          - python3-pip
+          - git
+          - nginx
+          - prometheus-node-exporter
+        state: present
+        update_cache: yes
+
+    - name: Clone ATMS code
+      ansible.builtin.git:
+        repo: "{{ atms_repo_url | default('https://github.com/kappasutra/Traffic.git') }}"
+        dest: "{{ atms_install_dir }}"
+        version: "{{ atms_version | default('main') }}"
+        force: yes
+      become_user: "{{ atms_user }}"
+
+    - name: Install Python dependencies into virtual env
+      ansible.builtin.pip:
+        requirements: "{{ atms_install_dir }}/requirements.txt"
+        virtualenv: "{{ atms_install_dir }}/.venv"
+        virtualenv_command: "python{{ python_version }} -m venv"
+      become_user: "{{ atms_user }}"
+
+    - name: Drop site config
+      ansible.builtin.copy:
+        src: "{{ atms_install_dir }}/services/observability/sarajevo-pilot.yaml"
+        dest: "{{ atms_config_dir }}/{{ inventory_hostname }}.yaml"
+        owner: "{{ atms_user }}"
+        group: "{{ atms_group }}"
+        mode: "0640"
+        remote_src: yes
+
+    - name: Generate secrets template (KJP ops fills in actual values)
+      ansible.builtin.copy:
+        dest: "{{ atms_config_dir }}/secrets.env"
+        owner: "{{ atms_user }}"
+        group: "{{ atms_group }}"
+        mode: "0600"
+        force: no  # don't overwrite existing
+        content: |
+          # ATMS secrets — fill in from KJP secrets manager.
+          ATMS_NTCIP_AUTH_KEY=CHANGEME
+          ATMS_NTCIP_PRIV_KEY=CHANGEME
+          ATMS_MQTT_USERNAME=atms-chamber-{{ inventory_hostname }}
+          ATMS_MQTT_PASSWORD=CHANGEME
+          ATMS_TIMESCALE_DSN=postgresql://atms_writer:CHANGEME@timescale.kjp.local:5432/atms_audit
+          ATMS_CAMERA_RTSP_{{ inventory_hostname }}=rtsp://10.42.10.5:554/Streaming/Channels/101
+
+    - name: Install systemd unit — atms-chamber@
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/atms-chamber@.service
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=ATMS Decision Chamber — %i
+          After=network-online.target
+          Wants=network-online.target
+
+          [Service]
+          Type=simple
+          User={{ atms_user }}
+          Group={{ atms_group }}
+          WorkingDirectory={{ atms_install_dir }}
+          EnvironmentFile={{ atms_config_dir }}/secrets.env
+          ExecStart={{ atms_install_dir }}/.venv/bin/python -m simulation.demo \
+              --site-config {{ atms_config_dir }}/%i.yaml \
+              --video ${ATMS_CAMERA_RTSP_%i}
+          Restart=on-failure
+          RestartSec=10
+          StandardOutput=append:{{ atms_log_dir }}/chamber-%i.log
+          StandardError=append:{{ atms_log_dir }}/chamber-%i.err
+          MemoryMax=4G
+          CPUQuota=200%
+          NoNewPrivileges=true
+          PrivateTmp=true
+          ProtectSystem=strict
+          ProtectHome=true
+          ReadWritePaths={{ atms_lib_dir }} {{ atms_log_dir }} /tmp
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Install systemd unit — atms-operator-console
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/atms-operator-console.service
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=ATMS Operator Console (Streamlit)
+          After=network-online.target
+
+          [Service]
+          Type=simple
+          User={{ atms_user }}
+          Group={{ atms_group }}
+          WorkingDirectory={{ atms_install_dir }}
+          ExecStart={{ atms_install_dir }}/.venv/bin/streamlit run \
+              services/operator-console/src/app.py \
+              --server.address 127.0.0.1 --server.port 8501 \
+              --server.headless true
+          Restart=on-failure
+          StandardOutput=append:{{ atms_log_dir }}/console.log
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: yes
+
+    - name: Enable + start chamber for this intersection
+      ansible.builtin.systemd:
+        name: "atms-chamber@{{ inventory_hostname }}.service"
+        enabled: yes
+        state: started
+
+    - name: Enable + start operator console
+      ansible.builtin.systemd:
+        name: atms-operator-console.service
+        enabled: yes
+        state: started
+
+    - name: Smoke test — pilot acceptance tests
+      ansible.builtin.command:
+        argv:
+          - "{{ atms_install_dir }}/.venv/bin/python"
+          - "scripts/pilot_acceptance_tests.py"
+          - "--site-config"
+          - "{{ atms_config_dir }}/{{ inventory_hostname }}.yaml"
+          - "--output-report"
+          - "{{ atms_log_dir }}/acceptance-{{ ansible_date_time.iso8601_basic_short }}.md"
+      args:
+        chdir: "{{ atms_install_dir }}"
+      register: acceptance_result
+      become_user: "{{ atms_user }}"
+      changed_when: false
+      failed_when: acceptance_result.rc != 0
+
+    - name: Smoke test — failover scenarios
+      ansible.builtin.command:
+        argv:
+          - "{{ atms_install_dir }}/.venv/bin/python"
+          - "scripts/failover_tests.py"
+          - "--output-report"
+          - "{{ atms_log_dir }}/failover-{{ ansible_date_time.iso8601_basic_short }}.md"
+      args:
+        chdir: "{{ atms_install_dir }}"
+      register: failover_result
+      become_user: "{{ atms_user }}"
+      changed_when: false
+      failed_when: failover_result.rc != 0
+
+    - name: Final status check
+      ansible.builtin.systemd:
+        name: "atms-chamber@{{ inventory_hostname }}.service"
+      register: chamber_status
+
+    - name: Report deployment outcome
+      ansible.builtin.debug:
+        msg: |
+          ATMS deployment complete for {{ inventory_hostname }}.
+          Chamber service: {{ chamber_status.status.ActiveState }}
+          Acceptance tests: {{ 'PASS' if acceptance_result.rc == 0 else 'FAIL' }}
+          Failover tests:   {{ 'PASS' if failover_result.rc == 0 else 'FAIL' }}
+          Next: fill in {{ atms_config_dir }}/secrets.env with real values.

@@ -1,0 +1,82 @@
+@startuml ATMS_Use_Case_Diagram
+
+!define RECTANGLE class
+
+skinparam packageStyle rectangle
+skinparam usecase {
+    BackgroundColor lightgreen
+    BorderColor black
+    FontSize 12
+}
+
+skinparam actor {
+    BackgroundColor lightblue
+    BorderColor black
+    FontSize 12
+}
+
+title AI-Powered Adaptive Traffic Management System\nUse Case Diagram
+
+' Actors
+actor "Traffic Engineer" as TE
+actor "Traffic Management\nSystem" as TMS
+actor "Camera System" as CAM
+actor "Signal Controller" as SC
+actor "Intersection\nCoordinator" as IC
+
+' System Boundary
+rectangle "ATMS System" {
+    ' Use Cases
+    usecase "UC-001: Real-Time\nTraffic Detection" as UC1
+    usecase "UC-002: Signal\nOptimization" as UC2
+    usecase "UC-003: Multi-Intersection\nCoordination" as UC3
+    usecase "UC-004: Speed &\nEmission Calculation" as UC4
+    usecase "UC-005: Traffic\nAnalytics" as UC5
+}
+
+' Relationships
+TMS --> UC1 : <<uses>>
+CAM --> UC1 : <<uses>>
+TMS --> UC2 : <<uses>>
+SC --> UC2 : <<uses>>
+TMS --> UC3 : <<uses>>
+IC --> UC3 : <<uses>>
+TMS --> UC4 : <<uses>>
+TE --> UC5 : <<uses>>
+TMS --> UC5 : <<uses>>
+
+' Extend relationships
+UC1 ..> UC4 : <<extends>>
+UC1 ..> UC2 : <<extends>>
+UC2 ..> UC3 : <<extends>>
+
+note right of UC1
+  Detects vehicles, pedestrians,
+  and other traffic objects
+  in real-time video streams
+end note
+
+note right of UC2
+  Dynamically optimizes traffic
+  signal timing based on
+  real-time conditions
+end note
+
+note right of UC3
+  Coordinates multiple intersections
+  for green wave optimization
+end note
+
+note right of UC4
+  Calculates real-world speeds
+  and CO2 emissions using
+  only measured values
+end note
+
+note right of UC5
+  Analyzes historical data
+  and generates reports
+end note
+
+@enduml
+

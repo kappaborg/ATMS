@@ -1,0 +1,30 @@
+# ATMS Decision Chamber — Prometheus scrape config.
+#
+# Drop this into your existing prometheus.yml under `scrape_configs:`
+# or run a dedicated Prometheus instance pointed at it. The chamber
+# exposes metrics on http://<intersection-host>:9090/metrics in
+# standard Prometheus text format.
+#
+# Production: list each intersection's edge host. Use service discovery
+# (Consul, DNS, file_sd) for dynamic intersection registration. For a
+# fixed corridor of 4 intersections, static_configs is fine.
+
+scrape_configs:
+  - job_name: 'atms-chamber'
+    scrape_interval: 5s
+    scrape_timeout: 3s
+    metrics_path: /metrics
+    static_configs:
+      # Replace these with your intersection edge hosts. The `intersection`
+      # label gets overridden by the chamber's own metric labels — this
+      # is just the target.
+      - targets: ['localhost:9090']
+        labels:
+          deployment: 'dev'
+          city: 'demo'
+
+  # Optional: scrape the operator console if you wire metrics there too
+  # - job_name: 'atms-operator-console'
+  #   metrics_path: /healthz/metrics
+  #   static_configs:
+  #     - targets: ['operator-console:8501']

@@ -1,0 +1,25 @@
+fastapi==0.104.1
+uvicorn==0.24.0
+aiokafka==0.8.1
+pydantic==2.5.0
+python-json-logger==2.0.7
+# Phase A6 — JWT/RBAC. `cryptography` enables RS256 verification once the
+# production IdP path is enabled (see docs/adr/0006-rbac-jwt-roles.md).
+pyjwt[crypto]>=2.8
+prometheus_client>=0.19
+# Phase B1 — shared library deps.
+pydantic-settings>=2.0
+structlog>=24.0
+# Phase B4 — resilience (Retry primitive).
+tenacity>=8.0
+# Phase B2 — OpenTelemetry tracing (ADR-0010).
+opentelemetry-api>=1.20
+opentelemetry-sdk>=1.20
+opentelemetry-exporter-otlp-proto-grpc>=1.20
+opentelemetry-instrumentation-fastapi>=0.40b0
+# Phase C4 — async Postgres + Alembic migrations (ADR-0013).
+asyncpg>=0.29
+alembic>=1.13
+psycopg2-binary>=2.9
+# Phase D1 — model registry client (ADR-0015). Skinny — server runs as its own pod.
+mlflow-skinny>=2.10

@@ -1,0 +1,73 @@
+# Promtail Helm values — DaemonSet scraping pod stdout.
+# Chart: grafana/promtail
+# Pipeline parses JSON and extracts B1/B2/B3 fields as labels (low-cardinality only).
+
+config:
+  clients:
+    - url: http://loki-gateway.observability.svc.cluster.local/loki/api/v1/push
+
+  snippets:
+    pipelineStages:
+      # Standard cri parse first (already JSON-wrapping the line).
+      - cri: {}
+      # Parse the JSON payload our services emit.
+      - json:
+          expressions:
+            level: level
+            service: service
+            event: event
+            intersection_id: intersection_id
+            trace_id: trace_id
+            span_id: span_id
+            decision_id: decision_id
+            timestamp: timestamp
+      # Promote a tight set to labels. Everything else stays as JSON in the
+      # message and is queryable via LogQL `| json`. Keep label set small
+      # (ADR-0011): adding `trace_id` as a label would blow up cardinality.
+      - labels:
+          level:
+          service:
+          intersection_id:
+      # Re-parse timestamp from our ISO8601 field.
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+          fallback_formats:
+            - RFC3339
+
+scrapeConfigs: |
+  # Use the chart's default scrape (kubernetes_sd_configs over /var/log/containers).
+  # Add a custom relabel to drop tooling pods we don't care about.
+  - job_name: kubernetes-pods
+    pipeline_stages: {{ toYaml .Values.config.snippets.pipelineStages | nindent 8 }}
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_node_name]
+        target_label: __host__
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_part_of]
+        regex: atms
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - source_labels: [__meta_kubernetes_pod_container_name]
+        target_label: container
+      - replacement: /var/log/pods/*$1/*.log
+        separator: /
+        source_labels:
+          - __meta_kubernetes_pod_uid
+          - __meta_kubernetes_pod_container_name
+        target_label: __path__
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+serviceAccount:
+  create: true

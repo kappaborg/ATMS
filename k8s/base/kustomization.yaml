@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: atms-system
+
+resources:
+  - namespace.yaml
+  - configmaps/atms-config.yaml
+  - secrets/atms-secrets.yaml
+  - persistent-volumes/models-pvc.yaml
+  - deployments/ai-perception-deployment.yaml
+  - deployments/decision-engine-deployment.yaml
+  - hpa/ai-perception-hpa.yaml
+  # ServiceMonitor - Prometheus Operator installed, ServiceMonitor CRD available
+  - monitoring/ai-perception-servicemonitor.yaml
+
+labels:
+  - includeSelectors: true
+    pairs:
+      app.kubernetes.io/name: atms-traffic-system
+      app.kubernetes.io/version: "1.0.0"
+      app.kubernetes.io/managed-by: kustomize
+
