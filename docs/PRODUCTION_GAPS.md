@@ -15,7 +15,7 @@ Architecture decisions: [`adr/`](./adr/).
 |----|------|--------|-------|------|
 | H1 | `.env` in `.gitignore` + `.env.example` shipped | `[DONE]` | — | 2026-05-29 |
 | H2 | Untrack stale `venv/`, `__pycache__/`, `*.pt`, `Processed_Videos/` from git | `[DONE]` — repo initialised 2026-07-02; large assets/venvs excluded via .gitignore (756 files / 23 MB tracked) | — | 2026-07-02 |
-| H3 | Consolidate `realtime_video_processor.py` + `youtube_decision_processor.py` into `services/video-processor/` | `[TODO]` | — | — |
+| H3 | Consolidate `realtime_video_processor.py` + `youtube_decision_processor.py` into `services/video-processor/` | `[PARTIAL]` — 2026-07-02: duplicated legacy per-frame paths deleted from both scripts (~550 lines); ATMSPipeline is now the single implementation (verified end-to-end on a test clip). Folding the scripts into the service remains. | — | 2026-07-02 |
 | H4 | Archive stale `docs/PHASE*`, `WEEK*`, `*COMPLETE*`, `*STATUS*` | `[DONE]` (37 files moved) | — | 2026-05-29 |
 | H5 | ADR template + `docs/PRODUCTION_GAPS.md` | `[DONE]` | — | 2026-05-29 |
 | H7 | Repo-root `pyproject.toml` (ruff + mypy + coverage) | `[DONE]` (A4) | — | 2026-05-29 |

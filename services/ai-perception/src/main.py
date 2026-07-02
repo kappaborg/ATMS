@@ -20,6 +20,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 from shared.utils.logger import setup_logger
 from shared.models.base import HealthResponse, SensorDataMessage
 from shared.models.detection import TrafficMetrics, Detection, BoundingBox, ObjectClass
+from shared.atms_common.privacy import PlateAnonymizer, PrivacyError
 
 # Import config - ensure we're importing from src/config.py
 # When running with uvicorn src.main:app, we need to ensure src is in path
@@ -94,6 +95,30 @@ logger = setup_logger(
     service_name=perception_config.SERVICE_NAME,
     level=perception_config.LOG_LEVEL
 )
+
+
+# ---------------------------------------------------------------------------
+# Privacy boundary (ADR-0014): raw plate text never leaves this service.
+# Every plate reading is reduced to an HMAC-SHA256 subject_id here, at
+# ingestion; downstream topics/stores only ever see the hash.
+# ---------------------------------------------------------------------------
+
+def _build_plate_anonymizer() -> PlateAnonymizer:
+    import os
+    import secrets
+
+    salt = os.getenv("ATMS_PLATE_SALT", "")
+    if salt:
+        return PlateAnonymizer(salt=salt.encode("utf-8"))
+    logger.warning(
+        "ATMS_PLATE_SALT is not set — using an EPHEMERAL random salt. "
+        "subject_ids will NOT be stable across restarts or replicas. "
+        "Provision the salt via SOPS for any real deployment (ADR-0014)."
+    )
+    return PlateAnonymizer(salt=secrets.token_bytes(32))
+
+
+plate_anonymizer = _build_plate_anonymizer()
 
 # Prometheus metrics - using try/except to avoid duplicate registration during reload
 try:
@@ -1391,13 +1416,21 @@ async def process_frames():
                             logger.warning(f"Skipping plate with invalid bbox dimensions: {bbox_data}")
                             continue
                         
-                        # Send ALL plate detections to Kafka (even if OCR failed)
-                        # This helps with debugging and tracking
+                        # ADR-0014 privacy boundary: publish the HMAC
+                        # subject_id, never the raw plate text. Detection-only
+                        # records (OCR failed) are still sent for debugging.
+                        subject_id = None
+                        if plate_text and plate_text not in ['N/A', 'null', '', None]:
+                            try:
+                                subject_id = plate_anonymizer.subject_id_for(plate_text)
+                            except PrivacyError as pe:
+                                logger.warning(f"Plate anonymization rejected a reading: {pe}")
+
                         plate_data = {
-                            'plate_text': plate_text if plate_text and plate_text not in ['N/A', 'null', '', None] else None,
+                            'subject_id': subject_id,
                             'detection_confidence': plate_result.confidence_score if hasattr(plate_result, 'confidence_score') else 0.0,
                             'ocr_confidence': plate_confidence,
-                            'has_text': plate_text is not None and plate_text not in ['N/A', 'null', '', None],
+                            'has_text': subject_id is not None,
                             'bbox': bbox_data,
                             'frame_id': message.frame_id or f"{message.sensor_id}_{message.sequence_number}",
                             'timestamp': datetime.utcnow().isoformat()

@@ -2,6 +2,9 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+rule_files:
+  - alert-rules.yml
+
 # Ports must match docker-compose.services.yml (the source of truth):
 #   ai-perception 8004, analytics 8005, dashboard 8006, decision-engine 8007,
 #   sensor-fusion 8008, data-aggregator 8009, traffic-controller 8010,
