@@ -18,7 +18,7 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=atms
       - POSTGRES_USER=atms_user
-      - POSTGRES_PASSWORD=atms_password
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     volumes:
       - ./models:/app/models:ro
       - ./config:/app/config:ro
@@ -61,7 +61,7 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=atms
       - POSTGRES_USER=atms_user
-      - POSTGRES_PASSWORD=atms_password
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     networks:
       - atms-network
     depends_on:
@@ -220,7 +220,7 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=atms
       - POSTGRES_USER=atms_user
-      - POSTGRES_PASSWORD=atms_password
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     networks:
       - atms-network
     depends_on:
@@ -252,7 +252,7 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=atms
       - POSTGRES_USER=atms_user
-      - POSTGRES_PASSWORD=atms_password
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     networks:
       - atms-network
     depends_on:

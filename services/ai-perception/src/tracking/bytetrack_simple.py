@@ -40,13 +40,14 @@ class SimpleByteTracker:
         self.track_buffer = track_buffer
         self.frame_rate = frame_rate
         
-        self.tracked_stracks = []  # Active tracks
-        self.lost_stracks = []    # Lost tracks
-        self.removed_stracks = []  # Removed tracks
-        
+        self.tracked_stracks = []  # Active tracks (updated this frame)
+        self.lost_stracks = []    # Lost tracks (carried across frames up to track_buffer)
+        self.removed_stracks = []  # Tracks removed THIS frame (refreshed every update)
+        self.last_removed_ids = []  # Track IDs removed this frame — for downstream cleanup
+
         self.frame_id = 0
         self.track_id_count = 0
-        
+
         # Track position history for motion prediction (prevents ID switching)
         self.track_positions = {}  # track_id -> [(x, y), ...] (last 5 positions)
         
@@ -87,33 +88,40 @@ class SimpleByteTracker:
         # Separate high and low confidence detections
         high_conf_dets = [d for d in detections_track if d['confidence'] >= self.high_thresh]
         low_conf_dets = [d for d in detections_track if self.track_thresh <= d['confidence'] < self.high_thresh]
-        
-        # Update tracked objects
-        # Match high confidence detections with existing tracks
+
+        # Candidate pool: active tracks AND lost tracks carried over from
+        # previous frames. Lost tracks stay recoverable for up to
+        # `track_buffer` frames — a track that misses one frame must not
+        # permanently lose its ID (that churn breaks speed estimation,
+        # trajectories and unique-vehicle counts downstream).
+        pool = self.tracked_stracks + self.lost_stracks
+
+        # First association: high confidence detections vs the full pool
         matched, unmatched_dets, unmatched_tracks = self._associate_detections_to_trackers(
-            high_conf_dets, self.tracked_stracks
+            high_conf_dets, pool
         )
-        
-        # Update matched tracks
+
+        activated = []
         for m in matched:
-            track = self.tracked_stracks[m[1]]
+            track = pool[m[1]]
             det = high_conf_dets[m[0]]
-            track['bbox'] = det['bbox']
-            track['confidence'] = det['confidence']
-            track['detection'] = det['detection']
-            track['time_since_update'] = 0
-            
-            # Update position history for motion prediction
-            center = self._get_bbox_center(det['bbox'])
-            track_id = track['track_id']
-            if track_id not in self.track_positions:
-                self.track_positions[track_id] = []
-            self.track_positions[track_id].append(center)
-            # Keep only last 5 positions
-            if len(self.track_positions[track_id]) > 5:
-                self.track_positions[track_id].pop(0)
-        
-        # Create new tracks for unmatched detections
+            self._apply_detection(track, det)
+            activated.append(track)
+
+        # Second association: low confidence detections vs still-unmatched tracks
+        remaining_tracks = [pool[i] for i in unmatched_tracks]
+        if low_conf_dets and remaining_tracks:
+            matched2, _, unmatched2 = self._associate_detections_to_trackers(
+                low_conf_dets, remaining_tracks
+            )
+            for m in matched2:
+                track = remaining_tracks[m[1]]
+                det = low_conf_dets[m[0]]
+                self._apply_detection(track, det)
+                activated.append(track)
+            remaining_tracks = [remaining_tracks[i] for i in unmatched2]
+
+        # Create new tracks for unmatched high-confidence detections
         for i in unmatched_dets:
             det = high_conf_dets[i]
             new_track = {
@@ -125,65 +133,50 @@ class SimpleByteTracker:
                 'time_since_update': 0,
                 'age': 1
             }
-            self.tracked_stracks.append(new_track)
-            
-            # Initialize position history for new track
-            center = self._get_bbox_center(det['bbox'])
-            self.track_positions[self.track_id_count] = [center]
-            
+            activated.append(new_track)
+            self.track_positions[self.track_id_count] = [self._get_bbox_center(det['bbox'])]
             self.track_id_count += 1
-        
-        # Handle unmatched tracks (mark as lost)
-        for i in unmatched_tracks:
-            track = self.tracked_stracks[i]
+
+        # Age unmatched tracks; expire those lost longer than track_buffer
+        lost = []
+        removed = []
+        for track in remaining_tracks:
             track['time_since_update'] += 1
             if track['time_since_update'] > self.track_buffer:
-                self.removed_stracks.append(track)
-                # Clean up position history for removed tracks
-                if track['track_id'] in self.track_positions:
-                    del self.track_positions[track['track_id']]
-        
-        # Move lost tracks
-        self.lost_stracks = [t for t in self.tracked_stracks if t['time_since_update'] > 0]
-        self.tracked_stracks = [t for t in self.tracked_stracks if t['time_since_update'] == 0]
-        
-        # Match low confidence detections with lost tracks
-        if len(low_conf_dets) > 0 and len(self.lost_stracks) > 0:
-            matched2, _, _ = self._associate_detections_to_trackers(
-                low_conf_dets, self.lost_stracks
-            )
-            
-            for m in matched2:
-                # Bounds checking to prevent IndexError
-                if len(m) < 2 or m[1] >= len(self.lost_stracks) or m[0] >= len(low_conf_dets):
-                    continue
-                track = self.lost_stracks[m[1]]
-                det = low_conf_dets[m[0]]
-                track['bbox'] = det['bbox']
-                track['confidence'] = det['confidence']
-                track['detection'] = det['detection']
-                track['time_since_update'] = 0
-                self.tracked_stracks.append(track)
-                self.lost_stracks.remove(track)
-                
-                # Update position history for recovered track
-                center = self._get_bbox_center(det['bbox'])
-                track_id = track['track_id']
-                if track_id not in self.track_positions:
-                    self.track_positions[track_id] = []
-                self.track_positions[track_id].append(center)
-                # Keep only last 5 positions
-                if len(self.track_positions[track_id]) > 5:
-                    self.track_positions[track_id].pop(0)
-        
-        # Build output detections with track IDs
+                removed.append(track)
+                self.track_positions.pop(track['track_id'], None)
+            else:
+                lost.append(track)
+
+        self.tracked_stracks = activated
+        self.lost_stracks = lost
+        # Per-frame (not cumulative): callers use these to release
+        # per-track state (speed filters, trajectories) without leaks.
+        self.removed_stracks = removed
+        self.last_removed_ids = [t['track_id'] for t in removed]
+
+        # Build output detections with track IDs (only tracks seen this frame)
         output = []
         for track in self.tracked_stracks:
             det = track['detection'].copy()
             det['track_id'] = track['track_id']
             output.append(det)
-        
+
         return output
+
+    def _apply_detection(self, track: Dict, det: Dict) -> None:
+        """Refresh a track with a matched detection and record its position."""
+        track['bbox'] = det['bbox']
+        track['confidence'] = det['confidence']
+        track['detection'] = det['detection']
+        track['time_since_update'] = 0
+        track['age'] = track.get('age', 0) + 1
+
+        center = self._get_bbox_center(det['bbox'])
+        history = self.track_positions.setdefault(track['track_id'], [])
+        history.append(center)
+        if len(history) > 5:
+            history.pop(0)
     
     def _associate_detections_to_trackers(self, detections, trackers):
         """Associate detections to trackers using IoU with motion prediction"""
@@ -283,6 +276,7 @@ class SimpleByteTracker:
         self.tracked_stracks = []
         self.lost_stracks = []
         self.removed_stracks = []
+        self.last_removed_ids = []
         self.frame_id = 0
         self.track_id_count = 0
         self.track_positions = {}  # Clear position history

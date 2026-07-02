@@ -2,21 +2,43 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+# Ports must match docker-compose.services.yml (the source of truth):
+#   ai-perception 8004, analytics 8005, dashboard 8006, decision-engine 8007,
+#   sensor-fusion 8008, data-aggregator 8009, traffic-controller 8010,
+#   video-processor 8018, api-gateway 8000.
 scrape_configs:
   - job_name: 'ai-perception'
     static_configs:
-      - targets: ['host.docker.internal:8014']
+      - targets: ['host.docker.internal:8004']
         labels:
           service: 'ai-perception'
-  
+
   - job_name: 'video-processor'
+    static_configs:
+      - targets: ['host.docker.internal:8018']
+        labels:
+          service: 'video-processor'
+
+  - job_name: 'dashboard'
+    static_configs:
+      - targets: ['host.docker.internal:8006']
+        labels:
+          service: 'dashboard'
+
+  - job_name: 'decision-engine'
+    static_configs:
+      - targets: ['host.docker.internal:8007']
+        labels:
+          service: 'decision-engine'
+
+  - job_name: 'traffic-controller'
+    static_configs:
+      - targets: ['host.docker.internal:8010']
+        labels:
+          service: 'traffic-controller'
+
+  - job_name: 'sensor-fusion'
     static_configs:
       - targets: ['host.docker.internal:8008']
         labels:
-          service: 'video-processor'
-  
-  - job_name: 'dashboard'
-    static_configs:
-      - targets: ['host.docker.internal:8009']
-        labels:
-          service: 'dashboard'
+          service: 'sensor-fusion'
