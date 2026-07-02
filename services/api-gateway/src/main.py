@@ -316,6 +316,22 @@ async def health():
         "services": services_health
     }
 
+def _downstream_headers(request: Request, api_key: APIKey) -> Dict[str, str]:
+    """Headers forwarded to backend services.
+
+    The gateway API key must NEVER leave the gateway — backends verify
+    JWTs, not gateway keys, and forwarding the key leaks it to every
+    downstream log. Clients calling JWT-gated backend routes supply the
+    JWT in `X-Forwarded-Authorization`, which becomes the downstream
+    `Authorization`. The key's name (not the key) is passed for audit.
+    """
+    headers = {"X-Gateway-Client": api_key.name}
+    client_jwt = request.headers.get("X-Forwarded-Authorization")
+    if client_jwt:
+        headers["Authorization"] = client_jwt
+    return headers
+
+
 @app.get("/api/v1/{service_name}/{path:path}")
 async def proxy_get(
     service_name: str,
@@ -335,7 +351,7 @@ async def proxy_get(
         path=f"/{path}",
         method="GET",
         params=params,
-        headers={"Authorization": f"Bearer {api_key.key}"}
+        headers=_downstream_headers(request, api_key)
     )
     
     # Add rate limit info to response headers
@@ -367,7 +383,7 @@ async def proxy_post(
         path=f"/{path}",
         method="POST",
         json_data=json_data,
-        headers={"Authorization": f"Bearer {api_key.key}"}
+        headers=_downstream_headers(request, api_key)
     )
     
     remaining = rate_limiter.get_remaining(api_key.key, api_key.rate_limit)
