@@ -3,6 +3,7 @@ AI Perception Service - YOLOv8 Object Detector
 Week 2: Professional YOLOv8 Integration with Optimization
 """
 import asyncio
+import concurrent.futures
 import os
 import time
 from typing import List, Optional, Tuple, Any
@@ -129,6 +130,16 @@ class YOLODetector:
         self.is_loaded = False
         self.inference_count = 0
         self.total_inference_time = 0.0
+
+        # Single-thread executor: ultralytics models are NOT thread-safe.
+        # Callers wrap detect() in asyncio.wait_for(); a timeout cannot
+        # cancel a thread-pool task, so with the shared default executor a
+        # timed-out inference kept running while the next frame submitted a
+        # second inference against the same model — a genuine race. With one
+        # dedicated worker, late inferences serialize instead of overlapping.
+        self._inference_executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="yolo-inference"
+        )
         
         # Initialize logger FIRST before using it in optimizations
         self.logger = logger.bind(
@@ -425,11 +436,11 @@ class YOLODetector:
             # Inference
             inf_start = time.time()
             
-            # Run inference in thread pool (YOLOv8 handles CoreML natively if use_coreml=True)
-            # CoreML models loaded via YOLO() work exactly like PyTorch models
+            # Run inference on the detector's dedicated single-thread
+            # executor (YOLOv8 handles CoreML natively if use_coreml=True).
             loop = asyncio.get_event_loop()
             results = await loop.run_in_executor(
-                None,
+                self._inference_executor,
                 self._run_inference,
                 image
             )

@@ -11,16 +11,23 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Repo root: services/ai-perception/src/brand/ -> 4 levels up.
+_PROJECT_ROOT = Path(__file__).resolve().parents[4]
+_DEFAULT_BRAND_MODEL = (
+    _PROJECT_ROOT
+    / "models/car_brand_classification/outputs/car_brand_classification_robust/weights/best.pt"
+)
+
 
 class BrandClassifier:
     """
     Car Brand Classification using trained YOLOv8 model
     Model trained on 32 car brands with 4,391 images
     """
-    
+
     def __init__(
         self,
-        model_path: str = "/Users/kappasutra/Traffic/models/car_brand_classification/outputs/car_brand_classification_robust/weights/best.pt",
+        model_path: str = str(_DEFAULT_BRAND_MODEL),
         confidence_threshold: float = 0.55,
         device: str = 'cpu'
     ):
@@ -38,8 +45,12 @@ class BrandClassifier:
         self.model = None
         self.is_loaded = False
         
-        # Brand name mapping (32 brands from training)
-        self.brand_names = [
+        # Fallback label list for the original 32-brand model ONLY. The
+        # authoritative mapping is read from the checkpoint's own
+        # `model.names` in load_model() — a positional list silently
+        # mislabels every prediction if a different model (e.g. the
+        # 54-class dvm_car_v1) is swapped in.
+        self._fallback_brand_names = [
             'Audi', 'BMW', 'Chevrolet', 'Dodge', 'Ford', 'GMC', 'Honda',
             'Hyundai', 'Infiniti', 'Jeep', 'Kia', 'Lexus', 'Mazda',
             'Mercedes-Benz', 'Nissan', 'Ram', 'Subaru', 'Tesla', 'Toyota',
@@ -47,6 +58,9 @@ class BrandClassifier:
             'Genesis', 'Land Rover', 'Lincoln', 'Mini', 'Mitsubishi',
             'Porsche', 'Other'
         ]
+        self.brand_names: Dict[int, str] = {
+            i: name for i, name in enumerate(self._fallback_brand_names)
+        }
         
         # Statistics
         self.total_classifications = 0
@@ -57,17 +71,19 @@ class BrandClassifier:
         try:
             # Try CoreML first if on Apple Silicon (MPS device)
             if self.device == 'mps' or self.device == 'cpu':
+                # Only CoreML variants of the REQUESTED model — never fall
+                # back to a different checkpoint (that silently swaps models).
                 coreml_path = self.model_path.with_suffix('.mlpackage')
                 possible_paths = [
                     coreml_path,
                     self.model_path.parent / f"{self.model_path.stem}.mlpackage",
-                    Path(f"models/car_brand_classification/outputs/car_brand_classification_robust/weights/best.mlpackage"),
                 ]
                 
                 for path in possible_paths:
                     if path.exists():
                         logger.info(f"✅ Loading CoreML brand model: {path} (3-5× faster!)")
                         self.model = YOLO(str(path))  # YOLOv8 handles CoreML natively
+                        self._adopt_model_names()
                         self.is_loaded = True
                         logger.info(f"Brand classifier loaded successfully with CoreML")
                         logger.info(f"Model supports {len(self.brand_names)} brands")
@@ -80,11 +96,12 @@ class BrandClassifier:
             
             logger.info(f"Loading brand classification model from: {self.model_path}")
             self.model = YOLO(str(self.model_path))
-            
+            self._adopt_model_names()
+
             # Move model to device
             if self.device == 'cuda':
                 self.model.to('cuda')
-            
+
             self.is_loaded = True
             logger.info(f"Brand classifier loaded successfully on {self.device}")
             logger.info(f"Model supports {len(self.brand_names)} brands")
@@ -95,7 +112,33 @@ class BrandClassifier:
             logger.error(f"Failed to load brand model: {e}")
             self.is_loaded = False
             return False
-    
+
+    def _adopt_model_names(self) -> None:
+        """Use the checkpoint's own class-name mapping when available.
+
+        Guards against label drift: a positional list breaks silently the
+        moment a retrained/different model is dropped in.
+        """
+        names = getattr(self.model, "names", None)
+        if isinstance(names, (list, tuple)):
+            names = dict(enumerate(names))
+        if not isinstance(names, dict) or not names:
+            logger.warning(
+                "Brand model exposes no class names — falling back to the "
+                "built-in 32-brand list. Verify it matches this checkpoint!"
+            )
+            return
+        # Ultralytics defaults to stringified indices when metadata is
+        # missing; that mapping is useless for labelling.
+        if all(str(v).isdigit() for v in names.values()):
+            logger.warning(
+                "Brand model class names are bare indices — falling back to "
+                "the built-in 32-brand list. Verify it matches this checkpoint!"
+            )
+            return
+        self.brand_names = {int(k): str(v) for k, v in names.items()}
+        logger.info(f"Adopted {len(self.brand_names)} class names from the model checkpoint")
+
     def classify_vehicle(
         self,
         frame: np.ndarray,
@@ -158,18 +201,21 @@ class BrandClassifier:
             
             if len(results) == 0 or len(results[0].boxes) == 0:
                 return None
-            
-            # Get best detection
-            best_detection = results[0].boxes[0]
-            confidence = float(best_detection.conf[0])
-            class_id = int(best_detection.cls[0])
-            
+
+            # Get best detection — explicitly the highest-confidence box
+            # (result ordering is not guaranteed across backends).
+            boxes = results[0].boxes
+            confs = boxes.conf.cpu().numpy() if hasattr(boxes.conf, "cpu") else np.asarray(boxes.conf)
+            best_idx = int(np.argmax(confs))
+            confidence = float(confs[best_idx])
+            class_id = int(boxes.cls[best_idx])
+
             # Filter by confidence
             if confidence < self.confidence_threshold:
                 return None
-            
-            # Get brand name
-            brand_name = self.brand_names[class_id] if class_id < len(self.brand_names) else "Unknown"
+
+            # Get brand name from the checkpoint-derived mapping
+            brand_name = self.brand_names.get(class_id, "Unknown")
             
             self.successful_classifications += 1
             

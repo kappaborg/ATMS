@@ -21,7 +21,7 @@ Architecture decisions: [`adr/`](./adr/).
 | H7 | Repo-root `pyproject.toml` (ruff + mypy + coverage) | `[DONE]` (A4) | — | 2026-05-29 |
 | H8 | `CONTRIBUTING.md`, `.github/CODEOWNERS`, `.github/dependabot.yml` | `[DONE]` (A4) | — | 2026-05-29 |
 | H6 | `.gitignore` covers `*.pt`, `*.onnx`, `*.mlpackage`, `Processed_Videos/`, `experiments_out/`, `debug_frame.jpg` | `[DONE]` | — | 2026-05-29 |
-| H9 | Helm chart `templates/` is empty — `helm install` deploys zero resources (README now warns; use `kubectl apply -k k8s/overlays/<env>/`) | `[TODO]` | — | — |
+| H9 | Helm chart `templates/` is empty — `helm install` deploys zero resources | `[DONE]` — 2026-07-02: generic Deployment/Service/HPA templates for all 9 services (probes, resource limits, secrets via `atms-secrets` not values.yaml); `helm lint` clean, renders 9+9+2 resources | — | 2026-07-02 |
 | H10 | Postgres backup with rotation (`scripts/backup_postgres.sh`, `make backup-db`); WAL archiving / offsite still open | `[PARTIAL]` | — | 2026-07-02 |
 
 ## Phase A — Make It Safe
