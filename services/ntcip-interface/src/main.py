@@ -19,7 +19,7 @@ from enum import Enum
 import struct
 import socket
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
@@ -29,7 +29,14 @@ project_root = Path(__file__).parent.parent.parent.parent
 sys.path.append(str(project_root))
 
 # Phase B1/B2/B3 — shared observability bootstrap.
+import json
 import os
+from shared.atms_common.auth import (
+    AuthConfig,
+    JWTVerifier,
+    Principal,
+    build_role_dependency,
+)
 from shared.atms_common.logging import configure_logging
 from shared.atms_common.tracing import configure_tracing, instrument_fastapi
 
@@ -48,6 +55,33 @@ configure_tracing(
     development=os.getenv("ATMS_OTEL_DEV", "1").lower() in ("1", "true", "yes"),
 )
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Auth: this service drives physical signal hardware — every state-changing
+# endpoint requires an authenticated engineer. See docs/adr/0006-rbac-jwt-roles.md.
+# ---------------------------------------------------------------------------
+
+
+def _build_verifier() -> JWTVerifier:
+    cfg = AuthConfig(
+        issuer=os.getenv("AUTH_ISSUER", "atms-dev"),
+        audience=os.getenv("AUTH_AUDIENCE", "atms-traffic-controller"),
+        algorithm=os.getenv("AUTH_ALGORITHM", "HS256"),
+        hs256_secret=os.getenv("AUTH_HS256_SECRET"),
+        rs256_jwks_uri=os.getenv("AUTH_JWKS_URI"),
+        clock_skew_s=int(os.getenv("AUTH_CLOCK_SKEW_S", "30")),
+    )
+    return JWTVerifier(cfg)
+
+
+def _audit_log(event: dict) -> None:
+    logger.warning("operator_action %s", json.dumps(event))
+
+
+_verifier = _build_verifier()
+require_role = build_role_dependency(_verifier, audit_logger=_audit_log)
+_ENGINEER_DEP = Depends(require_role("engineer"))
 
 
 # ============================================================================
@@ -278,9 +312,12 @@ app = FastAPI(
 )
 instrument_fastapi(app)
 
+# Wildcard origins must not be combined with credentials (Fetch spec);
+# pin explicit origins via ATMS_CORS_ORIGINS when browser access is needed.
+_cors_origins = [o for o in os.getenv("ATMS_CORS_ORIGINS", "").split(",") if o]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -328,7 +365,7 @@ async def health():
 
 
 @app.post("/controllers/register")
-async def register_controller(registration: ControllerRegistration):
+async def register_controller(registration: ControllerRegistration, _p: Principal = _ENGINEER_DEP):
     """Register a traffic signal controller"""
     hardware_manager.register_controller(
         registration.controller_id,
@@ -340,7 +377,7 @@ async def register_controller(registration: ControllerRegistration):
 
 
 @app.post("/controllers/{controller_id}/phase")
-async def set_phase(controller_id: str, request: PhaseCommandRequest):
+async def set_phase(controller_id: str, request: PhaseCommandRequest, _p: Principal = _ENGINEER_DEP):
     """Set phase command for a controller"""
     if controller_id not in hardware_manager.controllers:
         raise HTTPException(status_code=404, detail="Controller not found")
@@ -395,7 +432,7 @@ async def get_all_controllers():
 
 
 @app.post("/controllers/{controller_id}/state")
-async def set_controller_state(controller_id: str, state: str):
+async def set_controller_state(controller_id: str, state: str, _p: Principal = _ENGINEER_DEP):
     """Set controller state"""
     if controller_id not in hardware_manager.controllers:
         raise HTTPException(status_code=404, detail="Controller not found")

@@ -3,12 +3,20 @@ AI Perception Service - YOLOv8 Object Detector
 Week 2: Professional YOLOv8 Integration with Optimization
 """
 import asyncio
+import os
 import time
 from typing import List, Optional, Tuple, Any
 import numpy as np
 import torch
 from pathlib import Path
 import sys
+
+# Fabricating detections is only acceptable in explicitly-marked test runs.
+# Without this opt-in, a missing ultralytics install is a hard failure —
+# a traffic system must never silently emit synthetic data.
+MOCK_DETECTIONS_ALLOWED = os.getenv("ATMS_ALLOW_MOCK_DETECTIONS", "").lower() in (
+    "1", "true", "yes"
+)
 
 # Add shared modules to path
 sys.path.append(str(Path(__file__).parent.parent.parent.parent.parent))
@@ -228,7 +236,17 @@ class YOLODetector:
             bool: True if loaded successfully
         """
         if not YOLO_AVAILABLE:
-            self.logger.warning("YOLO not available, using mock mode")
+            if not MOCK_DETECTIONS_ALLOWED:
+                raise RuntimeError(
+                    "ultralytics (YOLOv8) is not installed and mock detections are "
+                    "not enabled. Install the model dependencies, or set "
+                    "ATMS_ALLOW_MOCK_DETECTIONS=1 ONLY for test environments — "
+                    "mock mode fabricates detections every frame."
+                )
+            self.logger.warning(
+                "YOLO not available — MOCK MODE ENABLED via ATMS_ALLOW_MOCK_DETECTIONS. "
+                "All detections from this process are SYNTHETIC."
+            )
             self.is_loaded = True
             return True
         
@@ -378,8 +396,13 @@ class YOLODetector:
             if not self.load_model():
                 return [], self._empty_metrics()
         
-        # Mock mode
+        # Mock mode — reachable only with the explicit test-time opt-in.
         if not YOLO_AVAILABLE or self.model is None:
+            if not MOCK_DETECTIONS_ALLOWED:
+                raise RuntimeError(
+                    "Detector has no loaded model and mock detections are not "
+                    "enabled (ATMS_ALLOW_MOCK_DETECTIONS)."
+                )
             return self._mock_detections(frame_id, sensor_id), self._mock_metrics()
         
         # Week 11: Start profiling
@@ -398,13 +421,6 @@ class YOLODetector:
             prep_start = time.time()
             # YOLOv8 handles preprocessing internally, but we track timing
             preprocessing_time = (time.time() - prep_start) * 1000
-            
-            # DEBUG: Save first frame to disk for inspection
-            if not hasattr(self, '_saved_frame'):
-                import cv2
-                cv2.imwrite('/Users/kappasutra/Traffic/debug_frame.jpg', image)
-                self.logger.info(f"DEBUG: Saved frame to debug_frame.jpg - shape: {image.shape}, dtype: {image.dtype}, min: {image.min()}, max: {image.max()}")
-                self._saved_frame = True
             
             # Inference
             inf_start = time.time()
@@ -525,11 +541,10 @@ class YOLODetector:
             for result in results:
                 boxes = result.boxes
                 
-                # DEBUG: Log detection info
                 if boxes is not None:
-                    self.logger.info(f"YOLOv8 found {len(boxes)} raw detections before filtering")
+                    self.logger.debug(f"YOLOv8 found {len(boxes)} raw detections before filtering")
                 else:
-                    self.logger.info("YOLOv8 found NO detections (boxes is None)")
+                    self.logger.debug("YOLOv8 found NO detections (boxes is None)")
                 
                 if boxes is None or len(boxes) == 0:
                     continue
@@ -545,9 +560,8 @@ class YOLODetector:
                     confidence = float(confs[i])
                     class_id = int(clss[i])
                     
-                    # DEBUG: Log all detections
-                    self.logger.info(f"Detection {i}: class_id={class_id}, confidence={confidence:.2f}, bbox=[{x1:.1f}, {y1:.1f}, {x2:.1f}, {y2:.1f}]")
-                    
+                    self.logger.debug(f"Detection {i}: class_id={class_id}, confidence={confidence:.2f}, bbox=[{x1:.1f}, {y1:.1f}, {x2:.1f}, {y2:.1f}]")
+
                     # Map class to our ObjectClass enum
                     object_class = self._map_class(class_id)
                     

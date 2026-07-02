@@ -20,14 +20,14 @@ from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from collections import deque
 import logging
+logger = logging.getLogger(__name__)
+
 try:
     from scipy import stats
     SCIPY_AVAILABLE = True
 except ImportError:
     SCIPY_AVAILABLE = False
     logger.warning("scipy not available. Some advanced features will be disabled.")
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass

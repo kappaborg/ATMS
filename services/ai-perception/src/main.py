@@ -1809,15 +1809,31 @@ async def atms_cleanup():
     return {"status": "cleanup", "message": "ATMS data cleanup completed"}
 
 
+def _safe_export_path(filepath: str) -> str:
+    """Confine export writes to ATMS_EXPORT_DIR; reject traversal/absolute paths."""
+    import os
+
+    export_root = Path(os.getenv("ATMS_EXPORT_DIR", "exports")).resolve()
+    candidate = Path(filepath)
+    if candidate.is_absolute():
+        raise HTTPException(status_code=400, detail="Absolute paths are not allowed")
+    resolved = (export_root / candidate).resolve()
+    if export_root != resolved and export_root not in resolved.parents:
+        raise HTTPException(status_code=400, detail="Path escapes the export directory")
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    return str(resolved)
+
+
 @app.get("/atms/export/{filepath:path}")
 async def atms_export_data(filepath: str):
-    """Export ATMS data to file"""
+    """Export ATMS data to a file inside the export directory"""
     if not data_collector:
         raise HTTPException(status_code=503, detail="Data collector not initialized")
-    
+
+    target = _safe_export_path(filepath)
     try:
-        data_collector.export_data(filepath)
-        return {"status": "exported", "filepath": filepath}
+        data_collector.export_data(target)
+        return {"status": "exported", "filepath": target}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
 
@@ -1856,13 +1872,14 @@ async def plates_reset():
 
 @app.get("/plates/export/{filepath:path}")
 async def plates_export_data(filepath: str):
-    """Export license plate data to file"""
+    """Export license plate data to a file inside the export directory"""
     if not plate_analytics:
         raise HTTPException(status_code=503, detail="Plate analytics not initialized")
-    
+
+    target = _safe_export_path(filepath)
     try:
-        plate_analytics.export_data(filepath)
-        return {"status": "exported", "filepath": filepath}
+        plate_analytics.export_data(target)
+        return {"status": "exported", "filepath": target}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
 
