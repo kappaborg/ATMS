@@ -70,11 +70,6 @@ except ImportError:
 DECISION_ENGINE_AVAILABLE = True  # We created ai_decision_system.py in project root
 
 
-class _PipelineSkip(Exception):
-    """Internal exception to skip the legacy per-frame logic after pipeline success."""
-
-    pass
-
 # Monitoring - Phase 1 implementation
 try:
     # Try importing dependencies first
@@ -1116,230 +1111,19 @@ class YouTubeDecisionProcessor:
                                 )
                                 self.all_detections.append(det.copy())
 
-                            raise _PipelineSkip()
-                        except _PipelineSkip:
-                            raise
                         except Exception as e:
-                            logger.warning(f"Pipeline processing failed, using legacy: {e}")
-                            detections = []
-
-                    # 1. YOLO Detection - FIX: detect() is async and requires frame_id and sensor_id
-                    frame_id = f"youtube_{self.frame_count}"
-                    sensor_id = f"youtube_stream_{self.youtube_url.split('watch?v=')[-1].split('&')[0] if 'watch?v=' in self.youtube_url else 'stream'}"
-                    
-                    # Run async detect with timeout - FIX: Prevent blocking
-                    try:
-                        # FIX: In sync context, loop should not be running - use run_until_complete with timeout
-                        yolo_result = loop.run_until_complete(
-                            asyncio.wait_for(
-                                self.detector.detect(processing_frame, frame_id=frame_id, sensor_id=sensor_id),
-                                timeout=0.5  # Reduced timeout to prevent freezing
+                            logger.error(
+                                f"Pipeline processing failed on frame {self.frame_count}: {e}"
                             )
+                            detections = []
+                    else:
+                        # The legacy inline per-frame path was removed —
+                        # atms_core/pipeline.py is the single implementation.
+                        raise RuntimeError(
+                            "ATMS pipeline not initialized - initialize_models() "
+                            "must succeed before processing frames"
                         )
-                        # Extract Detection objects from tuple (detections, metrics)
-                        if isinstance(yolo_result, tuple):
-                            yolo_results, metrics = yolo_result
-                        else:
-                            yolo_results = yolo_result
-                            metrics = None
-                    except asyncio.TimeoutError:
-                        if self.frame_count % 60 == 0:
-                            logger.warning(f"⚠️ YOLO detection timeout for frame {self.frame_count}")
-                        yolo_results = []
-                    except Exception as e:
-                        if self.frame_count % 60 == 0:
-                            logger.error(f"⚠️ YOLO detection error: {e}")
-                        yolo_results = []
-                    
-                    if yolo_results:
-                        # Scale coordinates back to original frame size if resized
-                        scale_x = frame.shape[1] / processing_frame.shape[1] if processing_frame.shape != frame.shape else 1.0
-                        scale_y = frame.shape[0] / processing_frame.shape[0] if processing_frame.shape != frame.shape else 1.0
-                        
-                        # Convert Detection objects to dict format
-                        # Helper function to get class_id from object_class
-                        def get_class_id_from_object_class(obj_class):
-                            """Convert ObjectClass enum to class_id"""
-                            class_map = {
-                                'car': 2,
-                                'truck': 7,
-                                'bus': 5,
-                                'motorcycle': 3,
-                                'bicycle': 1,
-                                'pedestrian': 0,
-                                'person': 0
-                            }
-                            class_str = obj_class.value if hasattr(obj_class, 'value') else str(obj_class)
-                            return class_map.get(class_str.lower(), 0)
-                        
-                        for det in yolo_results:
-                            # Handle both Detection objects and dicts
-                            if hasattr(det, 'bbox'):
-                                # Detection object (from YOLODetector)
-                                det_dict = {
-                                    'bbox': {
-                                        'x1': det.bbox.x1 * scale_x,
-                                        'y1': det.bbox.y1 * scale_y,
-                                        'x2': det.bbox.x2 * scale_x,
-                                        'y2': det.bbox.y2 * scale_y
-                                    },
-                                    'confidence': det.confidence,
-                                    'class': det.object_class.value if hasattr(det.object_class, 'value') else str(det.object_class),
-                                    'class_id': get_class_id_from_object_class(det.object_class),
-                                    'frame_id': getattr(det, 'frame_id', f"youtube_{self.frame_count}"),
-                                    'detection_id': getattr(det, 'detection_id', f"det_{self.frame_count}_{len(detections)}")
-                                }
-                            else:
-                                # Already a dict
-                                bbox = det.get('bbox', {})
-                                if isinstance(bbox, dict):
-                                    det_dict = {
-                                        'bbox': {
-                                            'x1': bbox.get('x1', 0) * scale_x,
-                                            'y1': bbox.get('y1', 0) * scale_y,
-                                            'x2': bbox.get('x2', 0) * scale_x,
-                                            'y2': bbox.get('y2', 0) * scale_y
-                                        },
-                                        'confidence': det.get('confidence', 0),
-                                        'class': det.get('class', 'unknown'),
-                                        'class_id': det.get('class_id', 0),
-                                        'frame_id': det.get('frame_id', f"youtube_{self.frame_count}"),
-                                        'detection_id': det.get('detection_id', f"det_{self.frame_count}_{len(detections)}")
-                                    }
-                                else:
-                                    continue  # Skip invalid detections
-                            detections.append(det_dict)
-                    
-                    # IMPROVEMENT: Distance-aware confidence filtering
-                    # Objects further away have lower confidence, so we adjust thresholds based on bbox size
-                    filtered_detections = []
-                    for det in detections:
-                        class_name = det.get('class', '').lower()
-                        confidence = det.get('confidence', 0.0)
-                        bbox = det.get('bbox', {})
-                        
-                        # IMPROVEMENT: Calculate object size to estimate distance
-                        bbox_width = bbox.get('x2', 0) - bbox.get('x1', 0)
-                        bbox_height = bbox.get('y2', 0) - bbox.get('y1', 0)
-                        bbox_area = bbox_width * bbox_height
-                        frame_area = processing_frame.shape[0] * processing_frame.shape[1]
-                        relative_size = bbox_area / frame_area if frame_area > 0 else 0
-                        
-                        # IMPROVEMENT: Adjust confidence threshold based on object size (distance)
-                        # Smaller objects (further away) get lower threshold
-                        # Large objects (>2% of frame): use normal threshold
-                        # Medium objects (0.5-2%): reduce threshold by 10%
-                        # Small objects (<0.5%): reduce threshold by 20%
-                        if relative_size > 0.02:  # Large object (close)
-                            size_multiplier = 1.0
-                        elif relative_size > 0.005:  # Medium object (medium distance)
-                            size_multiplier = 0.9  # 10% reduction
-                        else:  # Small object (far away)
-                            size_multiplier = 0.8  # 20% reduction
-                        
-                        # Apply class-specific confidence thresholds with distance adjustment
-                        if class_name in ['car', 'truck', 'bus', 'motorcycle', 'bicycle']:
-                            base_threshold = 0.42  # 42% for vehicles
-                            adjusted_threshold = base_threshold * size_multiplier
-                            if confidence >= adjusted_threshold:
-                                filtered_detections.append(det)
-                        elif class_name in ['pedestrian', 'person']:
-                            base_threshold = 0.51  # 51% for pedestrians (user's setting)
-                            adjusted_threshold = base_threshold * size_multiplier
-                            if confidence >= adjusted_threshold:
-                                filtered_detections.append(det)
-                        else:
-                            # Other classes: keep with default threshold (50%)
-                            base_threshold = 0.50
-                            adjusted_threshold = base_threshold * size_multiplier
-                            if confidence >= adjusted_threshold:
-                                filtered_detections.append(det)
-                    
-                    detections = filtered_detections
-                    
-                    # Track objects
-                    tracking_start_time = time.time()
-                    if self.tracker and detections:
-                        tracked_results = self.tracker.update(detections)
-                        detections = tracked_results
-                    tracking_time_ms = (time.time() - tracking_start_time) * 1000
-                    
-                    # Record detection and tracking metrics (non-blocking)
-                    if self.performance_collector:
-                        detection_time_ms = (time.time() - detection_start_time) * 1000
-                        vehicles = sum(1 for d in detections if d.get('class', '').lower() in ['car', 'truck', 'bus', 'motorcycle', 'bicycle'])
-                        pedestrians = sum(1 for d in detections if d.get('class', '').lower() in ['pedestrian', 'person'])
-                        self.performance_collector.record_detection(
-                            detection_time_ms, 
-                            len(detections),
-                            vehicles,
-                            pedestrians
-                        )
-                        self.performance_collector.record_tracking(tracking_time_ms)
-                    
-                    # Store detections for CSV export (before adding speed/emission)
-                    # datetime is imported at top of file, use it directly
-                    for det in detections:
-                        det['frame_number'] = self.frame_count
-                        # FIX: Use datetime.now(timezone.utc) instead of deprecated utcnow()
-                        det['frame_timestamp'] = datetime.now(timezone.utc).isoformat()
-                        det['video_time_seconds'] = self.frame_count / self.video_fps if self.video_fps > 0 else 0
-                        self.all_detections.append(det.copy())
-                    
-                    # IMPROVEMENT: Add speed and emission with REAL values only
-                    for det in detections:
-                        # IMPROVEMENT: Calculate speed with better accuracy
-                        track_id = det.get('track_id')
-                        if track_id and self.speed_calculator:
-                            bbox = det.get('bbox', {})
-                            center_x = (bbox.get('x1', 0) + bbox.get('x2', 0)) / 2
-                            center_y = (bbox.get('y1', 0) + bbox.get('y2', 0)) / 2
-                            
-                            # IMPROVEMENT: Update track with actual video FPS (not processing FPS)
-                            self.speed_calculator.update_track(track_id, (center_x, center_y), self.frame_count)
-                            speed_result = self.speed_calculator.calculate_speed(track_id)
-                            
-                            # IMPROVEMENT: Only use speed if confidence is reasonable (>0.3)
-                            if speed_result and speed_result.confidence > 0.3:
-                                det['speed'] = speed_result.speed_kmh
-                                det['speed_confidence'] = speed_result.confidence
-                                det['direction'] = speed_result.direction_deg
-                            else:
-                                # No reliable speed yet - will be calculated in future frames
-                                det['speed'] = None
-                                det['speed_confidence'] = speed_result.confidence if speed_result else 0.0
-                        
-                        # IMPROVEMENT: Calculate emissions ONLY with real speed values
-                        if self.enhanced_emission_calculator:
-                            try:
-                                # IMPROVEMENT: Only calculate if we have a real speed measurement
-                                vehicle_speed = det.get('speed')
-                                if vehicle_speed is not None and vehicle_speed > 0:
-                                    # Use REAL measured speed
-                                    emission = self.enhanced_emission_calculator.calculate_emissions_from_speed(
-                                        vehicle_type=det.get('class', 'car'),
-                                        speed_kmh=vehicle_speed,  # REAL speed, not default
-                                        distance_km=0.001  # 1 meter
-                                    )
-                                    det['emission_co2'] = emission.get('co2_g_km', 0)
-                                    det['fuel_consumption'] = emission.get('fuel_l_100km', 0)
-                                    det['emission_impact'] = emission.get('impact_level', 'medium')
-                                else:
-                                    # IMPROVEMENT: Don't use default speed - skip emission calculation
-                                    # This ensures we only use REAL values
-                                    det['emission_co2'] = 0
-                                    det['fuel_consumption'] = 0
-                                    det['emission_impact'] = None
-                            except Exception as e:
-                                if self.frame_count % 60 == 0:
-                                    logger.debug(f"Emission calculation error: {e}")
-                                det['emission_co2'] = 0
-                                det['fuel_consumption'] = 0
-                                det['emission_impact'] = None
-                    
-                except _PipelineSkip:
-                    # Pipeline succeeded; we intentionally skipped the legacy block.
-                    pass
+
                 except Exception as e:
                     logger.error(f"Error processing frame: {e}")
                     detections = []

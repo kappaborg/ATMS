@@ -159,7 +159,7 @@
             "refId": "A"
           },
           {
-            "expr": "rate(traffic_detections_filtered[1m])",
+            "expr": "rate(traffic_detections_filtered_total[1m])",
             "legendFormat": "Filtered/sec",
             "refId": "B"
           }

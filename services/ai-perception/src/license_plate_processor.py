@@ -349,9 +349,10 @@ class PlateAnalytics:
     
     def record_recognition(self, result: PlateRecognitionResult):
         """Record a plate recognition result"""
+        # ADR-0014: only the anonymized form is retained — raw plate text
+        # must not reach analytics storage or the export files built from it.
         record = {
             'timestamp': result.timestamp,
-            'plate_text': result.plate_text.text,
             'anonymized_text': result.anonymized_text,
             'confidence': result.confidence_score,
             'detection_confidence': result.plate_detection.confidence,
