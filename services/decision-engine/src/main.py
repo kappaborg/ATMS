@@ -19,6 +19,7 @@ import logging
 import os
 import sys
 import time
+from collections import deque
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -191,8 +192,25 @@ class DecisionEngineService:
         self.kafka_producer: AIOKafkaProducer | None = None
         self.auto_mode = True  # Automatic decision making
         self._consume_task: asyncio.Task | None = None
+        # Rolling window of recent per-vehicle CO2 readings from the
+        # emission-data topic (ai-perception). Feeds the decision inputs
+        # in place of the former hardcoded 150.0 constant.
+        self._recent_co2: deque[float] = deque(maxlen=500)
 
         logger.info("Decision Engine Service initialized")
+
+    def _record_emissions(self, message: dict) -> None:
+        """Fold an emission-data message into the rolling CO2 window."""
+        for record in message.get("emissions", []):
+            co2 = record.get("co2_g_km")
+            if isinstance(co2, (int, float)) and co2 > 0:
+                self._recent_co2.append(float(co2))
+
+    def _average_emission(self, default: float = 150.0) -> float:
+        """Mean CO2 g/km over the rolling window; `default` until data arrives."""
+        if not self._recent_co2:
+            return default
+        return sum(self._recent_co2) / len(self._recent_co2)
 
     async def start_kafka(self, bootstrap_servers: str = "localhost:9092"):
         """Start Kafka consumer and producer"""
@@ -245,6 +263,8 @@ class DecisionEngineService:
                 if message.topic == "traffic-metrics":
                     # Process traffic metrics and make decisions
                     await self.process_traffic_metrics(message.value, traffic_data)
+                elif message.topic == "emission-data":
+                    self._record_emissions(message.value)
         except Exception as e:
             logger.error(f"Error consuming messages: {e}")
 
@@ -252,23 +272,28 @@ class DecisionEngineService:
         """Process traffic metrics and make decision"""
         try:
             # Update traffic data (simplified - in reality would track by direction)
-            # For now, split data between north-south and east-west
+            # For now, split data between north-south and east-west.
+            # average_emission comes from the emission-data topic's rolling
+            # window (per-direction attribution is not yet available from
+            # ai-perception, so both approaches share the fleet average).
+            avg_emission = self._average_emission()
+            impact_score = min(100.0, avg_emission / 2.5)
             traffic_data["north_south"] = {
                 "vehicle_count": metrics.get("statistics", {}).get("total_detections", 0) // 2,
-                "average_emission": 150.0,  # Would come from emission-data topic
+                "average_emission": avg_emission,
                 "average_waiting_time": 30.0,
                 "average_velocity": 5.0,
-                "total_emission": 150.0,
-                "environmental_impact_score": 50.0,
+                "total_emission": avg_emission,
+                "environmental_impact_score": impact_score,
             }
 
             traffic_data["east_west"] = {
                 "vehicle_count": metrics.get("statistics", {}).get("total_detections", 0) // 2,
-                "average_emission": 140.0,
+                "average_emission": avg_emission,
                 "average_waiting_time": 25.0,
                 "average_velocity": 6.0,
-                "total_emission": 140.0,
-                "environmental_impact_score": 45.0,
+                "total_emission": avg_emission,
+                "environmental_impact_score": impact_score,
             }
 
             # Make decision
