@@ -24,7 +24,8 @@ try:
     KAFKA_AVAILABLE = True
 except ImportError:
     KAFKA_AVAILABLE = False
-    logger.warning("Kafka not available - decisions won't be sent to Kafka")
+    # logger is not configured yet at import time — use logging directly.
+    logging.warning("Kafka not available - decisions won't be sent to Kafka")
 
 # Add project paths
 project_root = Path(__file__).parent

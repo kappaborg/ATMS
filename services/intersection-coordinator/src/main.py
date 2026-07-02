@@ -20,7 +20,7 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 import json
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
@@ -41,6 +41,12 @@ except ImportError:
 
 # Phase B1/B2/B3 — shared observability bootstrap.
 import os
+from shared.atms_common.auth import (
+    AuthConfig,
+    JWTVerifier,
+    Principal,
+    build_role_dependency,
+)
 from shared.atms_common.logging import configure_logging
 from shared.atms_common.tracing import configure_tracing, instrument_fastapi
 
@@ -59,6 +65,35 @@ configure_tracing(
     development=os.getenv("ATMS_OTEL_DEV", "1").lower() in ("1", "true", "yes"),
 )
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Auth: coordination commands influence signal timing across intersections —
+# state-changing endpoints require an authenticated engineer.
+# See docs/adr/0006-rbac-jwt-roles.md.
+# ---------------------------------------------------------------------------
+
+
+def _build_verifier() -> JWTVerifier:
+    cfg = AuthConfig(
+        issuer=os.getenv("AUTH_ISSUER", "atms-dev"),
+        audience=os.getenv("AUTH_AUDIENCE", "atms-traffic-controller"),
+        algorithm=os.getenv("AUTH_ALGORITHM", "HS256"),
+        hs256_secret=os.getenv("AUTH_HS256_SECRET"),
+        rs256_jwks_uri=os.getenv("AUTH_JWKS_URI"),
+        clock_skew_s=int(os.getenv("AUTH_CLOCK_SKEW_S", "30")),
+    )
+    return JWTVerifier(cfg)
+
+
+def _audit_log(event: dict) -> None:
+    logger.warning("operator_action %s", json.dumps(event))
+
+
+_verifier = _build_verifier()
+require_role = build_role_dependency(_verifier, audit_logger=_audit_log)
+_ENGINEER_DEP = Depends(require_role("engineer"))
+_OPERATOR_DEP = Depends(require_role("operator"))
 
 
 # ============================================================================
@@ -505,9 +540,12 @@ app = FastAPI(
 )
 instrument_fastapi(app)
 
+# Wildcard origins must not be combined with credentials (Fetch spec);
+# pin explicit origins via ATMS_CORS_ORIGINS when browser access is needed.
+_cors_origins = [o for o in os.getenv("ATMS_CORS_ORIGINS", "").split(",") if o]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -543,7 +581,7 @@ async def health():
 
 
 @app.post("/intersections/{intersection_id}/metrics")
-async def update_metrics(intersection_id: str, metrics: IntersectionMetrics):
+async def update_metrics(intersection_id: str, metrics: IntersectionMetrics, _p: Principal = _OPERATOR_DEP):
     """Update metrics for an intersection"""
     metrics.intersection_id = intersection_id
     await coordinator.update_intersection_metrics(metrics)
@@ -566,7 +604,7 @@ async def get_all_intersections():
 
 
 @app.post("/coordinate")
-async def coordinate(request: CoordinationRequest):
+async def coordinate(request: CoordinationRequest, _p: Principal = _ENGINEER_DEP):
     """Coordinate intersections"""
     # Update metrics first
     await coordinator.update_intersection_metrics(request.metrics)
@@ -594,7 +632,7 @@ async def coordinate(request: CoordinationRequest):
 
 
 @app.post("/green-wave")
-async def create_green_wave(intersection_ids: List[str], direction: str = "north_south"):
+async def create_green_wave(intersection_ids: List[str], direction: str = "north_south", _p: Principal = _ENGINEER_DEP):
     """Create green wave for specified intersections"""
     intersections = [coordinator.intersections[iid] for iid in intersection_ids if iid in coordinator.intersections]
     
@@ -619,7 +657,7 @@ async def create_green_wave(intersection_ids: List[str], direction: str = "north
 
 
 @app.post("/emergency-route")
-async def emergency_route(intersection_id: str, route: List[str]):
+async def emergency_route(intersection_id: str, route: List[str], _p: Principal = _ENGINEER_DEP):
     """Create emergency vehicle priority route"""
     intersection = coordinator.get_intersection_state(intersection_id)
     if not intersection:

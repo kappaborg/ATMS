@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ============================================
   # AI PERCEPTION SERVICE
@@ -35,13 +33,14 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
-    resources:
-      limits:
-        cpus: '2.0'
-        memory: 4G
-      reservations:
-        cpus: '1.0'
-        memory: 2G
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
 
   # ============================================
   # DECISION ENGINE SERVICE
@@ -73,13 +72,14 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
-    resources:
-      limits:
-        cpus: '1.0'
-        memory: 2G
-      reservations:
-        cpus: '0.5'
-        memory: 1G
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
 
   # ============================================
   # SENSOR FUSION SERVICE
@@ -104,10 +104,11 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-    resources:
-      limits:
-        cpus: '1.0'
-        memory: 2G
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
 
   # ============================================
   # VIDEO PROCESSOR SERVICE
@@ -132,13 +133,14 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-    resources:
-      limits:
-        cpus: '2.0'
-        memory: 4G
-      reservations:
-        cpus: '1.0'
-        memory: 2G
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
 
   # ============================================
   # API GATEWAY SERVICE
@@ -156,6 +158,8 @@ services:
       - DECISION_ENGINE_URL=http://decision-engine:8007
       - SENSOR_FUSION_URL=http://sensor-fusion:8008
       - VIDEO_PROCESSOR_URL=http://video-processor:8018
+      # Provision API keys via the environment / .env, never in source.
+      - ATMS_API_KEYS=${ATMS_API_KEYS:-}
     networks:
       - atms-network
     depends_on:
@@ -164,10 +168,11 @@ services:
       - sensor-fusion
       - video-processor
     restart: unless-stopped
-    resources:
-      limits:
-        cpus: '0.5'
-        memory: 512M
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
   # ============================================
   # DASHBOARD SERVICE
@@ -192,10 +197,11 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-    resources:
-      limits:
-        cpus: '0.5'
-        memory: 512M
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
   # ============================================
   # ANALYTICS SERVICE
@@ -223,10 +229,11 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
-    resources:
-      limits:
-        cpus: '1.0'
-        memory: 2G
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
 
   # ============================================
   # DATA AGGREGATOR SERVICE
@@ -254,10 +261,11 @@ services:
       postgres:
         condition: service_healthy
     restart: unless-stopped
-    resources:
-      limits:
-        cpus: '1.0'
-        memory: 2G
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
 
   # ============================================
   # TRAFFIC CONTROLLER SERVICE
@@ -281,10 +289,11 @@ services:
       decision-engine:
         condition: service_started
     restart: unless-stopped
-    resources:
-      limits:
-        cpus: '0.5'
-        memory: 512M
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
 networks:
   atms-network:

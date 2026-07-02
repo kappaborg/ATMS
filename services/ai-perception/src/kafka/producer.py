@@ -58,9 +58,14 @@ class KafkaDetectionProducer:
     async def start(self):
         """Start Kafka producer"""
         if AIOKafkaProducer is None:
-            self.logger.warning("Kafka not available, using mock mode")
-            self.is_connected = True
-            return
+            # Never pretend to be connected: downstream consumers (decisions,
+            # analytics) would silently receive nothing while this service
+            # reports healthy. Fail loudly instead.
+            raise RuntimeError(
+                "aiokafka is not installed — cannot start the detection "
+                "producer. Install the Kafka dependencies or run a profile "
+                "that does not require Kafka."
+            )
         
         try:
             self.producer = AIOKafkaProducer(

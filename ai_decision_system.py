@@ -7,9 +7,10 @@ Makes real-time decisions to optimize traffic flow and minimize environmental im
 """
 
 from enum import Enum
-from datetime import datetime
-from typing import Dict, Optional
+from datetime import datetime, timezone
+from typing import Callable, Dict, Optional
 from dataclasses import dataclass
+import time
 import uuid
 import logging
 
@@ -73,9 +74,35 @@ class AIDecisionEngine:
     - Anomaly Detection (optional)
     """
     
-    def __init__(self, use_rl: bool = False, use_predictions: bool = False, use_anomaly_detection: bool = False):
-        """Initialize the decision engine"""
+    def __init__(
+        self,
+        use_rl: bool = False,
+        use_predictions: bool = False,
+        use_anomaly_detection: bool = False,
+        min_green_s: float = 10.0,
+        max_green_s: float = 90.0,
+        yellow_s: float = 3.0,
+        all_red_s: float = 2.0,
+        switch_threshold: float = 1.2,
+        now_fn: Optional[Callable[[], float]] = None,
+    ):
+        """Initialize the decision engine.
+
+        Timing parameters are wall-clock seconds enforced by the internal
+        phase state machine (GREEN → YELLOW → ALL_RED → opposite GREEN).
+        `now_fn` is injectable for deterministic tests/simulation.
+        """
         self.current_phase = TrafficPhase.GREEN
+        # Which approach currently holds green. The wire mapping in
+        # shared.atms_common.decision combines phase + direction downstream.
+        self.active_direction = "north_south"
+        self.min_green_s = min_green_s
+        self.max_green_s = max_green_s
+        self.yellow_s = yellow_s
+        self.all_red_s = all_red_s
+        self.switch_threshold = switch_threshold
+        self._now = now_fn or time.monotonic
+        self._phase_started_at = self._now()
         self.phase_history = []
         self.decision_count = 0
         self.statistics = {
@@ -167,38 +194,46 @@ class AIDecisionEngine:
             priority_data = east_west
             other_data = north_south
         
-        # Phase 2: Use RL agent if available
+        previous_phase = self.current_phase
+
+        # Decide whether demand justifies handing green to the other approach.
+        # The phase state machine then enforces min-green / clearance timing.
+        wants_switch = self._rule_based_wants_switch(
+            priority_direction, priority_score, other_score
+        )
+
+        # Phase 2: Use RL agent if available — its action overrides the
+        # rule-based switch request, but never the safety timing below.
         if self.use_rl and self.rl_agent:
             try:
                 # Prepare state for RL
                 state = {
                     'north_south': north_south,
                     'east_west': east_west,
-                    'current_phase': 0 if self.current_phase == TrafficPhase.RED else 
+                    'current_phase': 0 if self.current_phase == TrafficPhase.RED else
                                    1 if self.current_phase == TrafficPhase.YELLOW else 2,
                     'time_of_day': 0.5  # Normalized hour (can be improved)
                 }
-                
+
                 # Get RL prediction
                 phase_action, duration = self.rl_agent.predict_action(state)
-                
-                # Map RL action to phase
-                if phase_action == 1:  # Change to NS
-                    recommended_phase = TrafficPhase.GREEN  # NS gets green
-                elif phase_action == 2:  # Change to EW
-                    recommended_phase = TrafficPhase.GREEN  # EW gets green (can be extended)
+
+                # Map RL action to a switch request against the active direction
+                if phase_action == 1:  # NS should get green
+                    wants_switch = self.active_direction != "north_south"
+                elif phase_action == 2:  # EW should get green
+                    wants_switch = self.active_direction != "east_west"
                 else:  # Keep current
-                    recommended_phase = self.current_phase
-                
+                    wants_switch = False
+
                 logger.debug(f"RL agent recommended: action={phase_action}, duration={duration}s")
-                
+
             except Exception as e:
                 logger.warning(f"RL prediction failed, using rule-based: {e}")
-                # Fall through to rule-based logic
-                recommended_phase = self._rule_based_phase(priority_direction, priority_score, other_score)
-        else:
-            # Rule-based decision (original logic)
-            recommended_phase = self._rule_based_phase(priority_direction, priority_score, other_score)
+
+        # Advance the phase state machine (mutates current_phase /
+        # active_direction under min-green, yellow and all-red timing).
+        recommended_phase = self._advance_phase(wants_switch, other_score)
         
         # Phase 2: Check for anomalies
         anomaly_type = None
@@ -274,8 +309,8 @@ class AIDecisionEngine:
         # Create decision
         decision = TrafficDecision(
             decision_id=str(uuid.uuid4()),
-            timestamp=datetime.utcnow(),
-            current_phase=self.current_phase,
+            timestamp=datetime.now(timezone.utc),
+            current_phase=previous_phase,
             recommended_phase=recommended_phase,
             priority=priority,
             reason=reason,
@@ -294,17 +329,65 @@ class AIDecisionEngine:
         
         return decision
     
-    def _rule_based_phase(self, priority_direction: str, priority_score: float, other_score: float) -> TrafficPhase:
-        """Rule-based phase determination (original logic)"""
-        if priority_score > other_score * 1.2:  # 20% threshold
-            # Clear priority - recommend green for priority direction
-            return TrafficPhase.GREEN
-        elif priority_score > other_score * 1.1:  # 10% threshold
-            # Moderate priority - extend current phase if already green
-            return self.current_phase if self.current_phase == TrafficPhase.GREEN else TrafficPhase.GREEN
-        else:
-            # Balanced traffic - maintain current or switch
-            return TrafficPhase.GREEN
+    def _rule_based_wants_switch(
+        self, priority_direction: str, priority_score: float, other_score: float
+    ) -> bool:
+        """Should green move to the other approach?
+
+        True only when the demand winner is NOT the approach currently
+        holding green and its score clears the hysteresis threshold —
+        prevents flapping on near-balanced traffic.
+        """
+        if priority_direction == self.active_direction:
+            return False
+        return priority_score > other_score * self.switch_threshold
+
+    def _advance_phase(self, wants_switch: bool, other_demand: float) -> TrafficPhase:
+        """Advance the signal state machine one decision tick.
+
+        GREEN holds for at least `min_green_s`; a justified switch (or the
+        `max_green_s` anti-starvation guard) starts a YELLOW → ALL_RED
+        clearance, after which green flips to the opposite approach.
+        NOTE: the downstream failsafe controller independently enforces its
+        own hard invariants — this machine is the recommendation layer.
+        """
+        now = self._now()
+        elapsed = now - self._phase_started_at
+
+        if self.current_phase == TrafficPhase.GREEN:
+            if elapsed < self.min_green_s:
+                return TrafficPhase.GREEN
+            starvation_guard = elapsed >= self.max_green_s and other_demand > 0.0
+            if wants_switch or starvation_guard:
+                self._begin_phase(TrafficPhase.YELLOW, now)
+            return self.current_phase
+
+        if self.current_phase == TrafficPhase.YELLOW:
+            if elapsed >= self.yellow_s:
+                self._begin_phase(TrafficPhase.ALL_RED, now)
+            return self.current_phase
+
+        if self.current_phase == TrafficPhase.ALL_RED:
+            if elapsed >= self.all_red_s:
+                self.active_direction = (
+                    "east_west" if self.active_direction == "north_south" else "north_south"
+                )
+                self._begin_phase(TrafficPhase.GREEN, now)
+                logger.info(f"Green handed to {self.active_direction}")
+            return self.current_phase
+
+        # Legacy RED value (set only via external reset paths): treat as
+        # completed clearance and restart green on the active approach.
+        self._begin_phase(TrafficPhase.GREEN, now)
+        return self.current_phase
+
+    def _begin_phase(self, phase: TrafficPhase, now: float) -> None:
+        """Transition to a new phase and stamp its start time."""
+        if phase != self.current_phase:
+            self.statistics['phase_changes'] += 1
+            logger.info(f"Phase change: {self.current_phase.value} → {phase.value}")
+        self.current_phase = phase
+        self._phase_started_at = now
     
     def _calculate_direction_score(self, direction_data: Dict) -> float:
         """
@@ -454,16 +537,16 @@ class AIDecisionEngine:
     
     def execute_decision(self, decision: TrafficDecision):
         """
-        Execute a traffic decision (update current phase)
-        
+        Record an executed decision.
+
+        The phase itself is advanced by the state machine inside
+        `make_decision` (so callers that never call execute_decision — e.g.
+        the simulation harness — still get correct phase progression); this
+        method records history and impact statistics.
+
         Args:
             decision: TrafficDecision to execute
         """
-        if decision.recommended_phase != self.current_phase:
-            self.statistics['phase_changes'] += 1
-            logger.info(f"Phase change: {self.current_phase.value} → {decision.recommended_phase.value}")
-        
-        self.current_phase = decision.recommended_phase
         self.phase_history.append(decision)
         
         # Keep only last 100 decisions
@@ -486,6 +569,8 @@ class AIDecisionEngine:
     def reset(self):
         """Reset engine state"""
         self.current_phase = TrafficPhase.GREEN
+        self.active_direction = "north_south"
+        self._phase_started_at = self._now()
         self.phase_history = []
         self.decision_count = 0
         self.statistics = {
