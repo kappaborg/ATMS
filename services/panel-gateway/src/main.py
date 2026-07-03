@@ -32,6 +32,7 @@ from fastapi import (
     Header,
     HTTPException,
     Query,
+    Request,
     WebSocket,
     WebSocketDisconnect,
 )
@@ -39,6 +40,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from hub import CameraManager, Hub
+from limits import RateLimiter, WSLimiter, max_cameras
 from scene import SceneConfig
 from security import SourceRejected, api_token, check_token, validate_source
 from system_state import SystemState
@@ -49,6 +51,8 @@ KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "")
 hub = Hub()
 system = SystemState()
 manager = CameraManager(hub, system=system)
+rate_limiter = RateLimiter()
+ws_limiter = WSLimiter()
 _stop = asyncio.Event()
 app = FastAPI(title="ATMS Panel Gateway", version="1.0.0")
 
@@ -77,7 +81,15 @@ async def require_auth(
     check_token(authorization, token)
 
 
+async def rate_limit(request: Request) -> None:
+    """Per-client-IP sliding-window limit on mutating requests."""
+    key = request.client.host if request.client else "unknown"
+    if not rate_limiter.allow(key):
+        raise HTTPException(status_code=429, detail="rate limit exceeded")
+
+
 _AUTH = Depends(require_auth)
+_RATE = Depends(rate_limit)
 
 
 @app.on_event("startup")
@@ -115,6 +127,7 @@ async def health() -> dict:
     return {
         "status": "ok",
         "cameras": len(manager.list()),
+        "limits": {"max_cameras": max_cameras(), "ws_clients": ws_limiter.count},
         "system_stream": {"enabled": bool(KAFKA_BOOTSTRAP), "connected": system.connected},
     }
 
@@ -125,7 +138,9 @@ async def list_cameras(_: None = _AUTH) -> list[dict]:
 
 
 @app.post("/cameras")
-async def add_camera(cam: CameraIn, _: None = _AUTH) -> dict:
+async def add_camera(cam: CameraIn, _: None = _AUTH, __: None = _RATE) -> dict:
+    if len(manager.list()) >= max_cameras():
+        raise HTTPException(status_code=429, detail=f"camera limit reached ({max_cameras()})")
     try:
         safe_source = validate_source(cam.source)
     except SourceRejected as e:
@@ -140,7 +155,7 @@ async def add_camera(cam: CameraIn, _: None = _AUTH) -> dict:
 
 
 @app.delete("/cameras/{camera_id}")
-async def remove_camera(camera_id: str, _: None = _AUTH) -> dict:
+async def remove_camera(camera_id: str, _: None = _AUTH, __: None = _RATE) -> dict:
     try:
         manager.remove(camera_id)
     except KeyError:
@@ -149,7 +164,7 @@ async def remove_camera(camera_id: str, _: None = _AUTH) -> dict:
 
 
 @app.post("/cameras/{camera_id}/scene")
-async def set_scene(camera_id: str, payload: dict, _: None = _AUTH) -> dict:
+async def set_scene(camera_id: str, payload: dict, _: None = _AUTH, __: None = _RATE) -> dict:
     """Set calibration and/or approach zones for a camera.
 
     Body: {
@@ -182,6 +197,9 @@ async def ws_data(ws: WebSocket, token: str | None = Query(default=None)) -> Non
     if not _ws_authorized(ws, token):
         await ws.close(code=1008)  # policy violation
         return
+    if not ws_limiter.acquire():
+        await ws.close(code=1013)  # try again later
+        return
     await ws.accept()
     q = hub.register_data_client()
     try:
@@ -192,12 +210,16 @@ async def ws_data(ws: WebSocket, token: str | None = Query(default=None)) -> Non
         pass
     finally:
         hub.unregister_data_client(q)
+        ws_limiter.release()
 
 
 @app.websocket("/ws/video/{camera_id}")
 async def ws_video(ws: WebSocket, camera_id: str, token: str | None = Query(default=None)) -> None:
     if not _ws_authorized(ws, token):
         await ws.close(code=1008)
+        return
+    if not ws_limiter.acquire():
+        await ws.close(code=1013)
         return
     await ws.accept()
     interval = 1.0 / max(VIDEO_FPS, 1.0)
@@ -214,3 +236,5 @@ async def ws_video(ws: WebSocket, camera_id: str, token: str | None = Query(defa
             await asyncio.sleep(interval)
     except WebSocketDisconnect:
         pass
+    finally:
+        ws_limiter.release()

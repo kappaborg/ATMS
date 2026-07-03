@@ -150,6 +150,11 @@ Persistence: cameras and their calibration/zones are saved to
   cameras are allowed. File sources are confined to `ATMS_ALLOWED_VIDEO_DIRS`
   (default `videos/` + `Processed_Videos/`); traversal is rejected. Set
   `ATMS_ALLOW_LOOPBACK_SOURCES=1` to allow `127.0.0.1` test streams.
+- **Resource + rate limits** (DoS protection): at most `PANEL_MAX_CAMERAS`
+  cameras (default 8) and `PANEL_MAX_WS_CLIENTS` WebSocket connections
+  (default 32); mutating requests are rate-limited per client IP via
+  `PANEL_RATE_LIMIT` (default `30/60` = 30 requests / 60 s). Over-limit
+  returns `429` (REST) or closes the socket with `1013`.
 
 ## Notes for production
 
