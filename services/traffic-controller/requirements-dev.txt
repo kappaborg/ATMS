@@ -10,4 +10,4 @@ coverage>=7
 testcontainers[kafka]>=4
 prometheus_client>=0.19
 # starlette.testclient (integration tests) requires httpx.
-httpx>=0.27
+httpx>=0.27,<0.28  # fastapi 0.104.1 -> old starlette TestClient needs httpx app= (removed in 0.28)

@@ -1,6 +1,6 @@
 fastapi==0.104.1
 uvicorn==0.24.0
-aiokafka==0.8.1
+aiokafka>=0.10,<0.11  # 0.8.1 has no cp312 wheel / import issues
 pydantic==2.5.0
 python-json-logger==2.0.7
 # Phase A6 — JWT/RBAC. `cryptography` enables RS256 verification once the
