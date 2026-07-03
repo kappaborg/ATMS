@@ -49,3 +49,21 @@ class SceneConfig:
             "zones": self.zones.names if self.zones else [],
             "zone_directions": self.directions,
         }
+
+    def to_payload(self) -> dict:
+        """Serialise back to the /scene request form so it can be persisted
+        and re-applied verbatim after a restart."""
+        out: dict = {}
+        if self.calibration is not None:
+            out["calibration"] = {
+                "image_points": [list(p) for p in self.calibration.image_points],
+                "world_points_m": [list(p) for p in self.calibration.world_points_m],
+            }
+        if self.zones is not None:
+            out["zones"] = self.zones.to_dict()
+        if self.directions:
+            out["zone_directions"] = dict(self.directions)
+        return out
+
+    def is_empty(self) -> bool:
+        return self.calibration is None and self.zones is None

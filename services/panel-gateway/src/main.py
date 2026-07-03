@@ -58,6 +58,11 @@ class CameraIn(BaseModel):
 @app.on_event("startup")
 async def _startup() -> None:
     hub.bind_loop(asyncio.get_running_loop())
+    n = manager.restore()
+    if n:
+        import logging
+
+        logging.getLogger("uvicorn").info("restored %d camera(s) from saved state", n)
 
 
 @app.on_event("shutdown")

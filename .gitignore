@@ -123,3 +123,6 @@ services/*/.venv/
 # Coverage artifacts
 coverage.xml
 .coverage
+
+# Panel gateway runtime state
+services/panel-gateway/data/

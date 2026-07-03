@@ -123,3 +123,6 @@ class ApproachZones:
     @property
     def names(self) -> list[str]:
         return list(self.zones)
+
+    def to_dict(self) -> dict[str, list[list[int]]]:
+        return {name: poly.tolist() for name, poly in self.zones.items()}

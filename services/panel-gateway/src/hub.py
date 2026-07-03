@@ -11,7 +11,9 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+import store
 from detection import Detector
+from scene import SceneConfig
 from worker import CameraWorker
 
 
@@ -72,6 +74,7 @@ class CameraManager:
         worker = CameraWorker(cam_id, source, self._detector_lazy(), self.hub, loop_file=loop_file)
         self._workers[cam_id] = worker
         worker.start()
+        self._persist()
 
     def remove(self, cam_id: str) -> None:
         worker = self._workers.pop(cam_id, None)
@@ -79,13 +82,41 @@ class CameraManager:
             raise KeyError(cam_id)
         worker.stop()
         self.hub._frames.pop(cam_id, None)
+        self._persist()
 
     def set_scene(self, cam_id: str, scene) -> dict:
         worker = self._workers.get(cam_id)
         if worker is None:
             raise KeyError(cam_id)
         worker.scene = scene  # atomic reference swap; worker reads it each frame
+        self._persist()
         return scene.info()
+
+    # --- durability ---
+    def _persist(self) -> None:
+        cams = []
+        for w in self._workers.values():
+            entry = {"camera_id": w.cam_id, "source": str(w.source), "loop_file": w.loop_file}
+            payload = w.scene.to_payload()
+            if payload:
+                entry["scene"] = payload
+            cams.append(entry)
+        store.save({"cameras": cams})
+
+    def restore(self) -> int:
+        """Re-create cameras and re-apply scenes from the saved state.
+        Returns the number of cameras restored. Never raises on a bad entry."""
+        restored = 0
+        for entry in store.load().get("cameras", []):
+            try:
+                cam_id = entry["camera_id"]
+                self.add(cam_id, entry["source"], loop_file=entry.get("loop_file", True))
+                if entry.get("scene"):
+                    self.set_scene(cam_id, SceneConfig.from_payload(entry["scene"]))
+                restored += 1
+            except Exception:  # noqa: BLE001 — one bad entry must not block the rest
+                continue
+        return restored
 
     def list(self) -> list[dict[str, Any]]:
         return [
