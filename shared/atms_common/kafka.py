@@ -56,7 +56,7 @@ try:
     OTEL_AVAILABLE = True
 except ImportError:
     OTEL_AVAILABLE = False
-    otel_context = None  # type: ignore[assignment]
+    otel_context = None
 
 try:
     from aiokafka import AIOKafkaConsumer, AIOKafkaProducer

@@ -66,7 +66,7 @@ class AtmsDatabase:
 
     async def start(self) -> None:
         try:
-            import asyncpg  # noqa: PLC0415  Lazy: keeps non-DB unit tests dep-free.
+            import asyncpg
         except ImportError as e:
             raise DatabaseError("asyncpg is not installed") from e
 

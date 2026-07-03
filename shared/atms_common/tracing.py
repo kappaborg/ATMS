@@ -86,7 +86,7 @@ def configure_tracing(
         provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
     else:
         # Lazy import — only in non-dev path, so unit tests don't need grpc.
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # noqa: PLC0415
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
             OTLPSpanExporter,
         )
 
@@ -184,7 +184,7 @@ def instrument_fastapi(app: Any) -> None:
     Add FastAPI auto-instrumentation. Every HTTP request becomes a span with
     route, status_code, latency. Idempotent on the same app.
     """
-    from opentelemetry.instrumentation.fastapi import (  # noqa: PLC0415
+    from opentelemetry.instrumentation.fastapi import (
         FastAPIInstrumentor,
     )
 

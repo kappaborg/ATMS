@@ -1,22 +1,49 @@
+# Root-context multi-stage build.
+# Build from the PROJECT ROOT so `shared/` is in the context:
+#   docker build -f services/ntcip-interface/Dockerfile .
+# (CI uses context: . — see .github/workflows/ci.yml)
+FROM python:3.12-slim AS builder
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    make \
+    && rm -rf /var/lib/apt/lists/*
+
+# Shared library (has setup.py) + this service's requirements.
+COPY shared /tmp/shared
+COPY services/ntcip-interface/requirements.txt /tmp/requirements.txt
+
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN if [ -f /tmp/shared/setup.py ]; then pip install --no-cache-dir --user /tmp/shared; fi
+RUN pip install --no-cache-dir --user -r /tmp/requirements.txt
+# Force `packaging` into --user site (the global pip upgrade above
+# satisfies it globally, so it would otherwise miss /root/.local).
+RUN pip install --no-cache-dir --user --ignore-installed packaging
+
+# Final stage
 FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /root/.local /root/.local
 
-# Copy requirements
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Shared package + application code. config/ and models/ are not tracked
+# in git (empty dirs), so they are NOT copied — mount them at deploy time
+# if a service needs runtime config.
+COPY shared /app/shared
+COPY services/ntcip-interface/src/ ./src/
 
-# Copy source code
-COPY src/ ./src/
+ENV PATH=/root/.local/bin:$PATH
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/app:/app/shared
 
-# Expose port
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8008/health')" || exit 1
+
 EXPOSE 8008
 
-# Run service
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8008"]
-

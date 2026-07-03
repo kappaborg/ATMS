@@ -380,7 +380,7 @@ class EmissionEstimator:
         adds. Lower-cased on insert.
         """
         try:
-            import yaml  # noqa: PLC0415
+            import yaml
         except ImportError:
             return
         try:

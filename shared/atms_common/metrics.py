@@ -58,7 +58,7 @@ class PrometheusMetrics:
 
     def __init__(self) -> None:
         # Lazy import keeps prometheus_client out of the unit-test dependency set.
-        from prometheus_client import (  # noqa: PLC0415
+        from prometheus_client import (
             Counter,
             Gauge,
         )
