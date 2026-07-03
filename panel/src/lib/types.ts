@@ -40,6 +40,13 @@ export interface Counts {
   pedestrians: number;
 }
 
+export interface Incident {
+  type: string;
+  track_id: number;
+  seconds: number;
+  label: string;
+}
+
 export interface FrameEvent {
   type: "frame";
   camera_id: string;
@@ -49,6 +56,7 @@ export interface FrameEvent {
   fps: number;
   counts: Counts;
   detections: Detection[];
+  incidents: Incident[];
   approaches: { ns: ApproachStat; ew: ApproachStat };
   calibrated: boolean;
   decision: Decision;

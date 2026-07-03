@@ -172,24 +172,48 @@ class AnomalyDetector:
         
         return is_anomaly, anomaly_score
     
+    def evaluate(self, metrics: Dict) -> Tuple[bool, float, Optional[str]]:
+        """Detect and classify in a single pass.
+
+        Preferred over detect_anomaly()+classify_anomaly(), which would run
+        detection twice and append the same sample to history twice.
+        """
+        is_anomaly, score = self.detect_anomaly(metrics)
+        if not is_anomaly:
+            return False, score, None
+        return True, score, self._classify_from_metrics(metrics)
+
+    def _classify_from_metrics(self, metrics: Dict) -> str:
+        ns = metrics.get('north_south', {})
+        ew = metrics.get('east_west', {})
+        if ns.get('vehicle_count', 0) > 100 or ew.get('vehicle_count', 0) > 100:
+            return "HIGH_TRAFFIC"
+        elif ns.get('average_waiting_time', 0) > 120 or ew.get('average_waiting_time', 0) > 120:
+            return "CONGESTION"
+        elif ns.get('total_emission', 0) > 1000 or ew.get('total_emission', 0) > 1000:
+            return "HIGH_EMISSION"
+        elif ns.get('average_velocity', 0) < 5 or ew.get('average_velocity', 0) < 5:
+            return "LOW_SPEED"
+        return "UNKNOWN_ANOMALY"
+
     def classify_anomaly(self, metrics: Dict) -> Optional[str]:
         """
         Classify type of anomaly.
-        
+
         Args:
             metrics: Traffic metrics
-            
+
         Returns:
             Anomaly type or None if normal
         """
         is_anomaly, score = self.detect_anomaly(metrics)
-        
+
         if not is_anomaly:
             return None
-        
+
         ns = metrics.get('north_south', {})
         ew = metrics.get('east_west', {})
-        
+
         # Classify based on metrics
         if ns.get('vehicle_count', 0) > 100 or ew.get('vehicle_count', 0) > 100:
             return "HIGH_TRAFFIC"
