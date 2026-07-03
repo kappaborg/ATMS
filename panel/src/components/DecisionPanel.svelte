@@ -85,6 +85,21 @@
       {/if}
     {/if}
 
+    {#if event?.emissions}
+      <div class="carbon">
+        <div class="chead">🌱 Emissions <span>this session</span></div>
+        <div class="cgrid">
+          <div class="cm"><b>{event.emissions.total_co2_kg.toFixed(2)}<i>kg</i></b><span>CO₂ measured</span></div>
+          <div class="cm"><b>{event.emissions.rate_kg_h.toFixed(1)}<i>kg/h</i></b><span>rate</span></div>
+          <div class="cm"><b>{event.emissions.avg_g_per_km.toFixed(0)}<i>g/km</i></b><span>avg intensity</span></div>
+          <div class="cm saved"><b>{event.emissions.est_saved_kg.toFixed(2)}<i>kg</i></b><span>est. saved</span></div>
+        </div>
+        <p class="cnote">Est. saved = measured idle CO₂ × {(event.emissions.savings_ratio * 100).toFixed(0)}% (adaptive-control model; adjustable).</p>
+      </div>
+    {:else if event && !event.calibrated}
+      <p class="cuncal">🌱 Calibrate this camera to measure CO₂ emissions (needs real speed).</p>
+    {/if}
+
     {#if d.predicted_congestion}
       <div class="forecast">
         <div class="fhead">🔮 Congestion forecast <span>{d.predicted_congestion.horizon_min} min ahead</span></div>
@@ -112,6 +127,17 @@
   dt { color: #8b95a7; }
   dd { margin: 0; color: #dfe6ee; }
   .reason { font-size: 0.78rem; color: #b7c0cd; }
+  .carbon { margin-top: 14px; padding: 10px 12px; background: #0d1a12; border: 1px solid #1c3a28; border-radius: 8px; }
+  .chead { font-size: 0.74rem; color: #7fd6a0; margin-bottom: 8px; }
+  .chead span { color: #5a7566; }
+  .cgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cm { display: flex; flex-direction: column; }
+  .cm b { font-size: 1.0rem; color: #eaf1f8; }
+  .cm b i { font-size: 0.6rem; color: #7a8494; font-style: normal; margin-left: 2px; }
+  .cm span { font-size: 0.62rem; color: #7a8494; text-transform: uppercase; letter-spacing: 0.03em; }
+  .cm.saved b { color: #2ecc71; }
+  .cnote { margin: 8px 0 0; font-size: 0.64rem; color: #6b7688; line-height: 1.35; }
+  .cuncal { margin-top: 14px; font-size: 0.72rem; color: #7fd6a0; }
   .forecast { margin-top: 14px; padding: 10px 12px; background: #0e1622; border: 1px solid #1e2230; border-radius: 8px; }
   .fhead { font-size: 0.74rem; color: #9aa4b2; margin-bottom: 8px; }
   .fhead span { color: #6b7688; }
