@@ -31,6 +31,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from hub import CameraManager, Hub
+from scene import SceneConfig
 
 VIDEO_FPS = float(os.getenv("PANEL_VIDEO_FPS", "20"))
 
@@ -90,6 +91,27 @@ async def remove_camera(camera_id: str) -> dict:
     except KeyError:
         raise HTTPException(status_code=404, detail="camera not found")
     return {"status": "removed", "camera_id": camera_id}
+
+
+@app.post("/cameras/{camera_id}/scene")
+async def set_scene(camera_id: str, payload: dict) -> dict:
+    """Set calibration and/or approach zones for a camera.
+
+    Body: {
+      "calibration": {"image_points": [[x,y],...], "world_points_m": [[X,Y],...]},
+      "zones": {"north": [[x,y],...], ...},
+      "zone_directions": {"north": "ns", "east": "ew", ...}
+    }
+    All fields optional. Returns the applied scene info (incl. reprojection error).
+    """
+    try:
+        scene = SceneConfig.from_payload(payload)
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=f"invalid scene: {e}")
+    try:
+        return manager.set_scene(camera_id, scene)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="camera not found")
 
 
 @app.websocket("/ws/data")

@@ -40,6 +40,12 @@ class Detection:
     label: str
     confidence: float
     bbox: tuple[float, float, float, float]  # x1, y1, x2, y2
+    speed_kmh: float | None = None
+    approach: str | None = None
+
+    @property
+    def center(self) -> tuple[float, float]:
+        return (self.bbox[0] + self.bbox[2]) / 2, (self.bbox[1] + self.bbox[3]) / 2
 
 
 @dataclass
@@ -143,7 +149,11 @@ def annotate(frame: np.ndarray, result: FrameResult, phase: str | None, fps: flo
         x1, y1, x2, y2 = map(int, d.bbox)
         _, colour = _CLASSES.get(d.cls_id, ("object", (200, 200, 200)))
         cv2.rectangle(frame, (x1, y1), (x2, y2), colour, 2)
-        tag = f"{d.label} #{d.track_id} {d.confidence:.0%}"
+        tag = f"{d.label} #{d.track_id}"
+        if d.speed_kmh is not None:
+            tag += f" {d.speed_kmh:.0f}km/h"
+        else:
+            tag += f" {d.confidence:.0%}"
         (tw, th), _ = cv2.getTextSize(tag, cv2.FONT_HERSHEY_SIMPLEX, 0.45, 1)
         cv2.rectangle(frame, (x1, y1 - th - 6), (x1 + tw + 4, y1), colour, -1)
         cv2.putText(frame, tag, (x1 + 2, y1 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 1)
