@@ -2,7 +2,7 @@
 # Build from the PROJECT ROOT so `shared/` is in the context:
 #   docker build -f services/decision-engine/Dockerfile .
 # (CI uses context: . — see .github/workflows/ci.yml)
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /app
 
@@ -29,7 +29,7 @@ RUN pip install --no-cache-dir --user --ignore-installed \
 RUN pip install --no-cache-dir --user --ignore-installed packaging
 
 # Final stage
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 
