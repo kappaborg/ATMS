@@ -18,6 +18,11 @@
   let stageH = $state(1);
 
   let mode = $state<"points" | "zones">("points");
+  // "rect" = click 4 corners of a ground rectangle + enter its size (easy).
+  // "advanced" = enter each point's own X/Y metres.
+  let calMode = $state<"rect" | "advanced">("rect");
+  let rectW = $state(0); // rectangle width across the road (metres)
+  let rectL = $state(0); // rectangle length along the road (metres)
   let points = $state<Pt[]>([]);
   let zones = $state<Zone[]>([]);
   let draft = $state<[number, number][]>([]);
@@ -44,10 +49,26 @@
     const nx = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
     const ny = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
     if (mode === "points") {
+      // In rectangle mode, cap at 4 corners.
+      if (calMode === "rect" && points.length >= 4) return;
       points = [...points, { nx, ny, X: 0, Y: 0 }];
     } else {
       draft = [...draft, [nx, ny]];
     }
+  }
+
+  function clearPoints() {
+    points = [];
+    error = "";
+    result = null;
+  }
+
+  // Reject clustered/collinear image points before hitting the backend.
+  function pointsAreSpread(): boolean {
+    if (points.length < 4) return false;
+    const xs = points.map((p) => p.nx);
+    const ys = points.map((p) => p.ny);
+    return Math.max(...xs) - Math.min(...xs) > 0.06 && Math.max(...ys) - Math.min(...ys) > 0.06;
   }
 
   // Normalised -> rendered pixels for drawing the overlay.
@@ -76,22 +97,45 @@
     zones = zones.filter((_, k) => k !== i);
   }
 
+  function buildCalibration(): { image_points: [number, number][]; world_points_m: [number, number][] } | null {
+    if (points.length === 0) return null; // calibration optional (zones only)
+    if (points.length < 4) {
+      throw new Error("click at least 4 points on the road");
+    }
+    if (!pointsAreSpread()) {
+      throw new Error("spread the points out across the road — they're clustered too close together");
+    }
+    const image_points = points.map((p) => toImagePx(p.nx, p.ny));
+
+    if (calMode === "rect") {
+      if (points.length !== 4) throw new Error("rectangle mode needs exactly 4 corners");
+      if (!(rectW > 0) || !(rectL > 0)) {
+        throw new Error("enter the rectangle's width and length in metres");
+      }
+      // Corners in click order: near-left, near-right, far-right, far-left.
+      return {
+        image_points,
+        world_points_m: [[0, 0], [rectW, 0], [rectW, rectL], [0, rectL]],
+      };
+    }
+
+    // Advanced: each point needs its own real-world metres, and they must
+    // not all be the same point.
+    const distinct = new Set(points.map((p) => `${p.X},${p.Y}`)).size;
+    if (distinct < 3) {
+      throw new Error("enter distinct real-world metres for the points (not all 0)");
+    }
+    return { image_points, world_points_m: points.map((p) => [p.X, p.Y] as [number, number]) };
+  }
+
   async function apply() {
     error = "";
     result = null;
-    if (points.length && points.length < 4) {
-      error = "calibration needs at least 4 reference points (or none)";
-      return;
-    }
     applying = true;
     try {
       const payload: Parameters<typeof setScene>[1] = {};
-      if (points.length >= 4) {
-        payload.calibration = {
-          image_points: points.map((p) => toImagePx(p.nx, p.ny)),
-          world_points_m: points.map((p) => [p.X, p.Y] as [number, number]),
-        };
-      }
+      const cal = buildCalibration();
+      if (cal) payload.calibration = cal;
       if (zones.length) {
         payload.zones = Object.fromEntries(
           zones.map((z) => [z.name, z.verts.map(([nx, ny]) => toImagePx(nx, ny))]),
@@ -142,6 +186,11 @@
                   <circle cx={px(nx, stageW)} cy={px(ny, stageH)} r="5" fill="#7fd1ff" />
                 {/each}
               {/if}
+              {#if mode === "points" && calMode === "rect" && points.length >= 2}
+                <polyline
+                  points={[...points, ...(points.length === 4 ? [points[0]] : [])].map((p) => `${px(p.nx, stageW)},${px(p.ny, stageH)}`).join(" ")}
+                  fill="rgba(231,76,60,0.12)" stroke="#e74c3c" stroke-width="2" stroke-dasharray="6 5" />
+              {/if}
               {#each points as p, i}
                 <circle cx={px(p.nx, stageW)} cy={px(p.ny, stageH)} r="7" fill="#e74c3c" stroke="#fff" stroke-width="2" />
                 <text x={px(p.nx, stageW) + 11} y={px(p.ny, stageH) - 9} fill="#fff" font-size="15">{i + 1}</text>
@@ -150,8 +199,10 @@
           </div>
         {/if}
         <p class="hint">
-          {#if mode === "points"}
-            Click ≥4 points on the road, then enter each point's real-world position in metres (pick a fixed origin, e.g. a lane corner).
+          {#if mode === "points" && calMode === "rect"}
+            Click the <b>4 corners of a rectangle on the road</b> in order: near-left → near-right → far-right → far-left. Pick something whose real size you know — a crosswalk, a rectangular road marking, or a lane over a measured length. Then enter its width &amp; length.
+          {:else if mode === "points"}
+            Click ≥4 well-spread points on the road, then type each point's real-world position in metres (pick a fixed origin, e.g. a lane corner).
           {:else}
             Click to trace an approach zone's outline, name it, pick its direction, then “Finish zone”.
           {/if}
@@ -160,20 +211,46 @@
 
       <aside>
         {#if mode === "points"}
-          <h3>Reference points ({points.length})</h3>
-          <p class="sub">image → world metres</p>
-          <div class="list">
-            {#each points as p, i}
-              <div class="row">
-                <span class="idx">{i + 1}</span>
-                <span class="px">{(p.nx * 100).toFixed(0)},{(p.ny * 100).toFixed(0)}%</span>
-                <input type="number" step="0.1" bind:value={p.X} title="X metres" />
-                <input type="number" step="0.1" bind:value={p.Y} title="Y metres" />
-                <button class="x" onclick={() => removePoint(i)}>✕</button>
-              </div>
-            {/each}
-            {#if !points.length}<p class="empty">Click points on the image.</p>{/if}
+          <div class="calmode">
+            <button class:active={calMode === "rect"} onclick={() => (calMode = "rect")}>Rectangle (easy)</button>
+            <button class:active={calMode === "advanced"} onclick={() => (calMode = "advanced")}>Advanced</button>
           </div>
+
+          {#if calMode === "rect"}
+            <h3>Rectangle corners ({points.length}/4)</h3>
+            <div class="list">
+              {#each points as p, i}
+                <div class="crow">
+                  <span class="idx">{i + 1}</span>
+                  <span class="cname">{["near-left", "near-right", "far-right", "far-left"][i]}</span>
+                  <span class="px">{(p.nx * 100).toFixed(0)},{(p.ny * 100).toFixed(0)}%</span>
+                  <button class="x" onclick={() => removePoint(i)}>✕</button>
+                </div>
+              {/each}
+              {#if !points.length}<p class="empty">Click the 4 corners on the image.</p>{/if}
+            </div>
+            {#if points.length}<button class="clear" onclick={clearPoints}>Clear corners</button>{/if}
+            <div class="rect-size">
+              <label>Width (m)<input type="number" step="0.1" min="0" bind:value={rectW} placeholder="e.g. 3.5" /></label>
+              <label>Length (m)<input type="number" step="0.1" min="0" bind:value={rectL} placeholder="e.g. 12" /></label>
+            </div>
+            <p class="tip">Width = across the road, Length = along it. A standard lane is ~3.5 m wide; measure the length with a map/odometer if you can.</p>
+          {:else}
+            <h3>Reference points ({points.length})</h3>
+            <p class="sub">image → world metres</p>
+            <div class="list">
+              {#each points as p, i}
+                <div class="row">
+                  <span class="idx">{i + 1}</span>
+                  <span class="px">{(p.nx * 100).toFixed(0)},{(p.ny * 100).toFixed(0)}%</span>
+                  <input type="number" step="0.1" bind:value={p.X} title="X metres" />
+                  <input type="number" step="0.1" bind:value={p.Y} title="Y metres" />
+                  <button class="x" onclick={() => removePoint(i)}>✕</button>
+                </div>
+              {/each}
+              {#if !points.length}<p class="empty">Click points on the image.</p>{/if}
+            </div>
+          {/if}
         {:else}
           <h3>Zones ({zones.length})</h3>
           <div class="list">
@@ -232,6 +309,16 @@
   aside h3 { margin: 0 0 2px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8b95a7; }
   .sub { margin: 0 0 8px; font-size: 0.7rem; color: #6b7688; }
   .list { display: flex; flex-direction: column; gap: 6px; }
+  .calmode { display: flex; gap: 6px; margin-bottom: 12px; }
+  .calmode button { flex: 1; padding: 6px; background: #12151d; border: 1px solid #1e2230; color: #9aa4b2; border-radius: 6px; cursor: pointer; font-size: 0.76rem; }
+  .calmode button.active { background: #1b3a52; border-color: #2b6ea3; color: #cfe8ff; }
+  .crow { display: grid; grid-template-columns: 18px 1fr auto 22px; gap: 8px; align-items: center; font-size: 0.8rem; }
+  .crow .cname { color: #b7c0cd; }
+  .clear { margin: 8px 0; padding: 6px; background: #12151d; border: 1px solid #1e2230; color: #9aa4b2; border-radius: 5px; cursor: pointer; font-size: 0.74rem; }
+  .rect-size { display: flex; gap: 8px; margin-top: 10px; }
+  .rect-size label { flex: 1; display: flex; flex-direction: column; gap: 3px; font-size: 0.72rem; color: #8b95a7; }
+  .rect-size input { padding: 6px 8px; background: #12151d; border: 1px solid #1e2230; border-radius: 5px; color: #eaf1f8; font-size: 0.85rem; }
+  .tip { margin: 10px 0 0; font-size: 0.7rem; color: #7a8494; line-height: 1.4; }
   .row { display: grid; grid-template-columns: 20px 60px 1fr 1fr 22px; gap: 6px; align-items: center; }
   .row .idx { color: #e74c3c; font-weight: 600; font-size: 0.8rem; }
   .row .px { font-size: 0.72rem; color: #6b7688; }
