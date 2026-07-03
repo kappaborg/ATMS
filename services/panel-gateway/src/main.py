@@ -144,6 +144,32 @@ async def list_cameras(_: None = _AUTH) -> list[dict]:
     return manager.list()
 
 
+@app.get("/devices")
+async def list_devices(_: None = _AUTH) -> list[dict]:
+    """Probe local video device indices (USB webcams, macOS Continuity Camera
+    for iPhone). Returns the indices that open, with their frame size. On
+    macOS the first probe triggers a camera-permission prompt for the process
+    running the gateway."""
+    import cv2
+
+    def probe() -> list[dict]:
+        found = []
+        for i in range(4):
+            cap = cv2.VideoCapture(i)
+            try:
+                if cap.isOpened():
+                    ok, frame = cap.read()
+                    if ok and frame is not None:
+                        found.append(
+                            {"index": i, "width": int(frame.shape[1]), "height": int(frame.shape[0])}
+                        )
+            finally:
+                cap.release()
+        return found
+
+    return await asyncio.get_running_loop().run_in_executor(None, probe)
+
+
 @app.post("/cameras")
 async def add_camera(cam: CameraIn, _: None = _AUTH, __: None = _RATE) -> dict:
     if len(manager.list()) >= max_cameras():

@@ -4,13 +4,18 @@
 
   let { camera_id, onclose }: { camera_id: string; onclose: () => void } = $props();
 
-  type Pt = { ix: number; iy: number; X: number; Y: number };
+  // Points are stored in NORMALISED coordinates (nx, ny in 0..1 relative to
+  // the image), so clicks land exactly under the cursor regardless of the
+  // video's resolution, aspect ratio, or rotation. Pixels are computed once,
+  // at apply time, from the image's natural dimensions.
+  type Pt = { nx: number; ny: number; X: number; Y: number };
   type Zone = { name: string; direction: "ns" | "ew"; verts: [number, number][] };
 
   let backdrop = $state("");
-  let nw = $state(1280);
-  let nh = $state(720);
   let loadError = $state("");
+  let imgEl: HTMLImageElement | undefined = $state();
+  let stageW = $state(1);
+  let stageH = $state(1);
 
   let mode = $state<"points" | "zones">("points");
   let points = $state<Pt[]>([]);
@@ -32,21 +37,26 @@
   });
   onDestroy(() => backdrop && URL.revokeObjectURL(backdrop));
 
-  function onImgLoad(e: Event) {
-    const img = e.currentTarget as HTMLImageElement;
-    nw = img.naturalWidth || nw;
-    nh = img.naturalHeight || nh;
+  function stageClick(e: MouseEvent) {
+    // Map the click to 0..1 within the image element itself.
+    const el = e.currentTarget as HTMLElement;
+    const rect = el.getBoundingClientRect();
+    const nx = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    const ny = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
+    if (mode === "points") {
+      points = [...points, { nx, ny, X: 0, Y: 0 }];
+    } else {
+      draft = [...draft, [nx, ny]];
+    }
   }
 
-  function stageClick(e: MouseEvent) {
-    const rect = (e.currentTarget as SVGElement).getBoundingClientRect();
-    const ix = Math.round(((e.clientX - rect.left) / rect.width) * nw);
-    const iy = Math.round(((e.clientY - rect.top) / rect.height) * nh);
-    if (mode === "points") {
-      points = [...points, { ix, iy, X: 0, Y: 0 }];
-    } else {
-      draft = [...draft, [ix, iy]];
-    }
+  // Normalised -> rendered pixels for drawing the overlay.
+  const px = (n: number, span: number) => n * span;
+  // Normalised -> image pixels for the gateway (uses real frame size).
+  function toImagePx(nx: number, ny: number): [number, number] {
+    const w = imgEl?.naturalWidth || 1;
+    const h = imgEl?.naturalHeight || 1;
+    return [Math.round(nx * w), Math.round(ny * h)];
   }
 
   function removePoint(i: number) {
@@ -78,12 +88,14 @@
       const payload: Parameters<typeof setScene>[1] = {};
       if (points.length >= 4) {
         payload.calibration = {
-          image_points: points.map((p) => [p.ix, p.iy] as [number, number]),
+          image_points: points.map((p) => toImagePx(p.nx, p.ny)),
           world_points_m: points.map((p) => [p.X, p.Y] as [number, number]),
         };
       }
       if (zones.length) {
-        payload.zones = Object.fromEntries(zones.map((z) => [z.name, z.verts]));
+        payload.zones = Object.fromEntries(
+          zones.map((z) => [z.name, z.verts.map(([nx, ny]) => toImagePx(nx, ny))]),
+        );
         payload.zone_directions = Object.fromEntries(zones.map((z) => [z.name, z.direction]));
       }
       result = await setScene(camera_id, payload);
@@ -115,24 +127,24 @@
         {:else if !backdrop}
           <div class="err-box">Capturing frame…</div>
         {:else}
-          <div class="stage">
-            <img src={backdrop} alt="frame" onload={onImgLoad} />
-            <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-            <svg viewBox="0 0 {nw} {nh}" onclick={stageClick}>
+          <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+          <div class="stage" bind:clientWidth={stageW} bind:clientHeight={stageH} onclick={stageClick}>
+            <img src={backdrop} alt="frame" bind:this={imgEl} />
+            <svg viewBox="0 0 {stageW} {stageH}">
               {#each zones as z}
-                <polygon points={z.verts.map((v) => v.join(",")).join(" ")}
-                  fill={zoneColour(z.direction)} fill-opacity="0.18" stroke={zoneColour(z.direction)} stroke-width="3" />
-                <text x={z.verts[0][0]} y={z.verts[0][1] - 6} fill={zoneColour(z.direction)} font-size={Math.max(14, nh/40)}>{z.name}</text>
+                <polygon points={z.verts.map(([nx, ny]) => `${px(nx, stageW)},${px(ny, stageH)}`).join(" ")}
+                  fill={zoneColour(z.direction)} fill-opacity="0.18" stroke={zoneColour(z.direction)} stroke-width="2.5" />
+                <text x={px(z.verts[0][0], stageW)} y={px(z.verts[0][1], stageH) - 6} fill={zoneColour(z.direction)} font-size="15">{z.name}</text>
               {/each}
               {#if draft.length}
-                <polyline points={draft.map((v) => v.join(",")).join(" ")} fill="none" stroke="#7fd1ff" stroke-width="3" stroke-dasharray="8 6" />
-                {#each draft as v}
-                  <circle cx={v[0]} cy={v[1]} r={Math.max(5, nh/120)} fill="#7fd1ff" />
+                <polyline points={draft.map(([nx, ny]) => `${px(nx, stageW)},${px(ny, stageH)}`).join(" ")} fill="none" stroke="#7fd1ff" stroke-width="2.5" stroke-dasharray="8 6" />
+                {#each draft as [nx, ny]}
+                  <circle cx={px(nx, stageW)} cy={px(ny, stageH)} r="5" fill="#7fd1ff" />
                 {/each}
               {/if}
               {#each points as p, i}
-                <circle cx={p.ix} cy={p.iy} r={Math.max(6, nh/100)} fill="#e74c3c" stroke="#fff" stroke-width="2" />
-                <text x={p.ix + 10} y={p.iy - 8} fill="#fff" font-size={Math.max(14, nh/40)}>{i + 1}</text>
+                <circle cx={px(p.nx, stageW)} cy={px(p.ny, stageH)} r="7" fill="#e74c3c" stroke="#fff" stroke-width="2" />
+                <text x={px(p.nx, stageW) + 11} y={px(p.ny, stageH) - 9} fill="#fff" font-size="15">{i + 1}</text>
               {/each}
             </svg>
           </div>
@@ -154,7 +166,7 @@
             {#each points as p, i}
               <div class="row">
                 <span class="idx">{i + 1}</span>
-                <span class="px">{p.ix},{p.iy}</span>
+                <span class="px">{(p.nx * 100).toFixed(0)},{(p.ny * 100).toFixed(0)}%</span>
                 <input type="number" step="0.1" bind:value={p.X} title="X metres" />
                 <input type="number" step="0.1" bind:value={p.Y} title="Y metres" />
                 <button class="x" onclick={() => removePoint(i)}>✕</button>
@@ -207,10 +219,13 @@
   .tabs button.active, .dirs button.active { background: #1b3a52; border-color: #2b6ea3; color: #cfe8ff; }
   .close { margin-left: auto; background: none; border: none; color: #9aa4b2; font-size: 1.1rem; cursor: pointer; }
   .content { flex: 1; display: grid; grid-template-columns: 1fr 320px; min-height: 0; }
-  .stage-wrap { padding: 14px; display: flex; flex-direction: column; min-height: 0; }
-  .stage { position: relative; background: #000; border-radius: 6px; overflow: hidden; }
-  .stage img { display: block; width: 100%; height: auto; }
-  .stage svg { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+  .stage-wrap { padding: 14px; display: flex; flex-direction: column; align-items: center; min-height: 0; }
+  /* The stage shrinks to the rendered image (any aspect/orientation), so the
+     click overlay and the image share exactly the same box — clicks always
+     land under the cursor. */
+  .stage { position: relative; display: inline-block; line-height: 0; background: #000; border-radius: 6px; overflow: hidden; cursor: crosshair; }
+  .stage img { display: block; width: auto; height: auto; max-width: 100%; max-height: 64vh; }
+  .stage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .hint { font-size: 0.78rem; color: #8b95a7; margin: 10px 2px 0; line-height: 1.4; }
   .err-box { display: grid; place-items: center; aspect-ratio: 16/9; color: #8b95a7; background: #000; border-radius: 6px; }
   aside { border-left: 1px solid #1e2230; padding: 14px; display: flex; flex-direction: column; overflow: auto; }
