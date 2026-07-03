@@ -160,6 +160,27 @@ class CameraManager:
             for w in self._workers.values()
         ]
 
+    def report_csv(self, cam_id: str) -> str:
+        import time
+
+        w = self._workers.get(cam_id)
+        if w is None:
+            raise KeyError(cam_id)
+        now = time.time()
+        return w.report.to_csv(w.emissions.stats(now), now)
+
+    def report_json(self, cam_id: str) -> dict:
+        import time
+
+        w = self._workers.get(cam_id)
+        if w is None:
+            raise KeyError(cam_id)
+        now = time.time()
+        return {
+            "summary": w.report.summary(w.emissions.stats(now), now),
+            "timeseries": w.report.snapshots(),
+        }
+
     def stop_all(self) -> None:
         for w in list(self._workers.values()):
             w.stop()

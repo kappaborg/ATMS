@@ -92,6 +92,24 @@ export async function listDevices(): Promise<VideoDevice[]> {
   return r.json();
 }
 
+/** Fetch the camera's session report and trigger a CSV download. */
+export async function downloadReport(camera_id: string): Promise<void> {
+  const r = await fetch(
+    `${BASE}/cameras/${encodeURIComponent(camera_id)}/report?format=csv`,
+    { headers: authHeaders() },
+  );
+  if (!r.ok) throw new Error(`report ${r.status}`);
+  const blob = new Blob([await r.text()], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `atms-report-${camera_id}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function health(): Promise<boolean> {
   try {
     const r = await fetch(`${BASE}/health`);
