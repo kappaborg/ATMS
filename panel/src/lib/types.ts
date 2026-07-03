@@ -20,6 +20,18 @@ export interface Decision {
   reason: string;
 }
 
+export interface SystemDecision {
+  intersection_id: string;
+  commanded_phase: string | null;
+  recommended_phase: string | null;
+  priority: string | null;
+  confidence: number | null;
+  reason: string | null;
+  age_s: number;
+  stale: boolean;
+  source: string;
+}
+
 export interface Counts {
   vehicles: number;
   pedestrians: number;
@@ -37,6 +49,8 @@ export interface FrameEvent {
   approaches: { ns: ApproachStat; ew: ApproachStat };
   calibrated: boolean;
   decision: Decision;
+  intersection_id: string;
+  system: SystemDecision | null;
 }
 
 export interface CameraInfo {

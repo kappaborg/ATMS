@@ -55,12 +55,24 @@ def _open_capture(source: str | int) -> cv2.VideoCapture:
 
 
 class CameraWorker:
-    def __init__(self, cam_id: str, source: str | int, detector: Detector, hub, *, loop_file=True):
+    def __init__(
+        self,
+        cam_id: str,
+        source: str | int,
+        detector: Detector,
+        hub,
+        *,
+        loop_file=True,
+        intersection_id: str = "1",
+        system=None,
+    ):
         self.cam_id = cam_id
         self.source = source
         self.detector = detector
         self.hub = hub
         self.loop_file = loop_file
+        self.intersection_id = intersection_id
+        self.system = system  # SystemState | None
         self.tracker = SimpleByteTracker()
         self.engine = AIDecisionEngine()
         self.scene = SceneConfig()  # calibration/zones applied at runtime
@@ -202,5 +214,9 @@ class CameraWorker:
                         "confidence": round(decision.confidence, 3),
                         "reason": decision.reason,
                     },
+                    # Real controller decision from the ATMS `decisions` topic,
+                    # when the gateway is connected to a running system.
+                    "intersection_id": self.intersection_id,
+                    "system": self.system.get(self.intersection_id) if self.system else None,
                 }
             )
