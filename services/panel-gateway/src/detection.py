@@ -42,10 +42,15 @@ class Detection:
     bbox: tuple[float, float, float, float]  # x1, y1, x2, y2
     speed_kmh: float | None = None
     approach: str | None = None
+    stopped: bool = False
 
     @property
     def center(self) -> tuple[float, float]:
         return (self.bbox[0] + self.bbox[2]) / 2, (self.bbox[1] + self.bbox[3]) / 2
+
+    @property
+    def is_vehicle(self) -> bool:
+        return self.cls_id in _VEHICLE_IDS
 
 
 @dataclass
@@ -147,10 +152,15 @@ def annotate(frame: np.ndarray, result: FrameResult, phase: str | None, fps: flo
     """Draw boxes, track ids, and a compact status header onto the frame."""
     for d in result.detections:
         x1, y1, x2, y2 = map(int, d.bbox)
-        _, colour = _CLASSES.get(d.cls_id, ("object", (200, 200, 200)))
-        cv2.rectangle(frame, (x1, y1), (x2, y2), colour, 2)
+        if d.stopped:
+            colour = (0, 0, 255)  # red — flagged incident
+        else:
+            _, colour = _CLASSES.get(d.cls_id, ("object", (200, 200, 200)))
+        cv2.rectangle(frame, (x1, y1), (x2, y2), colour, 3 if d.stopped else 2)
         tag = f"{d.label} #{d.track_id}"
-        if d.speed_kmh is not None:
+        if d.stopped:
+            tag = f"STOPPED #{d.track_id}"
+        elif d.speed_kmh is not None:
             tag += f" {d.speed_kmh:.0f}km/h"
         else:
             tag += f" {d.confidence:.0%}"

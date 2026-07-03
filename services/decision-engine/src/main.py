@@ -191,8 +191,11 @@ class DecisionEngineService:
         # ATMS_USE_PREDICTIONS=0. The forecast nudges the direction scores so
         # the signal acts before a jam forms (see AIDecisionEngine).
         use_predictions = os.getenv("ATMS_USE_PREDICTIONS", "1").lower() in ("1", "true", "yes")
+        use_anomaly = os.getenv("ATMS_USE_ANOMALY", "1").lower() in ("1", "true", "yes")
         self.engine = (
-            AIDecisionEngine(use_predictions=use_predictions) if AI_SYSTEM_AVAILABLE else None
+            AIDecisionEngine(use_predictions=use_predictions, use_anomaly_detection=use_anomaly)
+            if AI_SYSTEM_AVAILABLE
+            else None
         )
         self.kafka_consumer: AIOKafkaConsumer | None = None
         self.kafka_producer: AIOKafkaProducer | None = None

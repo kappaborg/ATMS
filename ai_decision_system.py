@@ -108,6 +108,7 @@ class AIDecisionEngine:
         self.prediction_weight = prediction_weight
         self.prediction_horizon_min = prediction_horizon_min
         self._last_prediction: Optional[Dict] = None
+        self._last_anomaly: Optional[str] = None
         self._now = now_fn or time.monotonic
         self._phase_started_at = self._now()
         self.phase_history = []
@@ -250,20 +251,18 @@ class AIDecisionEngine:
         # active_direction under min-green, yellow and all-red timing).
         recommended_phase = self._advance_phase(wants_switch, other_score)
         
-        # Phase 2: Check for anomalies
+        # Phase 2: Check for anomalies (single detect+classify pass)
         anomaly_type = None
         if self.use_anomaly_detection and self.anomaly_detector:
             try:
-                metrics_dict = {
-                    'north_south': north_south,
-                    'east_west': east_west
-                }
-                is_anomaly, anomaly_score = self.anomaly_detector.detect_anomaly(metrics_dict)
+                is_anomaly, anomaly_score, anomaly_type = self.anomaly_detector.evaluate(
+                    {"north_south": north_south, "east_west": east_west}
+                )
                 if is_anomaly:
-                    anomaly_type = self.anomaly_detector.classify_anomaly(metrics_dict)
                     logger.warning(f"⚠️  Anomaly detected: {anomaly_type} (score: {anomaly_score:.2f})")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — advisory; never break the decision
                 logger.warning(f"Anomaly detection failed: {e}")
+        self._last_anomaly = anomaly_type
         
         # Escalate priority when the forecast (already folded into the scores
         # above) shows imminent congestion on either approach.
@@ -322,6 +321,9 @@ class AIDecisionEngine:
         if self._last_prediction:
             expected_impact["predicted_congestion_ns"] = self._last_prediction["north_south"]
             expected_impact["predicted_congestion_ew"] = self._last_prediction["east_west"]
+        if self._last_anomaly:
+            expected_impact["anomaly"] = self._last_anomaly
+            reason = reason.rstrip(".") + f". ⚠ Anomaly: {self._last_anomaly}."
         
         # Create decision
         decision = TrafficDecision(

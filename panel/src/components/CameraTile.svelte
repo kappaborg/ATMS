@@ -30,6 +30,11 @@
         <span class="stat lat">{event.pipeline_latency_ms.toFixed(0)} ms</span>
       {/if}
     </div>
+    {#if event?.incidents?.length}
+      <div class="incident">⚠ {event.incidents.length === 1 ? "Stopped vehicle" : `${event.incidents.length} stopped vehicles`}
+        <span>#{event.incidents[0].track_id} · {event.incidents[0].seconds.toFixed(0)}s</span>
+      </div>
+    {/if}
     <button class="remove" title="Remove camera" onclick={() => removeCamera(camera_id)}>✕</button>
   </div>
 </div>
@@ -39,6 +44,14 @@
   .video { position: relative; aspect-ratio: 16 / 9; background: #000; }
   img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: #667; font-size: 0.85rem; }
+  .incident {
+    position: absolute; top: 8px; left: 8px; display: flex; align-items: center; gap: 6px;
+    background: rgba(231,76,60,0.92); color: #fff; padding: 4px 10px; border-radius: 6px;
+    font-size: 0.74rem; font-weight: 600; box-shadow: 0 0 12px rgba(231,76,60,0.6);
+    animation: incpulse 1.2s ease-in-out infinite;
+  }
+  .incident span { font-weight: 400; opacity: 0.85; }
+  @keyframes incpulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
   .badge {
     position: absolute; left: 8px; bottom: 8px; display: flex; align-items: center; gap: 8px;
     background: rgba(0,0,0,0.55); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; color: #dfe6ee;

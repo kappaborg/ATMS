@@ -30,6 +30,7 @@ from tracking.bytetrack_simple import SimpleByteTracker  # noqa: E402
 from ai_decision_system import AIDecisionEngine  # noqa: E402
 
 from detection import Detector, annotate, summarize, to_tracker_input  # noqa: E402
+from incidents import IncidentDetector  # noqa: E402
 from scene import SceneConfig  # noqa: E402
 
 _INFER_LOCK = threading.Lock()
@@ -82,6 +83,7 @@ class CameraWorker:
             use_predictions=os.getenv("ATMS_USE_PREDICTIONS", "1").lower() in ("1", "true", "yes")
         )
         self.scene = SceneConfig()  # calibration/zones applied at runtime
+        self.incidents = IncidentDetector()
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
         self.status = "starting"
@@ -177,10 +179,18 @@ class CameraWorker:
                 if speeds:
                     bucket["average_velocity"] = sum(speeds) / len(speeds)
 
-            # Release speed-history for tracks the tracker expired this frame.
-            if scene.speed is not None:
-                for rid in getattr(self.tracker, "last_removed_ids", []):
+            # Release per-track state for tracks the tracker expired this frame.
+            for rid in getattr(self.tracker, "last_removed_ids", []):
+                if scene.speed is not None:
                     scene.speed.remove(rid)
+                self.incidents.remove(rid)
+
+            # Incident detection: flag vehicles stopped mid-scene.
+            vehicles = [d for d in result.detections if d.is_vehicle]
+            incidents, stopped_ids = self.incidents.update(vehicles, t_now)
+            for d in result.detections:
+                if d.track_id in stopped_ids:
+                    d.stopped = True
 
             decision = self.engine.make_decision(ns, ew)
             self.engine.execute_decision(decision)
@@ -225,6 +235,7 @@ class CameraWorker:
                         "ew": {"vehicles": ew["vehicle_count"], "avg_speed_kmh": round(ew["average_velocity"], 1)},
                     },
                     "calibrated": self.scene.calibration is not None,
+                    "incidents": incidents,
                     "decision": {
                         "phase": decision.recommended_phase.value,
                         "active_direction": self.engine.active_direction,
