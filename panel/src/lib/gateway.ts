@@ -2,10 +2,17 @@ import type { CameraInfo, FrameEvent } from "./types";
 
 const BASE = import.meta.env.VITE_GATEWAY ?? "http://127.0.0.1:8090";
 const WS_BASE = BASE.replace(/^http/, "ws");
+const TOKEN = (import.meta.env.VITE_GATEWAY_TOKEN as string | undefined) ?? "";
+
+// REST auth header (empty when no token configured).
+const authHeaders = (): Record<string, string> =>
+  TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {};
+// WebSocket can't set headers in the browser — pass the token as a query param.
+const wsAuth = (): string => (TOKEN ? `?token=${encodeURIComponent(TOKEN)}` : "");
 
 // --- REST ---
 export async function listCameras(): Promise<CameraInfo[]> {
-  const r = await fetch(`${BASE}/cameras`);
+  const r = await fetch(`${BASE}/cameras`, { headers: authHeaders() });
   if (!r.ok) throw new Error(`listCameras ${r.status}`);
   return r.json();
 }
@@ -13,7 +20,7 @@ export async function listCameras(): Promise<CameraInfo[]> {
 export async function addCamera(camera_id: string, source: string, loop_file = true) {
   const r = await fetch(`${BASE}/cameras`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ camera_id, source, loop_file }),
   });
   if (!r.ok) throw new Error((await r.json()).detail ?? `addCamera ${r.status}`);
@@ -21,7 +28,7 @@ export async function addCamera(camera_id: string, source: string, loop_file = t
 }
 
 export async function removeCamera(camera_id: string) {
-  const r = await fetch(`${BASE}/cameras/${encodeURIComponent(camera_id)}`, { method: "DELETE" });
+  const r = await fetch(`${BASE}/cameras/${encodeURIComponent(camera_id)}`, { method: "DELETE", headers: authHeaders() });
   if (!r.ok) throw new Error(`removeCamera ${r.status}`);
   return r.json();
 }
@@ -42,7 +49,7 @@ export interface SceneInfo {
 export async function setScene(camera_id: string, payload: ScenePayload): Promise<SceneInfo> {
   const r = await fetch(`${BASE}/cameras/${encodeURIComponent(camera_id)}/scene`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(payload),
   });
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? `setScene ${r.status}`);
@@ -55,7 +62,7 @@ export async function setScene(camera_id: string, payload: ScenePayload): Promis
  */
 export function snapshotFrame(camera_id: string, timeoutMs = 5000): Promise<string> {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(`${WS_BASE}/ws/video/${encodeURIComponent(camera_id)}`);
+    const ws = new WebSocket(`${WS_BASE}/ws/video/${encodeURIComponent(camera_id)}${wsAuth()}`);
     ws.binaryType = "blob";
     const timer = setTimeout(() => {
       ws.close();
@@ -96,7 +103,7 @@ export function connectData(
 
   const open = () => {
     if (closed) return;
-    ws = new WebSocket(`${WS_BASE}/ws/data`);
+    ws = new WebSocket(`${WS_BASE}/ws/data${wsAuth()}`);
     ws.onopen = () => {
       retry = 500;
       onStatus?.(true);
@@ -137,7 +144,7 @@ export function connectVideo(
 
   const open = () => {
     if (closed) return;
-    ws = new WebSocket(`${WS_BASE}/ws/video/${encodeURIComponent(camera_id)}`);
+    ws = new WebSocket(`${WS_BASE}/ws/video/${encodeURIComponent(camera_id)}${wsAuth()}`);
     ws.binaryType = "blob";
     ws.onopen = () => (retry = 500);
     ws.onmessage = (ev) => {

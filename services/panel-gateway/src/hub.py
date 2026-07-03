@@ -14,6 +14,7 @@ from typing import Any
 import store
 from detection import Detector
 from scene import SceneConfig
+from security import validate_source
 from worker import CameraWorker
 
 
@@ -121,9 +122,10 @@ class CameraManager:
         for entry in store.load().get("cameras", []):
             try:
                 cam_id = entry["camera_id"]
+                safe = validate_source(entry["source"])  # re-vet on load (tamper defence)
                 self.add(
                     cam_id,
-                    entry["source"],
+                    safe,
                     loop_file=entry.get("loop_file", True),
                     intersection_id=str(entry.get("intersection_id", "1")),
                 )
