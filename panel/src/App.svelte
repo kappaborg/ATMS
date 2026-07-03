@@ -6,12 +6,14 @@
   import CameraTile from "./components/CameraTile.svelte";
   import DecisionPanel from "./components/DecisionPanel.svelte";
   import CameraManager from "./components/CameraManager.svelte";
+  import CalibrationOverlay from "./components/CalibrationOverlay.svelte";
 
   let events = $state<Record<string, FrameEvent>>({});
   let cameras = $state<CameraInfo[]>([]);
   let connected = $state(false);
   let selected = $state<string | null>(null);
   let dataHz = $state(0);
+  let calibrating = $state<string | null>(null);
 
   let eventCount = 0;
 
@@ -65,10 +67,26 @@
       {/each}
     </div>
     <aside>
+      {#if selected}
+        <div class="sel-bar">
+          <span>{selected}</span>
+          <button onclick={() => (calibrating = selected)}>⚙ Calibrate</button>
+        </div>
+      {/if}
       <DecisionPanel event={selectedEvent} />
       <CameraManager onchange={refresh} />
     </aside>
   </div>
+
+  {#if calibrating}
+    <CalibrationOverlay
+      camera_id={calibrating}
+      onclose={() => {
+        calibrating = null;
+        refresh();
+      }}
+    />
+  {/if}
 </main>
 
 <style>
@@ -78,6 +96,8 @@
   .cell { cursor: pointer; border-radius: 8px; outline: 2px solid transparent; transition: outline-color .15s; }
   .cell.sel { outline-color: #2b6ea3; }
   aside { border-left: 1px solid #1e2230; background: #0a0c11; overflow: auto; display: flex; flex-direction: column; }
+  .sel-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #1e2230; font-size: 0.85rem; color: #cfe8ff; }
+  .sel-bar button { background: #1b3a52; border: 1px solid #2b6ea3; color: #cfe8ff; border-radius: 5px; padding: 5px 10px; cursor: pointer; font-size: 0.78rem; }
   .hint { grid-column: 1 / -1; display: grid; place-content: center; text-align: center; color: #667; }
   .hint h1 { font-size: 1.1rem; color: #8b95a7; margin: 0 0 6px; }
   .hint p { font-size: 0.85rem; margin: 0; }

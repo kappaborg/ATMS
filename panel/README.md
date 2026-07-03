@@ -70,7 +70,15 @@ curl -X POST http://127.0.0.1:8090/cameras -H 'Content-Type: application/json' \
 
 Without calibration the panel reports **no speed** and splits approaches by
 frame centre (a stand-in). Calibrate a camera to get **real speed** (km/h) and
-**real per-approach counts**:
+**real per-approach counts**.
+
+**In the app:** select a camera and click **⚙ Calibrate**. On the frozen frame,
+click ≥4 reference points and type each one's real-world position in metres
+(pick a fixed origin, e.g. a lane corner with known spacing), then draw approach
+zones and assign each a direction. **Apply to camera** shows the reprojection
+error so you can see how good the fit is.
+
+**Via the API** (what the UI calls under the hood):
 
 ```bash
 curl -X POST http://127.0.0.1:8090/cameras/north/scene -H 'Content-Type: application/json' -d '{
