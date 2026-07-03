@@ -12,13 +12,18 @@ RUN apt-get update && apt-get install -y \
     make \
     && rm -rf /var/lib/apt/lists/*
 
-# Shared library (has setup.py) + this service's requirements.
-COPY shared /tmp/shared
+# This service's Python requirements. `shared/` is NOT pip-installed
+# (its setup.py references untracked subpackages); it is provided at
+# runtime via `COPY shared /app/shared` + PYTHONPATH below.
 COPY services/analytics/requirements.txt /tmp/requirements.txt
 
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
-RUN if [ -f /tmp/shared/setup.py ]; then pip install --no-cache-dir --user /tmp/shared; fi
 RUN pip install --no-cache-dir --user -r /tmp/requirements.txt
+# shared.atms_common runtime deps (declared in shared/setup.py) — install
+# explicitly since shared itself is not pip-installed. --ignore-installed so
+# `packaging` (satisfied globally by the pip upgrade) lands in --user site.
+RUN pip install --no-cache-dir --user --ignore-installed \
+    packaging structlog python-json-logger
 # Force `packaging` into --user site (the global pip upgrade above
 # satisfies it globally, so it would otherwise miss /root/.local).
 RUN pip install --no-cache-dir --user --ignore-installed packaging
