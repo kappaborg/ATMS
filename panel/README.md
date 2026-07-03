@@ -40,6 +40,10 @@ npm install
 npm run tauri dev                          # first run compiles the Rust shell (slow)
 ```
 
+**Quick demo:** `./services/panel-gateway/demo.sh` starts the gateway and adds
+a looping demo camera; then `cd panel && npm run tauri dev` opens the app.
+(App connection is configured via `panel/.env` — see `.env.example`.)
+
 Add a camera from the app's **Add camera** panel, or via the API:
 
 ```bash
