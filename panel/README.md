@@ -109,8 +109,10 @@ homography is exact for objects on the road surface (verified to recover known
 speeds within measurement noise in `services/panel-gateway` tests).
 
 Env: `PANEL_PORT`, `PANEL_HOST`, `PANEL_VIDEO_FPS`, `PANEL_CORS_ORIGINS`,
-`PANEL_STATE_FILE`, `KAFKA_BOOTSTRAP_SERVERS`, `PANEL_API_TOKEN`,
-`ATMS_ALLOWED_VIDEO_DIRS`, `ATMS_ALLOW_LOOPBACK_SOURCES` (see Security).
+`PANEL_STATE_FILE`, `KAFKA_BOOTSTRAP_SERVERS`, `PANEL_CONTROLLER_URLS`,
+`PANEL_CONTROLLER_POLL_S`, `PANEL_API_TOKEN`, `ATMS_ALLOWED_VIDEO_DIRS`,
+`ATMS_ALLOW_LOOPBACK_SOURCES`, `PANEL_MAX_CAMERAS`, `PANEL_MAX_WS_CLIENTS`,
+`PANEL_RATE_LIMIT` (see Security).
 The app reads `VITE_GATEWAY` (default `http://127.0.0.1:8090`) and
 `VITE_GATEWAY_TOKEN`.
 
@@ -127,9 +129,22 @@ The gateway then consumes the `decisions` topic (the actual decision-engine
 output) and the panel shows, per intersection, the **Controller** commanded
 phase with a **live/stale** badge above the local panel estimate — so an
 operator sees what the running system is commanding, and is warned when the
-decision stream goes silent (a sign the failsafe controller has fallen back to
-fixed-time). Assign a camera to an intersection with `intersection_id` when
-adding it. Without Kafka the panel works standalone on local estimates.
+decision stream goes silent. Assign a camera to an intersection with
+`intersection_id` when adding it. Without Kafka the panel works standalone on
+local estimates.
+
+**Failsafe mode** (the top-line safety signal). Point the gateway at the
+traffic-controller(s) to show each intersection's failsafe mode —
+**AI-ADAPTIVE** (normal), **FIXED-TIME** (AI degraded), or **ALL-RED FLASH**
+(alarm, pulsing red) — plus a "controller unreachable" state:
+
+```bash
+PANEL_CONTROLLER_URLS="1=http://localhost:8010" ./services/panel-gateway/run.sh
+```
+
+The gateway polls each controller's (unauthenticated) `/health` endpoint every
+`PANEL_CONTROLLER_POLL_S` seconds (default 2). Format is
+`<intersection_id>=<base_url>`, comma-separated for multiple intersections.
 
 Persistence: cameras and their calibration/zones are saved to
 `PANEL_STATE_FILE` and restored on restart.

@@ -47,6 +47,8 @@ from system_state import SystemState
 
 VIDEO_FPS = float(os.getenv("PANEL_VIDEO_FPS", "20"))
 KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "")
+CONTROLLER_URLS = os.getenv("PANEL_CONTROLLER_URLS", "")
+CONTROLLER_POLL_S = float(os.getenv("PANEL_CONTROLLER_POLL_S", "2"))
 
 hub = Hub()
 system = SystemState()
@@ -114,6 +116,11 @@ async def _startup() -> None:
         from kafka_bridge import run_decisions_consumer
 
         asyncio.create_task(run_decisions_consumer(KAFKA_BOOTSTRAP, system, _stop))
+    if CONTROLLER_URLS:
+        from controller_poll import parse_mapping, run_controller_poller
+
+        mapping = parse_mapping(CONTROLLER_URLS)
+        asyncio.create_task(run_controller_poller(mapping, system, _stop, CONTROLLER_POLL_S))
 
 
 @app.on_event("shutdown")
