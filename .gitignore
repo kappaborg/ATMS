@@ -119,3 +119,7 @@ labels.cache
 # In-tree virtualenvs (use `make venv` per service instead)
 services/*/venv/
 services/*/.venv/
+
+# Coverage artifacts
+coverage.xml
+.coverage
