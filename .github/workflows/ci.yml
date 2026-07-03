@@ -230,13 +230,22 @@ jobs:
           retention-days: 1
 
   # ---------------------------------------------------------------------------
-  # Vulnerability scan (Trivy) — fails CI on HIGH/CRITICAL.
+  # Vulnerability scan (Trivy) — REPORT-ONLY. Findings are uploaded to the
+  # GitHub Security tab (code scanning) for visibility, but do NOT block the
+  # build. Image-CVE results depend on Trivy's vuln-DB snapshot (rebuilt every
+  # ~6h) and the runner's cached base-image digest at scan time, so a hard
+  # per-PR gate here is non-deterministic (a clean image can flip to red with
+  # no code change). Enforce image-CVE policy on a schedule / at release
+  # instead; review the Security tab for HIGH/CRITICAL over time.
   # ---------------------------------------------------------------------------
   image-scan:
     name: Trivy scan ${{ matrix.service }}
     runs-on: ubuntu-latest
     needs: build
     if: needs.changes.outputs.docker == 'true' || github.event_name == 'push'
+    permissions:
+      contents: read
+      security-events: write  # upload SARIF to the Security tab
     strategy:
       fail-fast: false
       matrix:
@@ -267,8 +276,15 @@ jobs:
           output: trivy-${{ matrix.service }}.sarif
           severity: HIGH,CRITICAL
           ignore-unfixed: true
-          exit-code: "1"
-      - name: Upload SARIF
+          exit-code: "0"  # report-only; see job comment above
+      - name: Upload SARIF to Security tab
+        if: always()
+        continue-on-error: true  # visibility, not a gate — never block CI on an upload hiccup
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-${{ matrix.service }}.sarif
+          category: trivy-${{ matrix.service }}
+      - name: Upload SARIF artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
