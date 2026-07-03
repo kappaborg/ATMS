@@ -82,3 +82,24 @@ def test_zone_classification():
     assert zones.classify(100, 100) == "north"
     assert zones.classify(100, 500) == "south"
     assert zones.classify(700, 100) is None
+
+
+def test_scene_payload_roundtrips():
+    """A scene serialised for persistence must rebuild identically (so an
+    operator's calibration survives a gateway restart)."""
+    from scene import SceneConfig
+
+    payload = {
+        "calibration": {"image_points": IMG, "world_points_m": WORLD},
+        "zones": {"north": [[0, 0], [640, 0], [640, 720], [0, 720]]},
+        "zone_directions": {"north": "ns"},
+    }
+    scene = SceneConfig.from_payload(payload)
+    out = scene.to_payload()
+    # calibration points preserved
+    assert out["calibration"]["image_points"] == [list(p) for p in IMG]
+    assert out["calibration"]["world_points_m"] == [list(p) for p in WORLD]
+    # zones + directions preserved; rebuilding again is stable
+    assert out["zones"]["north"] == [[0, 0], [640, 0], [640, 720], [0, 720]]
+    assert out["zone_directions"] == {"north": "ns"}
+    assert SceneConfig.from_payload(out).info()["calibrated"] is True
