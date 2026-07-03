@@ -22,7 +22,29 @@ control loop. The traffic-controller failsafe owns signal safety.
   to ~20 fps for smoothness. (Video latency is bounded by the camera/codec, not
   the app — a hard physical floor of ~100 ms+ for RTSP.)
 
-## Run it
+## Install as a desktop app (macOS)
+
+Build a real `.app` and put it in Applications so you can open it from
+Launchpad anytime:
+
+```bash
+cd panel && npm run tauri build
+cp -R "src-tauri/target/release/bundle/macos/ATMS Panel.app" /Applications/
+```
+
+The app is just the UI — it needs the **gateway** running (it connects to
+`http://127.0.0.1:8090`). Two ways to keep the gateway available:
+
+- **On demand:** double-click `services/panel-gateway/launch.command`
+  (leave the window open), then open *ATMS Panel*.
+- **Always on:** install the LaunchAgent so the gateway starts at login —
+  see `deploy/launchagents/com.atms.panel-gateway.plist`. The gateway idles
+  at ~0% CPU when the app is closed, so this is cheap.
+
+First launch may show a Gatekeeper prompt (unsigned local build): right-click
+the app → **Open** once.
+
+## Run it (development)
 
 **1. Start the gateway** (needs Python 3.11/3.12):
 
