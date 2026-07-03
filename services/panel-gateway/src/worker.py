@@ -30,6 +30,7 @@ from tracking.bytetrack_simple import SimpleByteTracker  # noqa: E402
 from ai_decision_system import AIDecisionEngine  # noqa: E402
 
 from detection import Detector, annotate, summarize, to_tracker_input  # noqa: E402
+from scene import SceneConfig  # noqa: E402
 
 _INFER_LOCK = threading.Lock()
 
@@ -62,6 +63,7 @@ class CameraWorker:
         self.loop_file = loop_file
         self.tracker = SimpleByteTracker()
         self.engine = AIDecisionEngine()
+        self.scene = SceneConfig()  # calibration/zones applied at runtime
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
         self.status = "starting"
@@ -109,20 +111,47 @@ class CameraWorker:
                 return
 
             frame_idx += 1
+            t_now = time.time()
             with _INFER_LOCK:
                 raw = self.detector.infer(frame)
             tracked = self.tracker.update(to_tracker_input(raw))
             result = summarize(tracked)
 
-            # Split counts left/right of centre as a stand-in for two approaches
-            # (per-approach geometry is a calibration concern, out of scope here).
+            scene = self.scene
             w = frame.shape[1]
+            # Per-direction aggregates fed to the decision engine.
             ns = {"vehicle_count": 0, "average_emission": 0.0, "average_waiting_time": 0.0,
                   "average_velocity": 0.0, "environmental_impact_score": 0.0}
             ew = dict(ns)
+            ns_speeds: list[float] = []
+            ew_speeds: list[float] = []
+
             for d in result.detections:
-                cx = (d.bbox[0] + d.bbox[2]) / 2
-                (ns if cx < w / 2 else ew)["vehicle_count"] += 1
+                cx, cy = d.center
+                # Real speed from ground-plane calibration, when available.
+                if scene.speed is not None:
+                    d.speed_kmh = scene.speed.update(d.track_id, cx, cy, t_now)
+                # Approach from operator zones, else left/right-of-centre fallback.
+                if scene.zones is not None:
+                    d.approach = scene.zones.classify(cx, cy)
+                    direction = scene.directions.get(d.approach or "", "")
+                else:
+                    direction = "ns" if cx < w / 2 else "ew"
+                    d.approach = direction
+                bucket, speeds = (ns, ns_speeds) if direction == "ns" else (ew, ew_speeds)
+                bucket["vehicle_count"] += 1
+                if d.speed_kmh is not None:
+                    speeds.append(d.speed_kmh)
+
+            for bucket, speeds in ((ns, ns_speeds), (ew, ew_speeds)):
+                if speeds:
+                    bucket["average_velocity"] = sum(speeds) / len(speeds)
+
+            # Release speed-history for tracks the tracker expired this frame.
+            if scene.speed is not None:
+                for rid in getattr(self.tracker, "last_removed_ids", []):
+                    scene.speed.remove(rid)
+
             decision = self.engine.make_decision(ns, ew)
             self.engine.execute_decision(decision)
 
@@ -156,9 +185,16 @@ class CameraWorker:
                             "label": d.label,
                             "confidence": round(d.confidence, 3),
                             "bbox": [round(v, 1) for v in d.bbox],
+                            "speed_kmh": d.speed_kmh,
+                            "approach": d.approach,
                         }
                         for d in result.detections
                     ],
+                    "approaches": {
+                        "ns": {"vehicles": ns["vehicle_count"], "avg_speed_kmh": round(ns["average_velocity"], 1)},
+                        "ew": {"vehicles": ew["vehicle_count"], "avg_speed_kmh": round(ew["average_velocity"], 1)},
+                    },
+                    "calibrated": self.scene.calibration is not None,
                     "decision": {
                         "phase": decision.recommended_phase.value,
                         "active_direction": self.engine.active_direction,

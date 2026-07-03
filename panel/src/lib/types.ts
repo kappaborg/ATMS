@@ -3,6 +3,13 @@ export interface Detection {
   label: string;
   confidence: number;
   bbox: [number, number, number, number];
+  speed_kmh: number | null;
+  approach: string | null;
+}
+
+export interface ApproachStat {
+  vehicles: number;
+  avg_speed_kmh: number;
 }
 
 export interface Decision {
@@ -27,6 +34,8 @@ export interface FrameEvent {
   fps: number;
   counts: Counts;
   detections: Detection[];
+  approaches: { ns: ApproachStat; ew: ApproachStat };
+  calibrated: boolean;
   decision: Decision;
 }
 

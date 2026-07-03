@@ -80,6 +80,13 @@ class CameraManager:
         worker.stop()
         self.hub._frames.pop(cam_id, None)
 
+    def set_scene(self, cam_id: str, scene) -> dict:
+        worker = self._workers.get(cam_id)
+        if worker is None:
+            raise KeyError(cam_id)
+        worker.scene = scene  # atomic reference swap; worker reads it each frame
+        return scene.info()
+
     def list(self) -> list[dict[str, Any]]:
         return [
             {
@@ -88,6 +95,7 @@ class CameraManager:
                 "status": w.status,
                 "error": w.error,
                 "fps": round(w.fps, 1),
+                "scene": w.scene.info(),
             }
             for w in self._workers.values()
         ]

@@ -62,8 +62,43 @@ curl -X POST http://127.0.0.1:8090/cameras -H 'Content-Type: application/json' \
 | GET | `/cameras` | list cameras + status/fps |
 | POST | `/cameras` | add `{camera_id, source, loop_file?}` |
 | DELETE | `/cameras/{id}` | remove a camera |
-| WS | `/ws/data` | JSON events: detections, decision, counts, latency |
+| POST | `/cameras/{id}/scene` | set calibration + approach zones (below) |
+| WS | `/ws/data` | JSON events: detections (with speed + approach), per-approach counts, decision, latency |
 | WS | `/ws/video/{id}` | binary JPEG frames (latest-wins) |
+
+## Calibration & approach zones
+
+Without calibration the panel reports **no speed** and splits approaches by
+frame centre (a stand-in). Calibrate a camera to get **real speed** (km/h) and
+**real per-approach counts**:
+
+```bash
+curl -X POST http://127.0.0.1:8090/cameras/north/scene -H 'Content-Type: application/json' -d '{
+  "calibration": {
+    "image_points":  [[100,600],[1180,600],[400,250],[880,250]],
+    "world_points_m":[[0,0],    [12,0],    [0,40],   [12,40]]
+  },
+  "zones": {
+    "north": [[0,0],[640,0],[640,720],[0,720]],
+    "south": [[640,0],[1280,0],[1280,720],[640,720]]
+  },
+  "zone_directions": {"north": "ns", "south": "ns"}
+}'
+```
+
+- **calibration**: ≥4 image pixel points and their real-world ground-plane
+  coordinates in metres (e.g. lane-marking corners with known spacing). A
+  homography maps pixels → metres; speed is ground-plane displacement over
+  time. The response includes `reprojection_error_m` — how well the homography
+  fits its own points; lower is better (aim for < ~0.3 m).
+- **zones**: named polygons (image pixels). A detection's centre is classified
+  into a zone → its approach.
+- **zone_directions**: maps each zone to `ns` or `ew` for the two decision-engine
+  approaches.
+
+Speed accuracy is only as good as the reference points; the ground-plane
+homography is exact for objects on the road surface (verified to recover known
+speeds within measurement noise in `services/panel-gateway` tests).
 
 Env: `PANEL_PORT`, `PANEL_HOST`, `PANEL_VIDEO_FPS`, `PANEL_CORS_ORIGINS`.
 The app reads `VITE_GATEWAY` (default `http://127.0.0.1:8090`).
