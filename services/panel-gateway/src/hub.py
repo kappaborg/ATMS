@@ -23,6 +23,7 @@ class Hub:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._frames: dict[str, bytes] = {}
         self._data_queues: set[asyncio.Queue] = set()
+        self._video_viewers = 0
 
     def bind_loop(self, loop: asyncio.AbstractEventLoop) -> None:
         self._loop = loop
@@ -56,6 +57,16 @@ class Hub:
 
     def unregister_data_client(self, q: asyncio.Queue) -> None:
         self._data_queues.discard(q)
+
+    def add_video_viewer(self) -> None:
+        self._video_viewers += 1
+
+    def remove_video_viewer(self) -> None:
+        self._video_viewers = max(0, self._video_viewers - 1)
+
+    def viewer_count(self) -> int:
+        """Total connected clients (data + video). Workers idle when zero."""
+        return len(self._data_queues) + self._video_viewers
 
 
 class CameraManager:

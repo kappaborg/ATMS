@@ -110,6 +110,18 @@ class CameraWorker:
         frame_idx = 0
         fps_t0, fps_n = time.time(), 0
         while not self._stop.is_set():
+            # Idle when no client is watching: keep the capture warm (read and
+            # discard a frame at a low rate) but skip the expensive YOLO
+            # pipeline. A newly-connecting viewer resumes full processing within
+            # a frame. This makes an always-on gateway cheap.
+            if self.hub.viewer_count() == 0:
+                self.status = "idle"
+                cap.read()
+                time.sleep(0.25)
+                continue
+            if self.status == "idle":
+                self.status = "live"
+
             t_cap = time.time()
             ok, frame = cap.read()
             if not ok:

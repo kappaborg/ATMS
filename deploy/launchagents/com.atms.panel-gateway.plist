@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Optional: auto-start the ATMS Panel gateway at login, so "ATMS Panel"
+  always has a backend when you open it. The gateway idles at ~0% CPU
+  when the app is closed.
+
+  Install:
+    1. Edit REPO_ROOT below to your checkout path.
+    2. cp deploy/launchagents/com.atms.panel-gateway.plist ~/Library/LaunchAgents/
+    3. launchctl load ~/Library/LaunchAgents/com.atms.panel-gateway.plist
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.atms.panel-gateway.plist
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.atms.panel-gateway</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>REPO_ROOT/services/panel-gateway/launch.command</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/atms-panel-gateway.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/atms-panel-gateway.log</string>
+</dict>
+</plist>

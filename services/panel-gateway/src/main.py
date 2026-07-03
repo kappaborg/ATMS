@@ -229,6 +229,7 @@ async def ws_video(ws: WebSocket, camera_id: str, token: str | None = Query(defa
         await ws.close(code=1013)
         return
     await ws.accept()
+    hub.add_video_viewer()
     interval = 1.0 / max(VIDEO_FPS, 1.0)
     last_sent: int | None = None
     try:
@@ -244,4 +245,5 @@ async def ws_video(ws: WebSocket, camera_id: str, token: str | None = Query(defa
     except WebSocketDisconnect:
         pass
     finally:
+        hub.remove_video_viewer()
         ws_limiter.release()
