@@ -109,8 +109,10 @@ homography is exact for objects on the road surface (verified to recover known
 speeds within measurement noise in `services/panel-gateway` tests).
 
 Env: `PANEL_PORT`, `PANEL_HOST`, `PANEL_VIDEO_FPS`, `PANEL_CORS_ORIGINS`,
-`PANEL_STATE_FILE`, `KAFKA_BOOTSTRAP_SERVERS`.
-The app reads `VITE_GATEWAY` (default `http://127.0.0.1:8090`).
+`PANEL_STATE_FILE`, `KAFKA_BOOTSTRAP_SERVERS`, `PANEL_API_TOKEN`,
+`ATMS_ALLOWED_VIDEO_DIRS`, `ATMS_ALLOW_LOOPBACK_SOURCES` (see Security).
+The app reads `VITE_GATEWAY` (default `http://127.0.0.1:8090`) and
+`VITE_GATEWAY_TOKEN`.
 
 ## Connecting to a running ATMS
 
@@ -131,6 +133,23 @@ adding it. Without Kafka the panel works standalone on local estimates.
 
 Persistence: cameras and their calibration/zones are saved to
 `PANEL_STATE_FILE` and restored on restart.
+
+## Security
+
+- **Safe by default:** the gateway binds to `127.0.0.1` (local only). If you
+  bind to a network interface (`PANEL_HOST=0.0.0.0`) without a token it logs a
+  loud warning.
+- **Token auth:** set `PANEL_API_TOKEN` to require a token on every mutating
+  and streaming endpoint (`/cameras`, `/scene`, both WebSockets). REST uses
+  `Authorization: Bearer <token>`; WebSockets use `?token=<token>` (browsers
+  can't set WS headers). `/health` stays open for liveness probes. The app
+  sends the token when built with `VITE_GATEWAY_TOKEN`.
+- **Camera-source validation** (always on): `POST /cameras` rejects SSRF and
+  local-file access. URLs to link-local/metadata (`169.254.169.254`),
+  reserved, and — by default — loopback addresses are blocked; private LAN
+  cameras are allowed. File sources are confined to `ATMS_ALLOWED_VIDEO_DIRS`
+  (default `videos/` + `Processed_Videos/`); traversal is rejected. Set
+  `ATMS_ALLOW_LOOPBACK_SOURCES=1` to allow `127.0.0.1` test streams.
 
 ## Notes for production
 

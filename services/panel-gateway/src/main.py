@@ -26,12 +26,21 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import (
+    Depends,
+    FastAPI,
+    Header,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from hub import CameraManager, Hub
 from scene import SceneConfig
+from security import SourceRejected, api_token, check_token, validate_source
 from system_state import SystemState
 
 VIDEO_FPS = float(os.getenv("PANEL_VIDEO_FPS", "20"))
@@ -60,14 +69,35 @@ class CameraIn(BaseModel):
     intersection_id: str = "1"  # which ATMS intersection this camera watches
 
 
+async def require_auth(
+    authorization: str | None = Header(default=None),
+    token: str | None = Query(default=None),
+) -> None:
+    """REST guard — no-op unless PANEL_API_TOKEN is set."""
+    check_token(authorization, token)
+
+
+_AUTH = Depends(require_auth)
+
+
 @app.on_event("startup")
 async def _startup() -> None:
+    import logging
+
+    log = logging.getLogger("uvicorn")
+    host = os.getenv("PANEL_HOST", "127.0.0.1")
+    loopback = host in ("127.0.0.1", "localhost", "::1")
+    if not loopback and not api_token():
+        log.warning(
+            "⚠ Panel gateway bound to %s WITHOUT PANEL_API_TOKEN — it is "
+            "reachable on the network and UNAUTHENTICATED. Set PANEL_API_TOKEN "
+            "or bind to 127.0.0.1.",
+            host,
+        )
     hub.bind_loop(asyncio.get_running_loop())
     n = manager.restore()
     if n:
-        import logging
-
-        logging.getLogger("uvicorn").info("restored %d camera(s) from saved state", n)
+        log.info("restored %d camera(s) from saved state", n)
     if KAFKA_BOOTSTRAP:
         from kafka_bridge import run_decisions_consumer
 
@@ -90,15 +120,19 @@ async def health() -> dict:
 
 
 @app.get("/cameras")
-async def list_cameras() -> list[dict]:
+async def list_cameras(_: None = _AUTH) -> list[dict]:
     return manager.list()
 
 
 @app.post("/cameras")
-async def add_camera(cam: CameraIn) -> dict:
+async def add_camera(cam: CameraIn, _: None = _AUTH) -> dict:
+    try:
+        safe_source = validate_source(cam.source)
+    except SourceRejected as e:
+        raise HTTPException(status_code=400, detail=f"rejected source: {e}")
     try:
         manager.add(
-            cam.camera_id, cam.source, loop_file=cam.loop_file, intersection_id=cam.intersection_id
+            cam.camera_id, safe_source, loop_file=cam.loop_file, intersection_id=cam.intersection_id
         )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
@@ -106,7 +140,7 @@ async def add_camera(cam: CameraIn) -> dict:
 
 
 @app.delete("/cameras/{camera_id}")
-async def remove_camera(camera_id: str) -> dict:
+async def remove_camera(camera_id: str, _: None = _AUTH) -> dict:
     try:
         manager.remove(camera_id)
     except KeyError:
@@ -115,7 +149,7 @@ async def remove_camera(camera_id: str) -> dict:
 
 
 @app.post("/cameras/{camera_id}/scene")
-async def set_scene(camera_id: str, payload: dict) -> dict:
+async def set_scene(camera_id: str, payload: dict, _: None = _AUTH) -> dict:
     """Set calibration and/or approach zones for a camera.
 
     Body: {
@@ -135,8 +169,19 @@ async def set_scene(camera_id: str, payload: dict) -> dict:
         raise HTTPException(status_code=404, detail="camera not found")
 
 
+def _ws_authorized(ws: WebSocket, token: str | None) -> bool:
+    try:
+        check_token(ws.headers.get("authorization"), token)
+        return True
+    except HTTPException:
+        return False
+
+
 @app.websocket("/ws/data")
-async def ws_data(ws: WebSocket) -> None:
+async def ws_data(ws: WebSocket, token: str | None = Query(default=None)) -> None:
+    if not _ws_authorized(ws, token):
+        await ws.close(code=1008)  # policy violation
+        return
     await ws.accept()
     q = hub.register_data_client()
     try:
@@ -150,7 +195,10 @@ async def ws_data(ws: WebSocket) -> None:
 
 
 @app.websocket("/ws/video/{camera_id}")
-async def ws_video(ws: WebSocket, camera_id: str) -> None:
+async def ws_video(ws: WebSocket, camera_id: str, token: str | None = Query(default=None)) -> None:
+    if not _ws_authorized(ws, token):
+        await ws.close(code=1008)
+        return
     await ws.accept()
     interval = 1.0 / max(VIDEO_FPS, 1.0)
     last_sent: int | None = None
