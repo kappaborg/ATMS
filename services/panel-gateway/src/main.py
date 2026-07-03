@@ -37,6 +37,7 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from hub import CameraManager, Hub
@@ -194,6 +195,23 @@ async def remove_camera(camera_id: str, _: None = _AUTH, __: None = _RATE) -> di
     except KeyError:
         raise HTTPException(status_code=404, detail="camera not found")
     return {"status": "removed", "camera_id": camera_id}
+
+
+@app.get("/cameras/{camera_id}/report")
+async def camera_report(camera_id: str, format: str = "csv", _: None = _AUTH):
+    """Session KPI report (vehicles, incidents, measured CO2 + estimated
+    savings, per-minute time-series). format=csv (default, downloadable) or json."""
+    try:
+        if format == "json":
+            return manager.report_json(camera_id)
+        csv_text = manager.report_csv(camera_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="camera not found")
+    return Response(
+        content=csv_text,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="atms-report-{camera_id}.csv"'},
+    )
 
 
 @app.post("/cameras/{camera_id}/scene")

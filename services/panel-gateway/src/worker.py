@@ -32,6 +32,7 @@ from ai_decision_system import AIDecisionEngine  # noqa: E402
 from detection import Detector, annotate, summarize, to_tracker_input  # noqa: E402
 from emissions import EmissionAccumulator  # noqa: E402
 from incidents import IncidentDetector  # noqa: E402
+from report import SessionReport  # noqa: E402
 from scene import SceneConfig  # noqa: E402
 
 _INFER_LOCK = threading.Lock()
@@ -86,6 +87,7 @@ class CameraWorker:
         self.scene = SceneConfig()  # calibration/zones applied at runtime
         self.incidents = IncidentDetector()
         self.emissions = EmissionAccumulator()
+        self.report = SessionReport(cam_id)
         self._prev_t: float | None = None
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
@@ -201,6 +203,15 @@ class CameraWorker:
             for d in vehicles:
                 if d.speed_kmh is not None:
                     self.emissions.add(d.track_id, d.label, d.speed_kmh, dt, t_now)
+
+            # Accumulate session KPIs for the exportable report.
+            self.report.record(
+                result.vehicle_count,
+                result.pedestrian_count,
+                [i["track_id"] for i in incidents],
+                self.emissions.stats(t_now),
+                t_now,
+            )
 
             decision = self.engine.make_decision(ns, ew)
             self.engine.execute_decision(decision)
