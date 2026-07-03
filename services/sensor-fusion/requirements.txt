@@ -1,8 +1,6 @@
 # Sensor Fusion Service - Python 3.11+ Requirements
 # Week 1 Implementation
 
-# Shared Package (local - install in development mode)
--e ../../shared
 
 # Core Framework
 fastapi==0.104.1
