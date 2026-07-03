@@ -108,8 +108,29 @@ Speed accuracy is only as good as the reference points; the ground-plane
 homography is exact for objects on the road surface (verified to recover known
 speeds within measurement noise in `services/panel-gateway` tests).
 
-Env: `PANEL_PORT`, `PANEL_HOST`, `PANEL_VIDEO_FPS`, `PANEL_CORS_ORIGINS`.
+Env: `PANEL_PORT`, `PANEL_HOST`, `PANEL_VIDEO_FPS`, `PANEL_CORS_ORIGINS`,
+`PANEL_STATE_FILE`, `KAFKA_BOOTSTRAP_SERVERS`.
 The app reads `VITE_GATEWAY` (default `http://127.0.0.1:8090`).
+
+## Connecting to a running ATMS
+
+By default each camera computes a **local** decision estimate. Point the
+gateway at your Kafka broker to also show the **real** controller output:
+
+```bash
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092 ./services/panel-gateway/run.sh
+```
+
+The gateway then consumes the `decisions` topic (the actual decision-engine
+output) and the panel shows, per intersection, the **Controller** commanded
+phase with a **live/stale** badge above the local panel estimate — so an
+operator sees what the running system is commanding, and is warned when the
+decision stream goes silent (a sign the failsafe controller has fallen back to
+fixed-time). Assign a camera to an intersection with `intersection_id` when
+adding it. Without Kafka the panel works standalone on local estimates.
+
+Persistence: cameras and their calibration/zones are saved to
+`PANEL_STATE_FILE` and restored on restart.
 
 ## Notes for production
 

@@ -32,11 +32,15 @@ from pydantic import BaseModel
 
 from hub import CameraManager, Hub
 from scene import SceneConfig
+from system_state import SystemState
 
 VIDEO_FPS = float(os.getenv("PANEL_VIDEO_FPS", "20"))
+KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "")
 
 hub = Hub()
-manager = CameraManager(hub)
+system = SystemState()
+manager = CameraManager(hub, system=system)
+_stop = asyncio.Event()
 app = FastAPI(title="ATMS Panel Gateway", version="1.0.0")
 
 # Tauri dev server / localhost origins. Pin via PANEL_CORS_ORIGINS in prod.
@@ -53,6 +57,7 @@ class CameraIn(BaseModel):
     camera_id: str
     source: str  # "rtsp://...", "http://...", "0" (USB), or a file path
     loop_file: bool = True
+    intersection_id: str = "1"  # which ATMS intersection this camera watches
 
 
 @app.on_event("startup")
@@ -63,16 +68,25 @@ async def _startup() -> None:
         import logging
 
         logging.getLogger("uvicorn").info("restored %d camera(s) from saved state", n)
+    if KAFKA_BOOTSTRAP:
+        from kafka_bridge import run_decisions_consumer
+
+        asyncio.create_task(run_decisions_consumer(KAFKA_BOOTSTRAP, system, _stop))
 
 
 @app.on_event("shutdown")
 async def _shutdown() -> None:
+    _stop.set()
     manager.stop_all()
 
 
 @app.get("/health")
 async def health() -> dict:
-    return {"status": "ok", "cameras": len(manager.list())}
+    return {
+        "status": "ok",
+        "cameras": len(manager.list()),
+        "system_stream": {"enabled": bool(KAFKA_BOOTSTRAP), "connected": system.connected},
+    }
 
 
 @app.get("/cameras")
@@ -83,7 +97,9 @@ async def list_cameras() -> list[dict]:
 @app.post("/cameras")
 async def add_camera(cam: CameraIn) -> dict:
     try:
-        manager.add(cam.camera_id, cam.source, loop_file=cam.loop_file)
+        manager.add(
+            cam.camera_id, cam.source, loop_file=cam.loop_file, intersection_id=cam.intersection_id
+        )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
     return {"status": "added", "camera_id": cam.camera_id}

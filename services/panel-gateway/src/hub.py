@@ -58,8 +58,9 @@ class Hub:
 
 
 class CameraManager:
-    def __init__(self, hub: Hub) -> None:
+    def __init__(self, hub: Hub, system=None) -> None:
         self.hub = hub
+        self.system = system  # SystemState | None
         self._detector: Detector | None = None
         self._workers: dict[str, CameraWorker] = {}
 
@@ -68,10 +69,15 @@ class CameraManager:
             self._detector = Detector()
         return self._detector
 
-    def add(self, cam_id: str, source: str | int, *, loop_file: bool = True) -> None:
+    def add(
+        self, cam_id: str, source: str | int, *, loop_file: bool = True, intersection_id: str = "1"
+    ) -> None:
         if cam_id in self._workers:
             raise ValueError(f"camera '{cam_id}' already exists")
-        worker = CameraWorker(cam_id, source, self._detector_lazy(), self.hub, loop_file=loop_file)
+        worker = CameraWorker(
+            cam_id, source, self._detector_lazy(), self.hub,
+            loop_file=loop_file, intersection_id=intersection_id, system=self.system,
+        )
         self._workers[cam_id] = worker
         worker.start()
         self._persist()
@@ -96,7 +102,12 @@ class CameraManager:
     def _persist(self) -> None:
         cams = []
         for w in self._workers.values():
-            entry = {"camera_id": w.cam_id, "source": str(w.source), "loop_file": w.loop_file}
+            entry = {
+                "camera_id": w.cam_id,
+                "source": str(w.source),
+                "loop_file": w.loop_file,
+                "intersection_id": w.intersection_id,
+            }
             payload = w.scene.to_payload()
             if payload:
                 entry["scene"] = payload
@@ -110,7 +121,12 @@ class CameraManager:
         for entry in store.load().get("cameras", []):
             try:
                 cam_id = entry["camera_id"]
-                self.add(cam_id, entry["source"], loop_file=entry.get("loop_file", True))
+                self.add(
+                    cam_id,
+                    entry["source"],
+                    loop_file=entry.get("loop_file", True),
+                    intersection_id=str(entry.get("intersection_id", "1")),
+                )
                 if entry.get("scene"):
                     self.set_scene(cam_id, SceneConfig.from_payload(entry["scene"]))
                 restored += 1
