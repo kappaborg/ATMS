@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { addCamera } from "../lib/gateway";
+  import { addCamera, listDevices, type VideoDevice } from "../lib/gateway";
   let { onchange }: { onchange: () => void } = $props();
 
   let camId = $state("");
@@ -7,6 +7,22 @@
   let kind = $state<"rtsp" | "usb" | "file">("rtsp");
   let busy = $state(false);
   let error = $state("");
+
+  let devices = $state<VideoDevice[]>([]);
+  let detecting = $state(false);
+
+  async function detect() {
+    detecting = true;
+    error = "";
+    try {
+      devices = await listDevices();
+      if (!devices.length) error = "no cameras found (grant camera permission, connect iPhone)";
+    } catch (err) {
+      error = (err as Error).message;
+    } finally {
+      detecting = false;
+    }
+  }
 
   const placeholder = $derived(
     kind === "rtsp" ? "rtsp://user:pass@192.168.1.10:554/stream"
@@ -40,6 +56,20 @@
   </div>
   <input placeholder="camera id (e.g. north-approach)" bind:value={camId} />
   <input placeholder={placeholder} bind:value={source} />
+  {#if kind === "usb"}
+    <button type="button" class="detect" onclick={detect} disabled={detecting}>
+      {detecting ? "detecting…" : "Detect cameras (incl. iPhone)"}
+    </button>
+    {#if devices.length}
+      <div class="devs">
+        {#each devices as d}
+          <button type="button" class="dev" onclick={() => (source = String(d.index))}>
+            #{d.index} · {d.width}×{d.height}
+          </button>
+        {/each}
+      </div>
+    {/if}
+  {/if}
   {#if error}<p class="err">{error}</p>{/if}
   <button type="submit" class="add" disabled={busy}>{busy ? "adding…" : "Add"}</button>
 </form>
@@ -47,6 +77,10 @@
 <style>
   form { padding: 14px 16px; border-top: 1px solid #1e2230; display: flex; flex-direction: column; gap: 8px; }
   h2 { margin: 0 0 4px; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.06em; color: #8b95a7; }
+  .detect { padding: 6px; background: #12151d; border: 1px solid #2b6ea3; color: #7fd1ff; border-radius: 5px; cursor: pointer; font-size: 0.76rem; }
+  .detect:disabled { opacity: 0.6; }
+  .devs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .dev { padding: 5px 8px; background: #1b3a52; border: 1px solid #2b6ea3; color: #cfe8ff; border-radius: 5px; cursor: pointer; font-size: 0.72rem; }
   .kinds { display: flex; gap: 6px; }
   .kinds button { flex: 1; padding: 5px; background: #12151d; border: 1px solid #1e2230; color: #9aa4b2; border-radius: 5px; cursor: pointer; font-size: 0.72rem; }
   .kinds button.active { background: #1b3a52; border-color: #2b6ea3; color: #cfe8ff; }

@@ -80,6 +80,18 @@ export function snapshotFrame(camera_id: string, timeoutMs = 5000): Promise<stri
   });
 }
 
+export interface VideoDevice {
+  index: number;
+  width: number;
+  height: number;
+}
+
+export async function listDevices(): Promise<VideoDevice[]> {
+  const r = await fetch(`${BASE}/devices`, { headers: authHeaders() });
+  if (!r.ok) throw new Error(`listDevices ${r.status}`);
+  return r.json();
+}
+
 export async function health(): Promise<boolean> {
   try {
     const r = await fetch(`${BASE}/health`);
