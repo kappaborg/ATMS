@@ -15,10 +15,29 @@
     return { label: "ALL-RED", c: "#e74c3c" };
   }
   const cmd = $derived(wire(sys?.commanded_phase));
+
+  // Failsafe mode — the top-line safety signal.
+  function modeInfo(m: string | null | undefined, reachable: boolean | undefined) {
+    if (!reachable || !m) return { label: "controller unreachable", c: "#8b95a7", alarm: false };
+    if (m === "ai_adaptive") return { label: "AI ADAPTIVE", c: "#2ecc71", alarm: false };
+    if (m === "fixed_time") return { label: "FIXED-TIME (AI degraded)", c: "#f1c40f", alarm: false };
+    if (m === "all_red_flash") return { label: "ALL-RED FLASH", c: "#e74c3c", alarm: true };
+    return { label: m, c: "#8b95a7", alarm: false };
+  }
+  const mode = $derived(modeInfo(sys?.mode, sys?.mode_reachable));
 </script>
 
 <section class="panel">
   {#if sys}
+    {#if sys.mode !== undefined}
+      <div class="mode" class:alarm={mode.alarm} style="--mc:{mode.c}">
+        <span class="mdot"></span>
+        <div>
+          <div class="mlabel">{mode.label}</div>
+          <div class="msub">failsafe mode</div>
+        </div>
+      </div>
+    {/if}
     <h2>Controller <span class="badge" class:stale={sys.stale}>{sys.stale ? "stale" : "live"}</span></h2>
     <div class="phase" style="--c:{cmd.c}">
       <div class="lamp"></div>
@@ -96,4 +115,10 @@
   .badge.stale { background: #241a12; color: #e0a94a; border-color: #e0a94a; }
   .src { margin: 8px 0 0; font-size: 0.68rem; color: #6b7688; }
   hr { border: none; border-top: 1px solid #1e2230; margin: 14px 0; }
+  .mode { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 14px; border-radius: 8px; background: color-mix(in srgb, var(--mc) 12%, #0b0d12); border: 1px solid var(--mc); }
+  .mode.alarm { animation: pulse 1s ease-in-out infinite; }
+  .mode .mdot { width: 12px; height: 12px; border-radius: 50%; background: var(--mc); box-shadow: 0 0 10px var(--mc); }
+  .mode .mlabel { font-size: 0.95rem; font-weight: 700; color: var(--mc); letter-spacing: 0.02em; }
+  .mode .msub { font-size: 0.62rem; color: #8b95a7; text-transform: uppercase; letter-spacing: 0.06em; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
 </style>

@@ -27,9 +27,11 @@ export interface SystemDecision {
   priority: string | null;
   confidence: number | null;
   reason: string | null;
-  age_s: number;
+  age_s: number | null;
   stale: boolean;
   source: string;
+  mode: string | null; // ai_adaptive | fixed_time | all_red_flash | null
+  mode_reachable: boolean;
 }
 
 export interface Counts {
