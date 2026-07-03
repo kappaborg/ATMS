@@ -74,7 +74,13 @@ class CameraWorker:
         self.intersection_id = intersection_id
         self.system = system  # SystemState | None
         self.tracker = SimpleByteTracker()
-        self.engine = AIDecisionEngine()
+        # Predictive congestion on: the panel's per-camera decision reason
+        # then shows "Congestion forecast …" (disable with ATMS_USE_PREDICTIONS=0).
+        import os
+
+        self.engine = AIDecisionEngine(
+            use_predictions=os.getenv("ATMS_USE_PREDICTIONS", "1").lower() in ("1", "true", "yes")
+        )
         self.scene = SceneConfig()  # calibration/zones applied at runtime
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
@@ -225,6 +231,8 @@ class CameraWorker:
                         "priority": decision.priority.value,
                         "confidence": round(decision.confidence, 3),
                         "reason": decision.reason,
+                        # Short-horizon congestion forecast (per direction, 0..1).
+                        "predicted_congestion": self.engine._last_prediction,
                     },
                     # Real controller decision from the ATMS `decisions` topic,
                     # when the gateway is connected to a running system.

@@ -85,6 +85,16 @@
       {/if}
     {/if}
 
+    {#if d.predicted_congestion}
+      <div class="forecast">
+        <div class="fhead">🔮 Congestion forecast <span>{d.predicted_congestion.horizon_min} min ahead</span></div>
+        <div class="fbars">
+          <div class="fbar"><span class="flbl">N–S</span><div class="track"><div class="fill" style="width:{Math.round(d.predicted_congestion.north_south * 100)}%"></div></div><span class="fpct">{Math.round(d.predicted_congestion.north_south * 100)}%</span></div>
+          <div class="fbar"><span class="flbl">E–W</span><div class="track"><div class="fill" style="width:{Math.round(d.predicted_congestion.east_west * 100)}%"></div></div><span class="fpct">{Math.round(d.predicted_congestion.east_west * 100)}%</span></div>
+        </div>
+      </div>
+    {/if}
+
     <p class="note">Advisory only — the failsafe controller enforces signal safety.</p>
   {:else}
     <p class="empty">Waiting for a camera…</p>
@@ -102,6 +112,15 @@
   dt { color: #8b95a7; }
   dd { margin: 0; color: #dfe6ee; }
   .reason { font-size: 0.78rem; color: #b7c0cd; }
+  .forecast { margin-top: 14px; padding: 10px 12px; background: #0e1622; border: 1px solid #1e2230; border-radius: 8px; }
+  .fhead { font-size: 0.74rem; color: #9aa4b2; margin-bottom: 8px; }
+  .fhead span { color: #6b7688; }
+  .fbars { display: flex; flex-direction: column; gap: 6px; }
+  .fbar { display: grid; grid-template-columns: 34px 1fr 36px; gap: 8px; align-items: center; }
+  .fbar .flbl { font-size: 0.72rem; color: #8b95a7; }
+  .fbar .track { height: 8px; background: #1a2331; border-radius: 4px; overflow: hidden; }
+  .fbar .fill { height: 100%; background: linear-gradient(90deg,#2b6ea3,#7fd1ff); }
+  .fbar .fpct { font-size: 0.72rem; color: #cfe8ff; text-align: right; }
   .approaches { display: flex; gap: 8px; margin-top: 14px; }
   .appr { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; background: #12151d; border: 1px solid #1e2230; border-radius: 6px; }
   .appr.active { border-color: #2ecc71; background: #12211a; }
