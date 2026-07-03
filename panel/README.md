@@ -175,6 +175,16 @@ The gateway polls each controller's (unauthenticated) `/health` endpoint every
 Persistence: cameras and their calibration/zones are saved to
 `PANEL_STATE_FILE` and restored on restart.
 
+## Emissions (carbon dashboard)
+
+When a camera is calibrated, the panel measures real CO2 from observed speed
+(per-vehicle base g/km x a speed factor; idling is time-based) and shows total
+CO2, rate, average intensity, and an **estimated** saving. The saved figure is
+a transparent model — measured idle CO2 x an adaptive-control ratio (published
+studies report ~10-30% idle/delay reduction) — never a raw measurement. Tune:
+`PANEL_ADAPTIVE_SAVINGS_RATIO` (default 0.15), `PANEL_IDLE_CO2_G_S` (0.5),
+`PANEL_IDLE_SPEED_KMH` (3.0).
+
 ## Security
 
 - **Safe by default:** the gateway binds to `127.0.0.1` (local only). If you

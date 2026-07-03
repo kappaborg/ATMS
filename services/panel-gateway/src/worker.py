@@ -30,6 +30,7 @@ from tracking.bytetrack_simple import SimpleByteTracker  # noqa: E402
 from ai_decision_system import AIDecisionEngine  # noqa: E402
 
 from detection import Detector, annotate, summarize, to_tracker_input  # noqa: E402
+from emissions import EmissionAccumulator  # noqa: E402
 from incidents import IncidentDetector  # noqa: E402
 from scene import SceneConfig  # noqa: E402
 
@@ -84,6 +85,8 @@ class CameraWorker:
         )
         self.scene = SceneConfig()  # calibration/zones applied at runtime
         self.incidents = IncidentDetector()
+        self.emissions = EmissionAccumulator()
+        self._prev_t: float | None = None
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
         self.status = "starting"
@@ -192,6 +195,13 @@ class CameraWorker:
                 if d.track_id in stopped_ids:
                     d.stopped = True
 
+            # Carbon: accumulate real CO2 from measured speed (needs calibration).
+            dt = (t_now - self._prev_t) if self._prev_t is not None else 0.0
+            self._prev_t = t_now
+            for d in vehicles:
+                if d.speed_kmh is not None:
+                    self.emissions.add(d.track_id, d.label, d.speed_kmh, dt, t_now)
+
             decision = self.engine.make_decision(ns, ew)
             self.engine.execute_decision(decision)
 
@@ -236,6 +246,7 @@ class CameraWorker:
                     },
                     "calibrated": self.scene.calibration is not None,
                     "incidents": incidents,
+                    "emissions": self.emissions.stats(t_now),
                     "decision": {
                         "phase": decision.recommended_phase.value,
                         "active_direction": self.engine.active_direction,

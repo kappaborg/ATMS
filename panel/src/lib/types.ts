@@ -12,6 +12,16 @@ export interface ApproachStat {
   avg_speed_kmh: number;
 }
 
+export interface Emissions {
+  total_co2_kg: number;
+  idle_co2_kg: number;
+  vehicles: number;
+  avg_g_per_km: number;
+  rate_kg_h: number;
+  est_saved_kg: number;
+  savings_ratio: number;
+}
+
 export interface Decision {
   phase: string;
   active_direction: string;
@@ -57,6 +67,7 @@ export interface FrameEvent {
   counts: Counts;
   detections: Detection[];
   incidents: Incident[];
+  emissions: Emissions | null;
   approaches: { ns: ApproachStat; ew: ApproachStat };
   calibrated: boolean;
   decision: Decision;
