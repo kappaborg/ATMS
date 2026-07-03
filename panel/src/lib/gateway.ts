@@ -26,6 +26,53 @@ export async function removeCamera(camera_id: string) {
   return r.json();
 }
 
+export interface ScenePayload {
+  calibration?: { image_points: [number, number][]; world_points_m: [number, number][] };
+  zones?: Record<string, [number, number][]>;
+  zone_directions?: Record<string, "ns" | "ew">;
+}
+
+export interface SceneInfo {
+  calibrated: boolean;
+  reprojection_error_m: number | null;
+  zones: string[];
+  zone_directions: Record<string, string>;
+}
+
+export async function setScene(camera_id: string, payload: ScenePayload): Promise<SceneInfo> {
+  const r = await fetch(`${BASE}/cameras/${encodeURIComponent(camera_id)}/scene`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? `setScene ${r.status}`);
+  return r.json();
+}
+
+/**
+ * Grab a single frozen frame from a camera's video stream (for calibration).
+ * Resolves with an object URL; caller revokes it when done.
+ */
+export function snapshotFrame(camera_id: string, timeoutMs = 5000): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(`${WS_BASE}/ws/video/${encodeURIComponent(camera_id)}`);
+    ws.binaryType = "blob";
+    const timer = setTimeout(() => {
+      ws.close();
+      reject(new Error("snapshot timed out"));
+    }, timeoutMs);
+    ws.onmessage = (ev) => {
+      clearTimeout(timer);
+      ws.close();
+      resolve(URL.createObjectURL(ev.data as Blob));
+    };
+    ws.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error("snapshot failed"));
+    };
+  });
+}
+
 export async function health(): Promise<boolean> {
   try {
     const r = await fetch(`${BASE}/health`);
