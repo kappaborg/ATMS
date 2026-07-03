@@ -9,7 +9,7 @@ pyjwt[crypto]>=2.8
 prometheus_client>=0.19
 # Phase B1 — shared library deps.
 pydantic-settings>=2.0
-structlog>=24.0
+structlog>=26.1.0
 # Phase B4 — resilience (Retry primitive).
 tenacity>=8.0
 # Phase B2 — OpenTelemetry tracing (ADR-0010).
