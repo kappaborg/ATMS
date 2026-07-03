@@ -9,3 +9,5 @@ coverage>=7
 # Requires Docker on the test host. Tests are skipped when Docker is absent.
 testcontainers[kafka]>=4
 prometheus_client>=0.19
+# starlette.testclient (integration tests) requires httpx.
+httpx>=0.27

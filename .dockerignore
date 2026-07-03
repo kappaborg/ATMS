@@ -1,0 +1,46 @@
+# Keep the Docker build context small. Dockerfiles build from the repo
+# root (for `shared/`), so without this the entire tree — including the
+# multi-GB data/model/video assets when present locally — would be sent
+# to the daemon. CI's checkout is small, but this protects local builds.
+
+# Large data / model / media assets
+data/
+datasets/
+models/
+multiview_dataset/
+multiview_models/
+multiview_training_data/
+Car_Recognition/
+videos/
+Processed_Videos/
+*.mp4
+*.avi
+*.pt
+*.onnx
+*.mlpackage
+*.zip
+*.pth
+
+# Virtualenvs and caches
+**/venv/
+**/.venv/
+**/__pycache__/
+**/*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+
+# VCS / local / secrets
+.git/
+.github/
+.env
+.env.*
+!.env.example
+
+# Docs, tests, scratch (not needed in service images)
+docs/
+experiments/
+scratchpad/
+*.md
+!README.md

@@ -123,7 +123,7 @@ class AtmsModelRegistry:
         if self._client is not None:
             return self._client
         try:
-            from mlflow.tracking import MlflowClient  # noqa: PLC0415
+            from mlflow.tracking import MlflowClient
         except ImportError as e:
             raise ModelRegistryError(
                 "mlflow-skinny is not installed; add `mlflow-skinny>=2.10` to requirements."

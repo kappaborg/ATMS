@@ -119,7 +119,7 @@ class _StdlibTransitionLogger(TransitionLogger):
 def _build_metrics() -> MetricsRecorder:
     try:
         # Lazy: avoid hard-requiring prometheus_client in unit-test envs.
-        from shared.atms_common.metrics import PrometheusMetrics  # noqa: PLC0415
+        from shared.atms_common.metrics import PrometheusMetrics
 
         return PrometheusMetrics()
     except Exception:
@@ -609,7 +609,7 @@ async def control_preempt_arm(req: PreemptArmRequest, principal: Principal = _EN
 @app.post("/control/preempt/clear")
 async def control_preempt_clear(req: PreemptClearRequest, principal: Principal = _ENGINEER_DEP):
     """Clear an active preempt. Honours preempt_min_dwell_s."""
-    from shared.atms_common.preempt import Approach  # noqa: PLC0415
+    from shared.atms_common.preempt import Approach
 
     try:
         approach = Approach(req.approach)

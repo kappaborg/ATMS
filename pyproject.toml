@@ -99,6 +99,14 @@ module = [
 ]
 ignore_errors = true
 
+# Optional third-party imports without type stubs (guarded by try/except).
+# CI installs mypy alone (no stubs), so silence the missing-stub error here.
+[[tool.mypy.overrides]]
+module = [
+    "yaml",
+]
+ignore_missing_imports = true
+
 # --------------------------------------------------------------------------- #
 # Coverage
 # --------------------------------------------------------------------------- #

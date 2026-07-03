@@ -233,7 +233,7 @@ def issue_hs256_test_token(
     now: int | None = None,
 ) -> str:
     """Issue a short-lived HS256 token signed with the config's secret."""
-    import time as _time  # noqa: PLC0415  test-only path
+    import time as _time
 
     if config.algorithm != "HS256":
         raise ValueError("issue_hs256_test_token requires HS256 config")

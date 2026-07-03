@@ -6,3 +6,5 @@ hypothesis>=6.100
 coverage>=7
 prometheus_client>=0.19
 pyjwt[crypto]>=2.8
+# starlette.testclient (integration tests) requires httpx.
+httpx>=0.27

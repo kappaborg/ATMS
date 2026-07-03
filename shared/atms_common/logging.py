@@ -46,7 +46,7 @@ def _inject_otel_context(_logger: Any, _name: str, event_dict: EventDict) -> Eve
     Idempotent on top of the B1 placeholder fields.
     """
     try:
-        from opentelemetry import trace  # noqa: PLC0415
+        from opentelemetry import trace
 
         span = trace.get_current_span()
         ctx = span.get_span_context() if span is not None else None

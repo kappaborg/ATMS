@@ -203,7 +203,7 @@ class DecisionEngineService:
         """Fold an emission-data message into the rolling CO2 window."""
         for record in message.get("emissions", []):
             co2 = record.get("co2_g_km")
-            if isinstance(co2, (int, float)) and co2 > 0:
+            if isinstance(co2, int | float) and co2 > 0:
                 self._recent_co2.append(float(co2))
 
     def _average_emission(self, default: float = 150.0) -> float:

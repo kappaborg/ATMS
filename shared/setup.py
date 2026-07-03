@@ -24,6 +24,10 @@ setup(
         "pydantic>=2.0.0",
         "structlog>=23.1.0",
         "python-json-logger>=2.0.7",
+        # OpenTelemetry instrumentation imports `packaging` at runtime; it is
+        # normally bundled with pip but is NOT copied into the slim runtime
+        # image stage (only /root/.local is), so declare it explicitly.
+        "packaging>=21.0",
     ],
 )
 
