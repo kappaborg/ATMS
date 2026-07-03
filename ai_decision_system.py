@@ -84,6 +84,8 @@ class AIDecisionEngine:
         yellow_s: float = 3.0,
         all_red_s: float = 2.0,
         switch_threshold: float = 1.2,
+        prediction_weight: float = 0.15,
+        prediction_horizon_min: int = 15,
         now_fn: Optional[Callable[[], float]] = None,
     ):
         """Initialize the decision engine.
@@ -101,6 +103,11 @@ class AIDecisionEngine:
         self.yellow_s = yellow_s
         self.all_red_s = all_red_s
         self.switch_threshold = switch_threshold
+        # Predictive congestion: how much a short-horizon forecast can nudge a
+        # direction's score (bounded so it never overrides real demand).
+        self.prediction_weight = prediction_weight
+        self.prediction_horizon_min = prediction_horizon_min
+        self._last_prediction: Optional[Dict] = None
         self._now = now_fn or time.monotonic
         self._phase_started_at = self._now()
         self.phase_history = []
@@ -175,11 +182,19 @@ class AIDecisionEngine:
             TrafficDecision object with recommended action
         """
         self.decision_count += 1
-        
-        # Calculate scores for each direction
+
+        # Calculate scores for each direction (current demand)
         ns_score = self._calculate_direction_score(north_south)
         ew_score = self._calculate_direction_score(east_west)
-        
+
+        # Fold in a short-horizon congestion forecast so the signal reacts
+        # BEFORE a jam forms, not after. Bounded — it nudges the scores, never
+        # overrides real demand. The failsafe controller still enforces all
+        # timing/safety on the resulting recommendation.
+        ns_score, ew_score, self._last_prediction = self._apply_prediction(
+            north_south, east_west, ns_score, ew_score
+        )
+
         # Determine priority direction
         if ns_score > ew_score:
             priority_direction = "north_south"
@@ -250,25 +265,18 @@ class AIDecisionEngine:
             except Exception as e:
                 logger.warning(f"Anomaly detection failed: {e}")
         
-        # Phase 2: Use predictions if available
+        # Escalate priority when the forecast (already folded into the scores
+        # above) shows imminent congestion on either approach.
         prediction_adjustment = 0.0
-        if self.use_predictions and self.predictor:
-            try:
-                # Update predictor history
-                metrics_dict = {
-                    'north_south': north_south,
-                    'east_west': east_west
-                }
-                self.predictor.update_history(metrics_dict)
-                
-                # Predict congestion
-                congestion = self.predictor.predict_congestion(minutes_ahead=15)
-                if congestion['north_south'] > 0.8 or congestion['east_west'] > 0.8:
-                    prediction_adjustment = 0.1  # Boost priority if congestion predicted
-                    logger.info(f"📊 Congestion predicted - adjusting decision")
-            except Exception as e:
-                logger.warning(f"Prediction failed: {e}")
-        
+        if self._last_prediction:
+            peak = max(
+                self._last_prediction.get("north_south", 0.0),
+                self._last_prediction.get("east_west", 0.0),
+            )
+            if peak > 0.8:
+                prediction_adjustment = 0.1
+                logger.info("📊 Congestion predicted — escalating priority")
+
         # Calculate priority level (adjust for predictions)
         base_priority = self._determine_priority(priority_data, other_data)
         
@@ -295,16 +303,25 @@ class AIDecisionEngine:
             priority_score,
             other_score
         )
-        
+        # Surface a strong congestion forecast in the human-readable reason.
+        if self._last_prediction:
+            pdir = "N-S" if self._last_prediction["north_south"] >= self._last_prediction["east_west"] else "E-W"
+            ppct = max(self._last_prediction["north_south"], self._last_prediction["east_west"])
+            if ppct >= 0.5:
+                reason = reason.rstrip(".") + f". Congestion forecast {pdir} {ppct:.0%} in {self._last_prediction['horizon_min']}min."
+
         # Calculate confidence
         confidence = self._calculate_confidence(priority_score, other_score, priority_data, other_data)
-        
+
         # Calculate expected impact
         expected_impact = self._calculate_expected_impact(
             priority_data,
             other_data,
             recommended_phase
         )
+        if self._last_prediction:
+            expected_impact["predicted_congestion_ns"] = self._last_prediction["north_south"]
+            expected_impact["predicted_congestion_ew"] = self._last_prediction["east_west"]
         
         # Create decision
         decision = TrafficDecision(
@@ -329,6 +346,36 @@ class AIDecisionEngine:
         
         return decision
     
+    def _apply_prediction(
+        self, north_south: Dict, east_west: Dict, ns_score: float, ew_score: float
+    ):
+        """Fold a short-horizon congestion forecast into the direction scores.
+
+        Returns (ns_score, ew_score, info) where `info` is the per-direction
+        predicted congestion (0..1) or None when prediction is disabled/failed.
+        The boost is bounded by `prediction_weight` so it can shade a decision
+        proactively but never overrides current demand.
+        """
+        if not (self.use_predictions and self.predictor):
+            return ns_score, ew_score, None
+        try:
+            self.predictor.update_history({"north_south": north_south, "east_west": east_west})
+            congestion = self.predictor.predict_congestion(
+                minutes_ahead=self.prediction_horizon_min
+            )
+            ns_c = float(congestion.get("north_south", 0.0))
+            ew_c = float(congestion.get("east_west", 0.0))
+            ns_score += ns_c * self.prediction_weight
+            ew_score += ew_c * self.prediction_weight
+            return ns_score, ew_score, {
+                "north_south": round(ns_c, 2),
+                "east_west": round(ew_c, 2),
+                "horizon_min": self.prediction_horizon_min,
+            }
+        except Exception as e:  # noqa: BLE001 — advisory; never break the decision
+            logger.warning(f"Prediction failed: {e}")
+            return ns_score, ew_score, None
+
     def _rule_based_wants_switch(
         self, priority_direction: str, priority_score: float, other_score: float
     ) -> bool:

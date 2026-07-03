@@ -18,6 +18,7 @@ export interface Decision {
   priority: string;
   confidence: number;
   reason: string;
+  predicted_congestion: { north_south: number; east_west: number; horizon_min: number } | null;
 }
 
 export interface SystemDecision {
