@@ -193,6 +193,17 @@ export async function setSahi(camera_id: string, enabled: boolean): Promise<void
   if (!r.ok) throw new Error(`setSahi ${r.status}`);
 }
 
+/** Set a camera's detection-confidence floor (0.05–0.95). Raise to drop wrong
+ * boxes on noisy scenes; lower for recall on dim/small objects. */
+export async function setConfidence(camera_id: string, min_confidence: number): Promise<void> {
+  const r = await fetch(`${BASE}/cameras/${encodeURIComponent(camera_id)}/confidence`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ min_confidence }),
+  });
+  if (!r.ok) throw new Error(`setConfidence ${r.status}`);
+}
+
 /** Emergency-vehicle preemption: force `direction` green, or clear it. */
 export async function setPreemption(
   camera_id: string,

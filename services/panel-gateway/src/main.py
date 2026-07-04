@@ -89,6 +89,7 @@ class CameraIn(BaseModel):
     loop_file: bool = True
     intersection_id: str = Field(default="1", pattern=r"^[A-Za-z0-9_-]{1,64}$")
     sahi: bool = False  # sliced inference for aerial/small-object views (slower)
+    min_confidence: float | None = Field(default=None, ge=0.05, le=0.95)
 
 
 def _resolve_principal(authorization: str | None, token: str | None) -> Principal | None:
@@ -287,6 +288,7 @@ async def add_camera(cam: CameraIn, p: Principal = _OPERATOR, __: None = _RATE) 
         manager.add(
             cam.camera_id, safe_source, loop_file=cam.loop_file,
             intersection_id=cam.intersection_id, sahi=cam.sahi,
+            min_confidence=cam.min_confidence,
         )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
@@ -308,6 +310,22 @@ async def set_camera_sahi(camera_id: str, body: SahiIn, p: Principal = _OPERATOR
         raise HTTPException(status_code=404, detail="camera not found")
     _audit(p, "set_sahi", f"id={camera_id} enabled={body.enabled}")
     return {"status": "ok", "camera_id": camera_id, "sahi": body.enabled}
+
+
+class ConfidenceIn(BaseModel):
+    min_confidence: float = Field(ge=0.05, le=0.95)
+
+
+@app.post("/cameras/{camera_id}/confidence")
+async def set_camera_confidence(camera_id: str, body: ConfidenceIn, p: Principal = _OPERATOR, __: None = _RATE) -> dict:
+    """Set a camera's detection-confidence floor. Raise it to remove wrong
+    boxes on noisy scenes (water/reflections/foliage); lower it for recall."""
+    try:
+        manager.set_min_confidence(camera_id, body.min_confidence)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="camera not found")
+    _audit(p, "set_confidence", f"id={camera_id} min={body.min_confidence}")
+    return {"status": "ok", "camera_id": camera_id, "min_confidence": body.min_confidence}
 
 
 @app.delete("/cameras/{camera_id}")
