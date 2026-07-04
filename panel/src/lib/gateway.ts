@@ -109,6 +109,7 @@ export interface ScenePayload {
   calibration?: { image_points: [number, number][]; world_points_m: [number, number][] };
   zones?: Record<string, [number, number][]>;
   zone_directions?: Record<string, "ns" | "ew">;
+  stop_lines?: { approach: "ns" | "ew"; points: [number, number][] }[];
 }
 
 export interface SceneInfo {

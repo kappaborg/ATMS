@@ -32,7 +32,7 @@ from ai_decision_system import AIDecisionEngine  # noqa: E402
 
 from detection import Detector, annotate, summarize, to_tracker_input  # noqa: E402
 import history  # noqa: E402
-from behavior import DriverBehavior  # noqa: E402
+from behavior import DriverBehavior, RedLightDetector  # noqa: E402
 from emissions import EmissionAccumulator  # noqa: E402
 from incidents import IncidentDetector  # noqa: E402
 from report import SessionReport  # noqa: E402
@@ -96,6 +96,7 @@ class CameraWorker:
         self.scene = SceneConfig()  # calibration/zones applied at runtime
         self.incidents = IncidentDetector()
         self.behavior = DriverBehavior()
+        self.redlight = RedLightDetector()
         self.emissions = EmissionAccumulator()
         self.report = SessionReport(cam_id)
         self._prev_t: float | None = None
@@ -253,6 +254,7 @@ class CameraWorker:
                     scene.speed.remove(rid)
                 self.incidents.remove(rid)
                 self.behavior.remove(rid)
+                self.redlight.remove(rid)
 
             # Unified violation detection: stopped (incident) + speeding +
             # wrong-way, all flagged on the detections and merged into one list
@@ -264,14 +266,29 @@ class CameraWorker:
             bviol, speeding_ids, wrong_ids = self.behavior.update(
                 vehicles, t_now, wrong_way=scene.zones is not None
             )
+            # Red-light running: crossing a stop-line while that approach is red.
+            # Uses the CURRENT signal state (before this frame's decision).
+            rlviol, redlight_ids = [], set()
+            if scene.stop_lines:
+                cur_phase = self.engine.current_phase.value
+                active = self.engine.active_direction
+
+                def _is_red(appr: str) -> bool:
+                    d = "north_south" if appr == "ns" else "east_west"
+                    return not (active == d and cur_phase in ("GREEN", "YELLOW"))
+
+                rlviol, redlight_ids = self.redlight.update(
+                    vehicles, t_now, scene.stop_lines, _is_red
+                )
             for d in result.detections:
                 d.stopped = d.track_id in stopped_ids
                 d.speeding = d.track_id in speeding_ids
                 d.wrong_way = d.track_id in wrong_ids
+                d.red_light = d.track_id in redlight_ids
             violations = [
                 {"type": "stopped_vehicle", "track_id": i["track_id"], "seconds": i["seconds"]}
                 for i in incidents
-            ] + bviol
+            ] + bviol + rlviol
 
             # Carbon: accumulate real CO2 from measured speed (needs calibration).
             dt = (t_now - self._prev_t) if self._prev_t is not None else 0.0
@@ -306,6 +323,16 @@ class CameraWorker:
             # (which feeds decisions, the network overview, and history).
             if viewers > 0:
                 annotated = annotate(frame, result, decision.recommended_phase.value, self.fps)
+                # Draw stop-lines, coloured by the current signal for their approach.
+                for sl in scene.stop_lines:
+                    d = "north_south" if sl["approach"] == "ns" else "east_west"
+                    red = not (
+                        self.engine.active_direction == d
+                        and decision.recommended_phase.value in ("GREEN", "YELLOW")
+                    )
+                    (sx1, sy1), (sx2, sy2) = sl["points"]
+                    cv2.line(annotated, (int(sx1), int(sy1)), (int(sx2), int(sy2)),
+                             (0, 0, 255) if red else (0, 200, 0), 2)
                 ok_enc, buf = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 80])
                 if ok_enc:
                     self.hub.set_frame(self.cam_id, buf.tobytes())

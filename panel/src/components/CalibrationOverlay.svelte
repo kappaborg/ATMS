@@ -17,7 +17,7 @@
   let stageW = $state(1);
   let stageH = $state(1);
 
-  let mode = $state<"points" | "zones">("points");
+  let mode = $state<"points" | "zones" | "stoplines">("points");
   // "rect" = click 4 corners of a ground rectangle + enter its size (easy).
   // "advanced" = enter each point's own X/Y metres.
   let calMode = $state<"rect" | "advanced">("rect");
@@ -28,6 +28,10 @@
   let draft = $state<[number, number][]>([]);
   let draftName = $state("");
   let draftDir = $state<"ns" | "ew">("ns");
+  // Stop-lines for red-light-running: each is 2 points + an approach.
+  let stopLines = $state<{ approach: "ns" | "ew"; verts: [number, number][] }[]>([]);
+  let slDraft = $state<[number, number][]>([]);
+  let slDir = $state<"ns" | "ew">("ns");
 
   let applying = $state(false);
   let result = $state<SceneInfo | null>(null);
@@ -52,9 +56,22 @@
       // In rectangle mode, cap at 4 corners.
       if (calMode === "rect" && points.length >= 4) return;
       points = [...points, { nx, ny, X: 0, Y: 0 }];
-    } else {
+    } else if (mode === "zones") {
       draft = [...draft, [nx, ny]];
+    } else {
+      // Stop-line: two clicks make one line.
+      const next = [...slDraft, [nx, ny] as [number, number]];
+      if (next.length === 2) {
+        stopLines = [...stopLines, { approach: slDir, verts: next }];
+        slDraft = [];
+      } else {
+        slDraft = next;
+      }
     }
+  }
+
+  function removeStopLine(i: number) {
+    stopLines = stopLines.filter((_, k) => k !== i);
   }
 
   function clearPoints() {
@@ -142,6 +159,12 @@
         );
         payload.zone_directions = Object.fromEntries(zones.map((z) => [z.name, z.direction]));
       }
+      if (stopLines.length) {
+        payload.stop_lines = stopLines.map((sl) => ({
+          approach: sl.approach,
+          points: sl.verts.map(([nx, ny]) => toImagePx(nx, ny)),
+        }));
+      }
       result = await setScene(camera_id, payload);
     } catch (e) {
       error = (e as Error).message;
@@ -160,6 +183,7 @@
       <div class="tabs">
         <button class:active={mode === "points"} onclick={() => (mode = "points")}>Reference points</button>
         <button class:active={mode === "zones"} onclick={() => (mode = "zones")}>Approach zones</button>
+        <button class:active={mode === "stoplines"} onclick={() => (mode = "stoplines")}>Stop-lines</button>
       </div>
       <button class="close" onclick={onclose}>✕</button>
     </header>
@@ -186,6 +210,15 @@
                   <circle cx={px(nx, stageW)} cy={px(ny, stageH)} r="5" fill="#7fd1ff" />
                 {/each}
               {/if}
+              {#each stopLines as sl}
+                <line x1={px(sl.verts[0][0], stageW)} y1={px(sl.verts[0][1], stageH)}
+                      x2={px(sl.verts[1][0], stageW)} y2={px(sl.verts[1][1], stageH)}
+                      stroke="#e74c3c" stroke-width="3" />
+                <text x={px(sl.verts[0][0], stageW)} y={px(sl.verts[0][1], stageH) - 6} fill="#e74c3c" font-size="14">stop · {sl.approach.toUpperCase()}</text>
+              {/each}
+              {#each slDraft as [nx, ny]}
+                <circle cx={px(nx, stageW)} cy={px(ny, stageH)} r="5" fill="#e74c3c" />
+              {/each}
               {#if mode === "points" && calMode === "rect" && points.length >= 2}
                 <polyline
                   points={[...points, ...(points.length === 4 ? [points[0]] : [])].map((p) => `${px(p.nx, stageW)},${px(p.ny, stageH)}`).join(" ")}
@@ -251,7 +284,7 @@
               {#if !points.length}<p class="empty">Click points on the image.</p>{/if}
             </div>
           {/if}
-        {:else}
+        {:else if mode === "zones"}
           <h3>Zones ({zones.length})</h3>
           <div class="list">
             {#each zones as z, i}
@@ -270,6 +303,27 @@
               <button class:active={draftDir === "ew"} onclick={() => (draftDir = "ew")}>E–W</button>
             </div>
             <button class="finish" onclick={finishZone} disabled={draft.length < 3}>Finish zone ({draft.length} pts)</button>
+          </div>
+        {:else}
+          <h3>Stop-lines ({stopLines.length})</h3>
+          <p class="sub">Red-light-running detection</p>
+          <div class="list">
+            {#each stopLines as sl, i}
+              <div class="zrow">
+                <span class="dot" style="background:#e74c3c"></span>
+                <span class="zname">stop-line {i + 1}</span>
+                <span class="zdir">{sl.approach.toUpperCase()}</span>
+                <button class="x" onclick={() => removeStopLine(i)}>✕</button>
+              </div>
+            {/each}
+            {#if !stopLines.length}<p class="empty">Click 2 points across a lane to draw the stop-line.</p>{/if}
+          </div>
+          <div class="zbuild">
+            <div class="dirs">
+              <button class:active={slDir === "ns"} onclick={() => (slDir = "ns")}>N–S</button>
+              <button class:active={slDir === "ew"} onclick={() => (slDir = "ew")}>E–W</button>
+            </div>
+            <p class="tip">Pick the approach direction, then click the two ends of its stop-line. A vehicle crossing it on red is flagged.</p>
           </div>
         {/if}
 
