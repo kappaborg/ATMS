@@ -100,12 +100,12 @@
     {#if event?.approaches}
       <div class="approaches">
         <div class="appr" class:active={d.active_direction === "north_south"}>
-          <span class="lbl">N–S</span>
+          <span class="lbl">N–S {#if event.transit?.ns}<span class="bus" title="Transit priority — bus present">🚌</span>{/if}</span>
           <span class="veh">{event.approaches.ns.vehicles} veh</span>
           <span class="spd">{event.calibrated ? event.approaches.ns.avg_speed_kmh.toFixed(0) + " km/h" : "—"}</span>
         </div>
         <div class="appr" class:active={d.active_direction === "east_west"}>
-          <span class="lbl">E–W</span>
+          <span class="lbl">E–W {#if event.transit?.ew}<span class="bus" title="Transit priority — bus present">🚌</span>{/if}</span>
           <span class="veh">{event.approaches.ew.vehicles} veh</span>
           <span class="spd">{event.calibrated ? event.approaches.ew.avg_speed_kmh.toFixed(0) + " km/h" : "—"}</span>
         </div>

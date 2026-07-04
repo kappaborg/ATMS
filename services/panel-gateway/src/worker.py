@@ -158,7 +158,8 @@ class CameraWorker:
             w = frame.shape[1]
             # Per-direction aggregates fed to the decision engine.
             ns = {"vehicle_count": 0, "average_emission": 0.0, "average_waiting_time": 0.0,
-                  "average_velocity": 0.0, "environmental_impact_score": 0.0}
+                  "average_velocity": 0.0, "environmental_impact_score": 0.0,
+                  "transit_present": False}
             ew = dict(ns)
             ns_speeds: list[float] = []
             ew_speeds: list[float] = []
@@ -177,6 +178,8 @@ class CameraWorker:
                     d.approach = direction
                 bucket, speeds = (ns, ns_speeds) if direction == "ns" else (ew, ew_speeds)
                 bucket["vehicle_count"] += 1
+                if d.label == "bus":
+                    bucket["transit_present"] = True  # transit signal priority
                 if d.speed_kmh is not None:
                     speeds.append(d.speed_kmh)
 
@@ -259,6 +262,7 @@ class CameraWorker:
                     "incidents": incidents,
                     "emissions": self.emissions.stats(t_now),
                     "preemption": self.engine._preemption_active(),
+                    "transit": {"ns": ns["transit_present"], "ew": ew["transit_present"]},
                     "decision": {
                         "phase": decision.recommended_phase.value,
                         "active_direction": self.engine.active_direction,
