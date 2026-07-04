@@ -2,13 +2,59 @@ import type { CameraInfo, FrameEvent } from "./types";
 
 const BASE = import.meta.env.VITE_GATEWAY ?? "http://127.0.0.1:8090";
 const WS_BASE = BASE.replace(/^http/, "ws");
-const TOKEN = (import.meta.env.VITE_GATEWAY_TOKEN as string | undefined) ?? "";
+
+// Session token: from a login (preferred) or a build-time VITE_GATEWAY_TOKEN.
+// Persisted so a reopened app stays signed in until the token expires.
+let TOKEN: string =
+  localStorage.getItem("atms_token") ??
+  ((import.meta.env.VITE_GATEWAY_TOKEN as string | undefined) ?? "");
+
+function setToken(t: string) {
+  TOKEN = t;
+  if (t) localStorage.setItem("atms_token", t);
+  else localStorage.removeItem("atms_token");
+}
 
 // REST auth header (empty when no token configured).
 const authHeaders = (): Record<string, string> =>
   TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {};
 // WebSocket can't set headers in the browser — pass the token as a query param.
 const wsAuth = (): string => (TOKEN ? `?token=${encodeURIComponent(TOKEN)}` : "");
+
+export interface Me {
+  username: string;
+  role: "viewer" | "operator" | "admin";
+}
+
+/** True when the gateway requires authentication. */
+export async function authRequired(): Promise<boolean> {
+  const r = await fetch(`${BASE}/health`);
+  if (!r.ok) return false;
+  return Boolean((await r.json()).auth_enabled);
+}
+
+/** Validate the stored token; returns the principal or null. */
+export async function getMe(): Promise<Me | null> {
+  if (!TOKEN) return null;
+  const r = await fetch(`${BASE}/auth/me`, { headers: authHeaders() });
+  return r.ok ? r.json() : null;
+}
+
+export async function login(username: string, password: string): Promise<Me> {
+  const r = await fetch(`${BASE}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!r.ok) throw new Error(r.status === 401 ? "Invalid username or password" : `login ${r.status}`);
+  const data = await r.json();
+  setToken(data.token);
+  return { username: data.username, role: data.role };
+}
+
+export function logout() {
+  setToken("");
+}
 
 // --- REST ---
 export async function listCameras(): Promise<CameraInfo[]> {
