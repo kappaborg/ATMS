@@ -14,10 +14,10 @@ def _manager_with(workers):
     return m
 
 
-def _w(cam_id, iid, src="videos/x.mp4"):
+def _w(cam_id, iid, src="videos/x.mp4", sahi=False):
     return SimpleNamespace(
         cam_id=cam_id, intersection_id=iid, source=src, loop_file=True,
-        status="running", error=None, fps=30.0,
+        status="running", error=None, fps=30.0, sahi_enabled=sahi,
         scene=SimpleNamespace(to_payload=lambda: {}, info=lambda: {}),
     )
 
@@ -36,6 +36,23 @@ def test_intersections_grouped_and_sorted():
 def test_camera_list_includes_intersection_id():
     m = _manager_with({"a": _w("a", "7")})
     assert m.list()[0]["intersection_id"] == "7"
+
+
+def test_camera_list_includes_sahi_flag():
+    m = _manager_with({"a": _w("a", "1", sahi=True), "b": _w("b", "1")})
+    by_id = {c["camera_id"]: c["sahi"] for c in m.list()}
+    assert by_id == {"a": True, "b": False}
+
+
+def test_set_sahi_toggles_and_unknown_raises():
+    import pytest
+
+    m = _manager_with({"a": _w("a", "1")})
+    m._persist = lambda: None  # no state file in unit test
+    m.set_sahi("a", True)
+    assert m._workers["a"].sahi_enabled is True
+    with pytest.raises(KeyError):
+        m.set_sahi("nope", True)
 
 
 def test_empty_has_no_intersections():

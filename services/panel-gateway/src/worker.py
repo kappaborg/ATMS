@@ -103,6 +103,7 @@ class CameraWorker:
         loop_file=True,
         intersection_id: str = "1",
         system=None,
+        sahi: bool = False,
     ):
         self.cam_id = cam_id
         self.source = source
@@ -111,6 +112,9 @@ class CameraWorker:
         self.loop_file = loop_file
         self.intersection_id = intersection_id
         self.system = system  # SystemState | None
+        # Per-camera SAHI: sliced inference for aerial/small-object views
+        # (slower); toggled at runtime via POST /cameras/{id}/sahi.
+        self.sahi_enabled = sahi
         self.tracker = SimpleByteTracker()
         # Predictive congestion on: the panel's per-camera decision reason
         # then shows "Congestion forecast …" (disable with ATMS_USE_PREDICTIONS=0).
@@ -255,7 +259,7 @@ class CameraWorker:
             frame_idx += 1
             t_now = time.time()
             with _INFER_LOCK:
-                raw = self.detector.infer(frame)
+                raw = self.detector.infer(frame, use_sahi=self.sahi_enabled)
             tracked = self.tracker.update(to_tracker_input(raw))
             result = summarize(tracked)
 

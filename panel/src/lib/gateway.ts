@@ -183,6 +183,16 @@ export async function downloadReport(camera_id: string): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
+/** Toggle SAHI (sliced small-object inference) for one camera. */
+export async function setSahi(camera_id: string, enabled: boolean): Promise<void> {
+  const r = await fetch(`${BASE}/cameras/${encodeURIComponent(camera_id)}/sahi`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ enabled }),
+  });
+  if (!r.ok) throw new Error(`setSahi ${r.status}`);
+}
+
 /** Emergency-vehicle preemption: force `direction` green, or clear it. */
 export async function setPreemption(
   camera_id: string,
