@@ -17,7 +17,7 @@ def _manager_with(workers):
 def _w(cam_id, iid, src="videos/x.mp4", sahi=False):
     return SimpleNamespace(
         cam_id=cam_id, intersection_id=iid, source=src, loop_file=True,
-        status="running", error=None, fps=30.0, sahi_enabled=sahi,
+        status="running", error=None, fps=30.0, sahi_enabled=sahi, min_confidence=0.25,
         scene=SimpleNamespace(to_payload=lambda: {}, info=lambda: {}),
     )
 
@@ -79,3 +79,21 @@ def test_add_rejects_bad_intersection_id():
     m._detector_lazy = lambda: None
     with pytest.raises(ValueError):
         m.add("cam1", "videos/x.mp4", intersection_id="../../evil")
+
+
+def test_camera_list_includes_min_confidence():
+    m = _manager_with({"a": _w("a", "1")})
+    assert "min_confidence" in m.list()[0]
+
+
+def test_set_min_confidence_clamps():
+    import pytest
+
+    m = _manager_with({"a": _w("a", "1")})
+    m._persist = lambda: None
+    m.set_min_confidence("a", 0.6)
+    assert abs(m._workers["a"].min_confidence - 0.6) < 1e-6
+    m.set_min_confidence("a", 5.0)  # out of range -> clamped
+    assert m._workers["a"].min_confidence == 0.95
+    with pytest.raises(KeyError):
+        m.set_min_confidence("nope", 0.5)

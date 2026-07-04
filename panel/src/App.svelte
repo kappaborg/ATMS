@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
-  import { connectData, listCameras, listIntersections, listCorridors, downloadReport, authRequired, getMe, logout, getHistory, setSahi, type Me, type HistoryTotals } from "./lib/gateway";
+  import { connectData, listCameras, listIntersections, listCorridors, downloadReport, authRequired, getMe, logout, getHistory, setSahi, setConfidence, type Me, type HistoryTotals } from "./lib/gateway";
   import type { CameraInfo, FrameEvent, IntersectionInfo, Corridor } from "./lib/types";
   import MetricsBar from "./components/MetricsBar.svelte";
   import CameraTile from "./components/CameraTile.svelte";
@@ -55,6 +55,17 @@
     if (!selected || !selectedCam) return;
     try {
       await setSahi(selected, !selectedCam.sahi);
+      await refresh();
+    } catch {
+      /* gateway offline */
+    }
+  }
+
+  async function bumpConfidence(delta: number) {
+    if (!selected || !selectedCam) return;
+    const next = Math.min(0.95, Math.max(0.05, Math.round((selectedCam.min_confidence + delta) * 100) / 100));
+    try {
+      await setConfidence(selected, next);
       await refresh();
     } catch {
       /* gateway offline */
@@ -171,6 +182,11 @@
           <div class="sel-actions">
             <button onclick={() => downloadReport(selected!)} title="Export session report (CSV)">⤓ Report</button>
             {#if canOperate}
+              <span class="conf" title="Detection confidence floor. Raise it to remove wrong boxes on noisy scenes (water, reflections, foliage); lower it for recall on dim/small objects.">
+                <button onclick={() => bumpConfidence(-0.05)}>−</button>
+                <span class="confval">conf {(selectedCam?.min_confidence ?? 0.35).toFixed(2)}</span>
+                <button onclick={() => bumpConfidence(0.05)}>+</button>
+              </span>
               <button class:sahion={selectedCam?.sahi} onclick={toggleSahi}
                 title="SAHI sliced inference: detects small/distant objects (aerial views) but is slower. Enable per camera only where needed.">
                 🔬 SAHI {selectedCam?.sahi ? "ON" : "off"}
@@ -227,6 +243,9 @@
   .sel-actions { display: flex; gap: 6px; }
   .sel-bar button { background: #1b3a52; border: 1px solid #2b6ea3; color: #cfe8ff; border-radius: 5px; padding: 5px 10px; cursor: pointer; font-size: 0.78rem; }
   .sel-bar button.sahion { background: #1b5233; border-color: #2ecc71; color: #d6ffe6; }
+  .conf { display: inline-flex; align-items: center; gap: 4px; }
+  .conf button { padding: 3px 8px; }
+  .conf .confval { font-size: 0.72rem; color: #9aa4b2; min-width: 56px; text-align: center; }
   .hint { grid-column: 1 / -1; display: grid; place-content: center; text-align: center; color: #667; }
   .hint h1 { font-size: 1.1rem; color: #8b95a7; margin: 0 0 6px; }
   .hint p { font-size: 0.85rem; margin: 0; }

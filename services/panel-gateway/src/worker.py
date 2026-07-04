@@ -106,6 +106,7 @@ class CameraWorker:
         intersection_id: str = "1",
         system=None,
         sahi: bool = False,
+        min_confidence: float | None = None,
     ):
         self.cam_id = cam_id
         self.source = source
@@ -117,6 +118,25 @@ class CameraWorker:
         # Per-camera SAHI: sliced inference for aerial/small-object views
         # (slower); toggled at runtime via POST /cameras/{id}/sahi.
         self.sahi_enabled = sahi
+        # Per-camera confidence floor: drop detections below this before they
+        # are tracked/counted/shown. Raise it on noisy scenes (water/beach/
+        # reflections) to kill wrong boxes; lower it where recall matters
+        # (dim night streets). Default = the detector's global floor.
+        self.min_confidence = (
+            min_confidence if min_confidence is not None
+            else float(os.getenv("PANEL_MIN_CONFIDENCE", str(detector.confidence)))
+        )
+        # Multi-stream latency control. All cameras share one detector under
+        # one lock; a slow (SAHI) camera would otherwise make the others QUEUE,
+        # so latency balloons with 3+ streams. Instead: wait only briefly for
+        # the shared detector — if it's busy, skip detection this frame and
+        # re-display the last result. Bounds latency regardless of stream count.
+        self._infer_wait = float(os.getenv("PANEL_INFER_WAIT_MS", "150")) / 1000.0
+        self._detect_interval = float(os.getenv("PANEL_DETECT_INTERVAL_MS", "0")) / 1000.0
+        self._last_detect = 0.0
+        self._last_result = None
+        self._last_phase = "GREEN"
+        self._last_event: dict | None = None
         # New tracks are only spawned from detections above `high_thresh`. On
         # dim/small-object scenes (night, distant motorcycles) real objects are
         # detected at 0.3-0.5 and would be seen-but-never-counted at the stock
@@ -218,6 +238,23 @@ class CameraWorker:
         for tid in list(self._tp_last):
             if tid not in live:
                 self._tp_last.pop(tid, None)
+
+    def _reemit(self, frame, viewers: int, t_cap: float, frame_idx: int) -> None:
+        """Detector was busy/throttled: redraw the last boxes on the fresh
+        frame and re-publish the last data event with updated timing. Keeps
+        video smooth and latency low without re-running the pipeline."""
+        if viewers > 0 and self._last_result is not None:
+            annotated = annotate(frame, self._last_result, self._last_phase, self.fps)
+            ok_enc, buf = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            if ok_enc:
+                self.hub.set_frame(self.cam_id, buf.tobytes())
+        if self._last_event is not None:
+            ev = dict(self._last_event)
+            ev["frame"] = frame_idx
+            ev["ts"] = time.time()
+            ev["pipeline_latency_ms"] = round((time.time() - t_cap) * 1000.0, 1)
+            ev["fps"] = round(self.fps, 1)
+            self.hub.publish_event(ev)
 
     def _log_violation(self, viol: dict, bbox, frame, t_now: float) -> None:
         """Persist one violation to the evidence log with a cropped snapshot."""
@@ -327,8 +364,31 @@ class CameraWorker:
 
             frame_idx += 1
             t_now = time.time()
-            with _INFER_LOCK:
-                raw = self.detector.infer(frame, use_sahi=self.sahi_enabled)
+            # Bounded-latency, multi-stream detection: only run the (shared,
+            # possibly SAHI-slow) detector if this camera is due AND the lock
+            # is free within a short wait. Otherwise reuse the last result so
+            # video stays smooth and latency doesn't queue up behind others.
+            raw = None
+            due = self._detect_interval <= 0 or (t_now - self._last_detect) >= self._detect_interval
+            if due and _INFER_LOCK.acquire(timeout=self._infer_wait):
+                try:
+                    raw = [
+                        r for r in self.detector.infer(frame, use_sahi=self.sahi_enabled)
+                        if r[1] >= self.min_confidence
+                    ]
+                finally:
+                    _INFER_LOCK.release()
+                self._last_detect = t_now
+            if raw is None:
+                # Detector busy or throttled — redraw last boxes, re-emit, skip.
+                if self._last_result is not None:
+                    self._reemit(frame, viewers, t_cap, frame_idx)
+                    fps_n += 1
+                    if time.time() - fps_t0 >= 1.0:
+                        self.fps = fps_n / (time.time() - fps_t0)
+                        fps_t0, fps_n = time.time(), 0
+                    continue
+                raw = []  # nothing detected yet — fall through with an empty set
             tracked = self.tracker.update(to_tracker_input(raw))
             result = summarize(tracked)
 
@@ -574,8 +634,7 @@ class CameraWorker:
                     self.hub.set_frame(self.cam_id, buf.tobytes())
             latency_ms = (time.time() - t_cap) * 1000.0
 
-            self.hub.publish_event(
-                {
+            event = {
                     "type": "frame",
                     "camera_id": self.cam_id,
                     "frame": frame_idx,
@@ -631,4 +690,8 @@ class CameraWorker:
                     "intersection_id": self.intersection_id,
                     "system": self.system.get(self.intersection_id) if self.system else None,
                 }
-            )
+            self.hub.publish_event(event)
+            # Remember this result so throttled/busy frames can re-display it.
+            self._last_result = result
+            self._last_phase = decision.recommended_phase.value
+            self._last_event = event

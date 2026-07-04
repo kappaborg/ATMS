@@ -56,7 +56,7 @@ Auto-start at login (macOS): `deploy/launchagents/com.atms.panel-gateway.plist`.
 `PANEL_ALWAYS_RECORD` / `PANEL_RECORD_FPS` — unattended detection & evidence;
 `PANEL_READ_PLATES` + `PANEL_PLATE_COUNTRY` — plate capture & validation;
 `PANEL_USE_SAHI` or per-camera via API/app — small-object slicing;
-`PANEL_MODEL` (yolov8n/s/m — bigger = better small/night detection, slower); `PANEL_CONFIDENCE` (detection floor, default 0.35; lower for dim/small objects); `PANEL_TRACK_NEW` (new-track confidence, default 0.35; lower so faint night objects get counted); `PANEL_REID` — appearance identity recovery; `PANEL_SPEED_LIMIT_KMH`,
+`PANEL_MODEL` (yolov8n/s/m — bigger = better small/night detection, slower); `PANEL_CONFIDENCE` (detection floor, default 0.35; lower for dim/small objects); `PANEL_TRACK_NEW` (new-track confidence, default 0.35; lower so faint night objects get counted); `PANEL_MIN_CONFIDENCE` (per-camera detection floor — raise to drop wrong boxes on noisy scenes); `PANEL_INFER_WAIT_MS` (max wait for the shared detector before a camera reuses its last result — bounds multi-stream latency, default 150); `PANEL_DETECT_INTERVAL_MS` (cap detection rate per camera, default 0=off); `PANEL_REID` — appearance identity recovery; `PANEL_SPEED_LIMIT_KMH`,
 `PANEL_DRIFT_LAT_G`, `PANEL_SPEEDING_FRAMES`, `PANEL_ERRATIC_REVERSALS` —
 violation tuning; `KAFKA_BOOTSTRAP_SERVERS`, `PANEL_CONTROLLER_URLS` —
 full-ATMS integration. Full reference: `panel/README.md`.

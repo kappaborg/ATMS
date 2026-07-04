@@ -99,6 +99,7 @@ export interface CameraInfo {
   live: boolean;
   intersection_id: string;
   sahi: boolean;
+  min_confidence: number;
   status: string;
   error: string | null;
   fps: number;

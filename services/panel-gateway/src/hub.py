@@ -88,6 +88,7 @@ class CameraManager:
     def add(
         self, cam_id: str, source: str | int, *,
         loop_file: bool = True, intersection_id: str = "1", sahi: bool = False,
+        min_confidence: float | None = None,
     ) -> None:
         # Single chokepoint (API + restore): ids build filesystem/route paths,
         # so reject anything outside a safe charset (path-traversal defence).
@@ -100,7 +101,7 @@ class CameraManager:
         worker = CameraWorker(
             cam_id, source, self._detector_lazy(), self.hub,
             loop_file=loop_file, intersection_id=intersection_id, system=self.system,
-            sahi=sahi,
+            sahi=sahi, min_confidence=min_confidence,
         )
         self._workers[cam_id] = worker
         worker.start()
@@ -111,6 +112,13 @@ class CameraManager:
         if worker is None:
             raise KeyError(cam_id)
         worker.sahi_enabled = bool(enabled)  # atomic; worker reads it each frame
+        self._persist()
+
+    def set_min_confidence(self, cam_id: str, value: float) -> None:
+        worker = self._workers.get(cam_id)
+        if worker is None:
+            raise KeyError(cam_id)
+        worker.min_confidence = max(0.05, min(0.95, float(value)))  # atomic
         self._persist()
 
     def remove(self, cam_id: str) -> None:
@@ -139,6 +147,7 @@ class CameraManager:
                 "loop_file": w.loop_file,
                 "intersection_id": w.intersection_id,
                 "sahi": w.sahi_enabled,
+                "min_confidence": w.min_confidence,
             }
             payload = w.scene.to_payload()
             if payload:
@@ -160,11 +169,16 @@ class CameraManager:
                     loop_file=entry.get("loop_file", True),
                     intersection_id=str(entry.get("intersection_id", "1")),
                     sahi=bool(entry.get("sahi", False)),
+                    min_confidence=entry.get("min_confidence"),
                 )
                 if entry.get("scene"):
                     self.set_scene(cam_id, SceneConfig.from_payload(entry["scene"]))
                 restored += 1
-            except Exception:  # noqa: BLE001 — one bad entry must not block the rest
+            except Exception as e:  # noqa: BLE001 — one bad entry must not block the rest
+                import logging
+                logging.getLogger("panel.hub").warning(
+                    "restore skipped camera %s: %s", entry.get("camera_id"), e
+                )
                 continue
         return restored
 
@@ -177,6 +191,7 @@ class CameraManager:
                 "live": is_live_source(w.source),
                 "intersection_id": w.intersection_id,
                 "sahi": w.sahi_enabled,
+                "min_confidence": round(w.min_confidence, 2),
                 "status": w.status,
                 "error": w.error,
                 "fps": round(w.fps, 1),
