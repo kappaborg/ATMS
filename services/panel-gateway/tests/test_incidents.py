@@ -1,4 +1,4 @@
-"""Stopped-vehicle incident detection."""
+"""Stopped-vehicle incident detection: parked / roadway / congestion gates."""
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,14 +14,42 @@ class V:
     label: str = "car"
 
 
-def test_stationary_vehicle_flagged():
+def _drive_then_stall(det, tid=1, stop_at=(300.0, 100.0), extra=None, roadway=None):
+    """Vehicle drives for 4 ticks, then stands still; returns last result."""
+    inc, stopped = [], set()
+    for k in range(14):
+        pos = (100.0 + min(k, 4) * 50.0, 100.0) if k < 4 else stop_at
+        fleet = [V(tid, pos)] + (extra(k) if extra else [])
+        inc, stopped = det.update(fleet, k * 1.0, roadway_ids=roadway(fleet) if roadway else None)
+    return inc, stopped
+
+
+def test_stall_after_driving_flagged():
     det = IncidentDetector(stop_seconds=5.0, move_threshold_px=18.0)
-    inc = []
-    for i in range(10):
-        t = i * 1.0
-        inc, stopped = det.update([V(1, (100.0, 100.0))], t)  # never moves
+    inc, stopped = _drive_then_stall(det)
+    assert 1 in stopped
     assert any(x["type"] == "stopped_vehicle" and x["track_id"] == 1 for x in inc)
-    assert inc[0]["seconds"] >= 5.0
+
+
+def test_parked_from_birth_never_flagged():
+    # A car already stationary when first seen = PARKED, not an incident.
+    det = IncidentDetector(stop_seconds=5.0, move_threshold_px=18.0)
+    inc, stopped = [], set()
+    for k in range(15):
+        inc, stopped = det.update([V(1, (100.0, 100.0))], k * 1.0)
+    assert not stopped and inc == []
+
+
+def test_stop_outside_roadway_is_parking():
+    # Drives then stops, but OUTSIDE the roadway zones -> parking, no flag.
+    det = IncidentDetector(stop_seconds=5.0, move_threshold_px=18.0)
+    inc, stopped = _drive_then_stall(det, roadway=lambda fleet: set())  # nobody in roadway
+    assert not stopped and inc == []
+
+
+def test_stop_inside_roadway_flags():
+    det = IncidentDetector(stop_seconds=5.0, move_threshold_px=18.0)
+    inc, stopped = _drive_then_stall(det, roadway=lambda fleet: {1})
     assert 1 in stopped
 
 
@@ -29,48 +57,39 @@ def test_moving_vehicle_not_flagged():
     det = IncidentDetector(stop_seconds=5.0, move_threshold_px=18.0)
     stopped = set()
     for i in range(10):
-        t = i * 1.0
-        _, stopped = det.update([V(1, (100.0 + i * 40, 100.0))], t)  # moves each frame
+        _, stopped = det.update([V(1, (100.0 + i * 40, 100.0))], i * 1.0)
     assert 1 not in stopped
 
 
 def test_congestion_suppresses_stops():
-    # A queue of stopped cars (red light / jam) must NOT flag as incidents.
+    # A queue: they all drive in, then ALL stand (red light) -> suppressed.
     det = IncidentDetector(stop_seconds=5.0, move_threshold_px=18.0)
-    fleet = [V(i, (100.0, 100.0 + i * 30)) for i in range(6)]  # 6 stationary cars
     inc, stopped = [], set()
-    for k in range(10):
+    for k in range(14):
+        x = 100.0 + min(k, 4) * 50.0
+        fleet = [V(i, (x, 100.0 + i * 30)) for i in range(6)]
         inc, stopped = det.update(fleet, k * 1.0)
-    assert inc == [] and not stopped  # congestion -> suppressed
+    assert inc == [] and not stopped
 
 
 def test_lone_stall_amid_moving_traffic_still_flags():
-    # One stopped car while others drive past IS an incident.
     det = IncidentDetector(stop_seconds=5.0, move_threshold_px=18.0)
-    stopped = set()
-    for k in range(10):
-        moving = [V(10 + j, (200.0 + j * 40 + k * 60, 100.0)) for j in range(4)]  # 4 moving
-        _, stopped = det.update([V(1, (100.0, 100.0))] + moving, k * 1.0)  # car 1 stuck
+    moving = lambda k: [V(10 + j, (200.0 + j * 40 + k * 60, 300.0)) for j in range(4)]  # noqa: E731
+    inc, stopped = _drive_then_stall(det, extra=moving)
     assert 1 in stopped
-
-
-def test_lone_stall_on_empty_road_flags():
-    # A single stalled car (no queue) still flags — congestion gate needs >=3.
-    det = IncidentDetector(stop_seconds=5.0, move_threshold_px=18.0)
-    inc = []
-    for k in range(10):
-        inc, _ = det.update([V(1, (100.0, 100.0))], k * 1.0)
-    assert any(x["track_id"] == 1 for x in inc)
 
 
 def test_resets_when_it_moves_again():
     det = IncidentDetector(stop_seconds=3.0, move_threshold_px=18.0)
-    # sit still long enough to flag
-    for i in range(5):
-        inc, stopped = det.update([V(1, (100.0, 100.0))], i * 1.0)
+    # drive, stall long enough to flag...
+    for k in range(4):
+        det.update([V(1, (100.0 + k * 50, 100.0))], k * 1.0)
+    stopped = set()
+    for k in range(4, 9):
+        _, stopped = det.update([V(1, (250.0, 100.0))], k * 1.0)
     assert 1 in stopped
-    # then move far -> clock resets, not flagged next frame
-    _, stopped = det.update([V(1, (400.0, 100.0))], 5.0)
+    # ...then it moves off -> clock resets, not flagged next frame
+    _, stopped = det.update([V(1, (500.0, 100.0))], 9.0)
     assert 1 not in stopped
 
 
