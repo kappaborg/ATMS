@@ -207,6 +207,24 @@ studies report ~10-30% idle/delay reduction) — never a raw measurement. Tune:
   `PANEL_RATE_LIMIT` (default `30/60` = 30 requests / 60 s). Over-limit
   returns `429` (REST) or closes the socket with `1013`.
 
+## Multi-operator access (RBAC)
+
+For agency use, define named operators with roles instead of one shared token:
+
+```bash
+PANEL_USERS="alice:admin:sha256:<hex>,bob:operator:oppw,eve:viewer:viewpw" \
+PANEL_AUTH_SECRET="<random-32+ chars>" ./services/panel-gateway/run.sh
+```
+
+Roles form a hierarchy: **viewer** (watch only) < **operator** (+ add/remove
+cameras, calibrate) < **admin**. Passwords may be plaintext (dev) or
+`sha256:<hex>` (recommended). Login (`POST /auth/login`) returns a signed
+session token (8h TTL, `PANEL_TOKEN_TTL_S`); the app shows a sign-in screen,
+the current user/role, and hides operator controls from viewers. Every login
+and mutation is written to an append-only audit log (`panel.audit`). The
+legacy `PANEL_API_TOKEN` still works and maps to admin. Set `PANEL_AUTH_SECRET`
+so sessions survive a gateway restart.
+
 ## Real-data / strict live mode
 
 For government/production use, set `ATMS_STRICT_LIVE=1`: it forbids recorded

@@ -42,8 +42,9 @@ from pydantic import BaseModel
 
 from hub import CameraManager, Hub
 from limits import RateLimiter, WSLimiter, max_cameras
+from panel_auth import Principal, auth_enabled, authenticate, issue_token, principal_from_token
 from scene import SceneConfig
-from security import SourceRejected, api_token, check_token, validate_source
+from security import SourceRejected, validate_source
 from system_state import SystemState
 
 VIDEO_FPS = float(os.getenv("PANEL_VIDEO_FPS", "20"))
@@ -76,12 +77,35 @@ class CameraIn(BaseModel):
     intersection_id: str = "1"  # which ATMS intersection this camera watches
 
 
-async def require_auth(
-    authorization: str | None = Header(default=None),
-    token: str | None = Query(default=None),
-) -> None:
-    """REST guard — no-op unless PANEL_API_TOKEN is set."""
-    check_token(authorization, token)
+def _resolve_principal(authorization: str | None, token: str | None) -> Principal | None:
+    """Bearer header (or ?token= for WebSockets) -> Principal. When auth is
+    disabled (no users / no API token configured) everything runs as a local
+    admin so the desktop dev flow needs no login."""
+    if not auth_enabled():
+        return Principal(sub="local", role="admin")
+    tok = None
+    if authorization and authorization.lower().startswith("bearer "):
+        tok = authorization[7:].strip()
+    elif token:
+        tok = token
+    return principal_from_token(tok)
+
+
+def require_role(minimum: str):
+    """Dependency factory: require an authenticated principal with >= role."""
+
+    async def dep(
+        authorization: str | None = Header(default=None),
+        token: str | None = Query(default=None),
+    ) -> Principal:
+        p = _resolve_principal(authorization, token)
+        if p is None:
+            raise HTTPException(status_code=401, detail="authentication required")
+        if not p.has_role(minimum):
+            raise HTTPException(status_code=403, detail=f"requires '{minimum}' role")
+        return p
+
+    return dep
 
 
 async def rate_limit(request: Request) -> None:
@@ -91,7 +115,17 @@ async def rate_limit(request: Request) -> None:
         raise HTTPException(status_code=429, detail="rate limit exceeded")
 
 
-_AUTH = Depends(require_auth)
+def _audit(p: Principal, action: str, detail: str = "") -> None:
+    """Append-only operator audit line — who did what (accountability)."""
+    import logging
+
+    logging.getLogger("panel.audit").info(
+        "AUDIT user=%s role=%s action=%s %s", p.sub, p.role, action, detail
+    )
+
+
+_VIEWER = Depends(require_role("viewer"))
+_OPERATOR = Depends(require_role("operator"))
 _RATE = Depends(rate_limit)
 
 
@@ -102,11 +136,11 @@ async def _startup() -> None:
     log = logging.getLogger("uvicorn")
     host = os.getenv("PANEL_HOST", "127.0.0.1")
     loopback = host in ("127.0.0.1", "localhost", "::1")
-    if not loopback and not api_token():
+    if not loopback and not auth_enabled():
         log.warning(
-            "⚠ Panel gateway bound to %s WITHOUT PANEL_API_TOKEN — it is "
-            "reachable on the network and UNAUTHENTICATED. Set PANEL_API_TOKEN "
-            "or bind to 127.0.0.1.",
+            "⚠ Panel gateway bound to %s with NO auth — it is reachable on the "
+            "network and UNAUTHENTICATED. Set PANEL_USERS (multi-operator RBAC) "
+            "or PANEL_API_TOKEN, or bind to 127.0.0.1.",
             host,
         )
     hub.bind_loop(asyncio.get_running_loop())
@@ -136,18 +170,48 @@ async def health() -> dict:
         "status": "ok",
         "cameras": len(manager.list()),
         "strict_live": os.getenv("ATMS_STRICT_LIVE", "").lower() in ("1", "true", "yes"),
+        "auth_enabled": auth_enabled(),
         "limits": {"max_cameras": max_cameras(), "ws_clients": ws_limiter.count},
         "system_stream": {"enabled": bool(KAFKA_BOOTSTRAP), "connected": system.connected},
     }
 
 
+class LoginIn(BaseModel):
+    username: str
+    password: str
+
+
+@app.post("/auth/login")
+async def login(body: LoginIn, request: Request, __: None = _RATE) -> dict:
+    """Exchange operator credentials for a signed session token."""
+    p = authenticate(body.username, body.password)
+    if p is None:
+        import logging
+
+        ip = request.client.host if request.client else "unknown"
+        logging.getLogger("panel.audit").warning(
+            "AUDIT login-failed user=%s ip=%s", body.username, ip
+        )
+        raise HTTPException(status_code=401, detail="invalid credentials")
+    token, exp = issue_token(p)
+    _audit(p, "login")
+    return {"token": token, "username": p.sub, "role": p.role, "expires_epoch": exp}
+
+
+@app.get("/auth/me")
+async def whoami(p: Principal = _VIEWER) -> dict:
+    """Resolve the caller's identity/role (frontend uses this to validate a
+    stored token and tailor the UI)."""
+    return {"username": p.sub, "role": p.role}
+
+
 @app.get("/cameras")
-async def list_cameras(_: None = _AUTH) -> list[dict]:
+async def list_cameras(_: Principal = _VIEWER) -> list[dict]:
     return manager.list()
 
 
 @app.get("/devices")
-async def list_devices(_: None = _AUTH) -> list[dict]:
+async def list_devices(_: Principal = _VIEWER) -> list[dict]:
     """Probe local video device indices (USB webcams, macOS Continuity Camera
     for iPhone). Returns the indices that open, with their frame size. On
     macOS the first probe triggers a camera-permission prompt for the process
@@ -173,7 +237,7 @@ async def list_devices(_: None = _AUTH) -> list[dict]:
 
 
 @app.post("/cameras")
-async def add_camera(cam: CameraIn, _: None = _AUTH, __: None = _RATE) -> dict:
+async def add_camera(cam: CameraIn, p: Principal = _OPERATOR, __: None = _RATE) -> dict:
     if len(manager.list()) >= max_cameras():
         raise HTTPException(status_code=429, detail=f"camera limit reached ({max_cameras()})")
     try:
@@ -186,20 +250,22 @@ async def add_camera(cam: CameraIn, _: None = _AUTH, __: None = _RATE) -> dict:
         )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
+    _audit(p, "add_camera", f"id={cam.camera_id}")
     return {"status": "added", "camera_id": cam.camera_id}
 
 
 @app.delete("/cameras/{camera_id}")
-async def remove_camera(camera_id: str, _: None = _AUTH, __: None = _RATE) -> dict:
+async def remove_camera(camera_id: str, p: Principal = _OPERATOR, __: None = _RATE) -> dict:
     try:
         manager.remove(camera_id)
     except KeyError:
         raise HTTPException(status_code=404, detail="camera not found")
+    _audit(p, "remove_camera", f"id={camera_id}")
     return {"status": "removed", "camera_id": camera_id}
 
 
 @app.get("/cameras/{camera_id}/report")
-async def camera_report(camera_id: str, format: str = "csv", _: None = _AUTH):
+async def camera_report(camera_id: str, format: str = "csv", _: Principal = _VIEWER):
     """Session KPI report (vehicles, incidents, measured CO2 + estimated
     savings, per-minute time-series). format=csv (default, downloadable) or json."""
     try:
@@ -216,7 +282,7 @@ async def camera_report(camera_id: str, format: str = "csv", _: None = _AUTH):
 
 
 @app.post("/cameras/{camera_id}/scene")
-async def set_scene(camera_id: str, payload: dict, _: None = _AUTH, __: None = _RATE) -> dict:
+async def set_scene(camera_id: str, payload: dict, p: Principal = _OPERATOR, __: None = _RATE) -> dict:
     """Set calibration and/or approach zones for a camera.
 
     Body: {
@@ -231,17 +297,16 @@ async def set_scene(camera_id: str, payload: dict, _: None = _AUTH, __: None = _
     except (KeyError, ValueError) as e:
         raise HTTPException(status_code=400, detail=f"invalid scene: {e}")
     try:
-        return manager.set_scene(camera_id, scene)
+        result = manager.set_scene(camera_id, scene)
     except KeyError:
         raise HTTPException(status_code=404, detail="camera not found")
+    _audit(p, "set_scene", f"id={camera_id}")
+    return result
 
 
 def _ws_authorized(ws: WebSocket, token: str | None) -> bool:
-    try:
-        check_token(ws.headers.get("authorization"), token)
-        return True
-    except HTTPException:
-        return False
+    p = _resolve_principal(ws.headers.get("authorization"), token)
+    return p is not None and p.has_role("viewer")
 
 
 @app.websocket("/ws/data")
