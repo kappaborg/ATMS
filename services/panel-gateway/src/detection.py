@@ -18,7 +18,13 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-MOCK_ALLOWED = os.getenv("ATMS_ALLOW_MOCK_DETECTIONS", "").lower() in ("1", "true", "yes")
+# Strict live mode (government/production): all data must be real. Overrides
+# any mock opt-in and forbids file sources (see security.validate_source).
+STRICT_LIVE = os.getenv("ATMS_STRICT_LIVE", "").lower() in ("1", "true", "yes")
+MOCK_ALLOWED = (
+    os.getenv("ATMS_ALLOW_MOCK_DETECTIONS", "").lower() in ("1", "true", "yes")
+    and not STRICT_LIVE
+)
 
 # COCO class ids we care about for traffic, mapped to display labels + colours.
 _CLASSES: dict[int, tuple[str, tuple[int, int, int]]] = {

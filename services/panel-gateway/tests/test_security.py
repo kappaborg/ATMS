@@ -71,6 +71,24 @@ def test_empty_source_rejected():
         validate_source("   ")
 
 
+def test_strict_live_rejects_files_allows_streams(tmp_path, monkeypatch):
+    from security import is_live_source, source_kind
+
+    vid = tmp_path / "clip.mp4"
+    vid.write_bytes(b"x")
+    monkeypatch.setenv("ATMS_ALLOWED_VIDEO_DIRS", str(tmp_path))
+    monkeypatch.setenv("ATMS_STRICT_LIVE", "1")
+    # file rejected in strict live mode
+    with pytest.raises(SourceRejected):
+        validate_source(str(vid))
+    # live sources still fine
+    assert validate_source("0") == 0
+    assert validate_source("rtsp://192.168.1.20:554/h264").startswith("rtsp://")
+    # classification
+    assert is_live_source("rtsp://x/y") and is_live_source("0") and not is_live_source("a.mp4")
+    assert source_kind("http://x/y") == "http" and source_kind("a.mp4") == "file"
+
+
 # --- token auth ---
 
 def test_token_disabled_allows_all(monkeypatch):

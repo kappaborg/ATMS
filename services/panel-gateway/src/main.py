@@ -135,6 +135,7 @@ async def health() -> dict:
     return {
         "status": "ok",
         "cameras": len(manager.list()),
+        "strict_live": os.getenv("ATMS_STRICT_LIVE", "").lower() in ("1", "true", "yes"),
         "limits": {"max_cameras": max_cameras(), "ws_clients": ws_limiter.count},
         "system_stream": {"enabled": bool(KAFKA_BOOTSTRAP), "connected": system.connected},
     }

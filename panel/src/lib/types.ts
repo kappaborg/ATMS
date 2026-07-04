@@ -78,6 +78,8 @@ export interface FrameEvent {
 export interface CameraInfo {
   camera_id: string;
   source: string;
+  kind: "rtsp" | "http" | "usb" | "file";
+  live: boolean;
   status: string;
   error: string | null;
   fps: number;

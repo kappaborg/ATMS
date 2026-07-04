@@ -46,6 +46,27 @@ def _allow_loopback() -> bool:
     return os.getenv("ATMS_ALLOW_LOOPBACK_SOURCES", "").lower() in ("1", "true", "yes")
 
 
+def _strict_live() -> bool:
+    return os.getenv("ATMS_STRICT_LIVE", "").lower() in ("1", "true", "yes")
+
+
+def source_kind(source) -> str:
+    """Classify a (validated) source: 'rtsp' | 'http' | 'usb' | 'file'."""
+    s = str(source).strip().lower()
+    if str(source).strip().isdigit():
+        return "usb"
+    if s.startswith("rtsp://"):
+        return "rtsp"
+    if s.startswith(("http://", "https://")):
+        return "http"
+    return "file"
+
+
+def is_live_source(source) -> bool:
+    """Live = a real-time device or network stream (not a recorded file)."""
+    return source_kind(source) in ("rtsp", "http", "usb")
+
+
 def validate_source(source: str) -> str | int:
     """Return a safe source (int USB index or a vetted URL / absolute file
     path) or raise SourceRejected."""
@@ -56,6 +77,12 @@ def validate_source(source: str) -> str | int:
         return int(s)  # USB device index
     if s.lower().startswith(("rtsp://", "http://", "https://")):
         return _validate_url(s)
+    # File source — forbidden in strict live mode (no recorded/backup video).
+    if _strict_live():
+        raise SourceRejected(
+            "strict live mode (ATMS_STRICT_LIVE) forbids file sources — "
+            "use an RTSP/HTTP stream or a USB/Continuity camera"
+        )
     return _validate_file(s)
 
 
