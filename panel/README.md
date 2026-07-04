@@ -216,6 +216,18 @@ throttled to `PANEL_RECORD_FPS` (default 5) and skipping video encoding — so
 history, incidents and the network overview never have gaps. Cameras then
 report status `recording`.
 
+## Green-wave corridors
+
+Coordinate a route of intersections into a green wave. `POST /corridors`
+(operator) with `{corridor_id, direction, design_speed_kmh, cycle_s, green_s,
+stops:[{intersection_id, distance_m}]}` computes the cumulative offset schedule
+(offset[i] = cumulative_distance[i] / design_speed mod cycle) and pushes a
+bounded coordination bias onto each intersection's engine — soft, so heavy
+local demand still overrides it (an *adaptive* green wave). The Network view
+shows a time-space diagram (green bands + the design-speed vehicle line riding
+through them). Simulation: `python benchmarks/benchmark_corridor.py` (green-wave
+~58% fewer stops than a naive simultaneous corridor).
+
 ## Long-horizon history (persisted)
 
 The gateway persists per-interval metric deltas (vehicles, CO2, estimated

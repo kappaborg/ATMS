@@ -1,4 +1,4 @@
-import type { CameraInfo, FrameEvent, IntersectionInfo } from "./types";
+import type { CameraInfo, FrameEvent, IntersectionInfo, Corridor } from "./types";
 
 const BASE = import.meta.env.VITE_GATEWAY ?? "http://127.0.0.1:8090";
 const WS_BASE = BASE.replace(/^http/, "ws");
@@ -67,6 +67,26 @@ export async function listIntersections(): Promise<IntersectionInfo[]> {
   const r = await fetch(`${BASE}/intersections`, { headers: authHeaders() });
   if (!r.ok) throw new Error(`listIntersections ${r.status}`);
   return r.json();
+}
+
+export async function listCorridors(): Promise<Corridor[]> {
+  const r = await fetch(`${BASE}/corridors`, { headers: authHeaders() });
+  if (!r.ok) return [];
+  return r.json();
+}
+
+export async function addCorridor(payload: unknown): Promise<Corridor> {
+  const r = await fetch(`${BASE}/corridors`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? `addCorridor ${r.status}`);
+  return r.json();
+}
+
+export async function removeCorridor(id: string): Promise<void> {
+  await fetch(`${BASE}/corridors/${encodeURIComponent(id)}`, { method: "DELETE", headers: authHeaders() });
 }
 
 export async function addCamera(camera_id: string, source: string, loop_file = true) {

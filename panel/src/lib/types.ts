@@ -94,3 +94,15 @@ export interface IntersectionInfo {
   cameras: string[];
   system: SystemDecision | null;
 }
+
+export interface Corridor {
+  corridor_id: string;
+  direction: string;
+  design_speed_kmh: number;
+  cycle_s: number;
+  green_s: number;
+  offsets: Record<string, number>;
+  bands: { intersection_id: string; distance_m: number; windows: [number, number][] }[];
+  trajectory: [number, number][];
+  length_m: number;
+}

@@ -295,6 +295,36 @@ async def list_intersections(_: Principal = _VIEWER) -> list[dict]:
     return out
 
 
+@app.get("/corridors")
+async def list_corridors(_: Principal = _VIEWER) -> list[dict]:
+    """Green-wave corridors with their computed offset schedule, green bands
+    and design-speed trajectory (for the time-space diagram)."""
+    return manager.list_corridors()
+
+
+@app.post("/corridors")
+async def add_corridor(payload: dict, p: Principal = _OPERATOR, __: None = _RATE) -> dict:
+    """Define a corridor and coordinate its intersections into a green wave.
+    Body: {corridor_id, direction?, design_speed_kmh?, cycle_s?, green_s?,
+           stops:[{intersection_id, distance_m}]}."""
+    try:
+        result = manager.add_corridor(payload)
+    except (KeyError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=f"invalid corridor: {e}")
+    _audit(p, "add_corridor", f"id={payload.get('corridor_id')}")
+    return result
+
+
+@app.delete("/corridors/{corridor_id}")
+async def remove_corridor(corridor_id: str, p: Principal = _OPERATOR, __: None = _RATE) -> dict:
+    try:
+        manager.remove_corridor(corridor_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="corridor not found")
+    _audit(p, "remove_corridor", f"id={corridor_id}")
+    return {"status": "removed", "corridor_id": corridor_id}
+
+
 @app.get("/history")
 async def history_range(
     hours: float = 24.0,

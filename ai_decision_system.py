@@ -86,6 +86,7 @@ class AIDecisionEngine:
         switch_threshold: float = 1.2,
         min_switch_vehicles: int = 3,
         transit_weight: float = 0.2,
+        coordination_weight: float = 0.2,
         max_ped_extend_s: float = 6.0,
         prediction_weight: float = 0.15,
         prediction_horizon_min: int = 15,
@@ -124,6 +125,11 @@ class AIDecisionEngine:
         self.max_ped_extend_s = max_ped_extend_s
         self._ped_present = False
         self._ped_hold_active = False
+        # Green-wave coordination: a bounded bias toward the coordinated
+        # approach while the corridor clock is in this intersection's green
+        # band. Soft (heavy local demand can override) — an "adaptive" wave.
+        self.coordination_weight = coordination_weight
+        self._coord: Optional[Dict] = None  # {offset_s, cycle_s, green_s, direction}
         # Predictive congestion: how much a short-horizon forecast can nudge a
         # direction's score (bounded so it never overrides real demand).
         self.prediction_weight = prediction_weight
@@ -231,6 +237,14 @@ class AIDecisionEngine:
         ns_score, ew_score, self._last_prediction = self._apply_prediction(
             north_south, east_west, ns_score, ew_score
         )
+
+        # Green-wave coordination: bounded bias toward the corridor's coordinated
+        # approach during its green band (soft — heavy demand can still override).
+        coord_dir = self._coordination_direction()
+        if coord_dir == "north_south":
+            ns_score += self.coordination_weight
+        elif coord_dir == "east_west":
+            ew_score += self.coordination_weight
 
         # Determine priority direction
         if ns_score > ew_score:
@@ -389,6 +403,9 @@ class AIDecisionEngine:
             tdir = "N-S" if self._last_transit["north_south"] else "E-W"
             reason = reason.rstrip(".") + f". 🚌 Transit priority {tdir}."
             expected_impact["transit_priority"] = tdir
+        if coord_dir is not None:
+            reason = reason.rstrip(".") + f". 🌊 Green-wave coordination ({'N-S' if coord_dir == 'north_south' else 'E-W'})."
+            expected_impact["coordination"] = coord_dir
         if self._ped_hold_active:
             reason = reason.rstrip(".") + ". 🚶 Holding all-red for pedestrian clearance."
             expected_impact["pedestrian_clearance"] = True
@@ -422,6 +439,24 @@ class AIDecisionEngine:
         
         return decision
     
+    def set_coordination(self, offset_s: float, cycle_s: float, green_s: float, direction: str) -> None:
+        """Join a green-wave corridor: bias `direction` to green while the
+        corridor clock is within [offset_s, offset_s+green_s] each cycle."""
+        if direction not in ("north_south", "east_west"):
+            raise ValueError(f"invalid direction: {direction}")
+        self._coord = {"offset_s": offset_s, "cycle_s": cycle_s, "green_s": green_s, "direction": direction}
+
+    def clear_coordination(self) -> None:
+        self._coord = None
+
+    def _coordination_direction(self) -> Optional[str]:
+        """The approach favoured by the green wave right now, or None. Uses the
+        engine clock; in-process engines share an origin, so their bands align."""
+        if not self._coord:
+            return None
+        phase = (self._now() - self._coord["offset_s"]) % self._coord["cycle_s"]
+        return self._coord["direction"] if phase < self._coord["green_s"] else None
+
     def request_preemption(self, direction: str, hold_s: Optional[float] = None) -> None:
         """Trigger emergency-vehicle preemption for an approach.
 
