@@ -86,6 +86,7 @@ class AIDecisionEngine:
         switch_threshold: float = 1.2,
         min_switch_vehicles: int = 3,
         transit_weight: float = 0.2,
+        max_ped_extend_s: float = 6.0,
         prediction_weight: float = 0.15,
         prediction_horizon_min: int = 15,
         now_fn: Optional[Callable[[], float]] = None,
@@ -116,6 +117,13 @@ class AIDecisionEngine:
         # emergency preemption, which is a hard override).
         self.transit_weight = transit_weight
         self._last_transit: Optional[Dict] = None
+        # Pedestrian safety: hold the all-red clearance up to this many extra
+        # seconds while a pedestrian is still in the roadway, so cross-traffic
+        # is never released into someone mid-crossing. Bounded so the signal
+        # can't be stalled indefinitely.
+        self.max_ped_extend_s = max_ped_extend_s
+        self._ped_present = False
+        self._ped_hold_active = False
         # Predictive congestion: how much a short-horizon forecast can nudge a
         # direction's score (bounded so it never overrides real demand).
         self.prediction_weight = prediction_weight
@@ -186,19 +194,24 @@ class AIDecisionEngine:
     def make_decision(
         self,
         north_south: Dict,
-        east_west: Dict
+        east_west: Dict,
+        pedestrian_present: bool = False,
     ) -> TrafficDecision:
         """
         Make a traffic decision based on traffic data from two directions
-        
+
         Args:
             north_south: Traffic data for north-south direction
             east_west: Traffic data for east-west direction
-        
+            pedestrian_present: True if a pedestrian is still in the roadway;
+                holds the all-red clearance (bounded) so cross-traffic is not
+                released into them.
+
         Returns:
             TrafficDecision object with recommended action
         """
         self.decision_count += 1
+        self._ped_present = bool(pedestrian_present)
 
         # Transit signal priority: note which approaches have a bus (for
         # surfacing); the score bonus itself is applied in the score function.
@@ -376,6 +389,11 @@ class AIDecisionEngine:
             tdir = "N-S" if self._last_transit["north_south"] else "E-W"
             reason = reason.rstrip(".") + f". 🚌 Transit priority {tdir}."
             expected_impact["transit_priority"] = tdir
+        if self._ped_hold_active:
+            reason = reason.rstrip(".") + ". 🚶 Holding all-red for pedestrian clearance."
+            expected_impact["pedestrian_clearance"] = True
+        elif self._ped_present:
+            expected_impact["pedestrian_present"] = True
         if preempt is not None:
             label = "N-S" if preempt == "north_south" else "E-W"
             reason = f"🚨 EMERGENCY VEHICLE PREEMPTION — clearing {label}. " + reason
@@ -515,7 +533,15 @@ class AIDecisionEngine:
             return self.current_phase
 
         if self.current_phase == TrafficPhase.ALL_RED:
-            if elapsed >= self.all_red_s:
+            # Pedestrian protection: once the base clearance has elapsed, keep
+            # holding all-red while a pedestrian is still in the roadway, up to
+            # a bounded maximum so the intersection can never be stalled.
+            self._ped_hold_active = (
+                self._ped_present
+                and elapsed >= self.all_red_s
+                and elapsed < self.all_red_s + self.max_ped_extend_s
+            )
+            if elapsed >= self.all_red_s and not self._ped_hold_active:
                 self.active_direction = (
                     "east_west" if self.active_direction == "north_south" else "north_south"
                 )

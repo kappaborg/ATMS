@@ -70,6 +70,7 @@ export interface FrameEvent {
   emissions: Emissions | null;
   preemption: "north_south" | "east_west" | null;
   transit: { ns: boolean; ew: boolean };
+  pedestrian: { present: boolean; clearance_hold: boolean };
   approaches: { ns: ApproachStat; ew: ApproachStat };
   calibrated: boolean;
   decision: Decision;

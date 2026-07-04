@@ -164,11 +164,9 @@ class CameraWorker:
             ns_speeds: list[float] = []
             ew_speeds: list[float] = []
 
+            ped_present = False  # a pedestrian in the roadway (crossing)
             for d in result.detections:
                 cx, cy = d.center
-                # Real speed from ground-plane calibration, when available.
-                if scene.speed is not None:
-                    d.speed_kmh = scene.speed.update(d.track_id, cx, cy, t_now)
                 # Approach from operator zones, else left/right-of-centre fallback.
                 if scene.zones is not None:
                     d.approach = scene.zones.classify(cx, cy)
@@ -176,12 +174,23 @@ class CameraWorker:
                 else:
                     direction = "ns" if cx < w / 2 else "ew"
                     d.approach = direction
-                bucket, speeds = (ns, ns_speeds) if direction == "ns" else (ew, ew_speeds)
-                bucket["vehicle_count"] += 1
-                if d.label == "bus":
-                    bucket["transit_present"] = True  # transit signal priority
-                if d.speed_kmh is not None:
-                    speeds.append(d.speed_kmh)
+
+                if d.is_vehicle:
+                    # Real speed from ground-plane calibration, when available.
+                    if scene.speed is not None:
+                        d.speed_kmh = scene.speed.update(d.track_id, cx, cy, t_now)
+                    bucket, speeds = (ns, ns_speeds) if direction == "ns" else (ew, ew_speeds)
+                    bucket["vehicle_count"] += 1
+                    if d.label == "bus":
+                        bucket["transit_present"] = True  # transit signal priority
+                    if d.speed_kmh is not None:
+                        speeds.append(d.speed_kmh)
+                elif d.label == "person":
+                    # In the roadway = inside an approach zone (calibrated). Without
+                    # zones, any detected person counts — safety-conservative (better
+                    # to over-hold clearance than strand someone; bounded in engine).
+                    if scene.zones is None or d.approach is not None:
+                        ped_present = True
 
             for bucket, speeds in ((ns, ns_speeds), (ew, ew_speeds)):
                 if speeds:
@@ -216,7 +225,7 @@ class CameraWorker:
                 t_now,
             )
 
-            decision = self.engine.make_decision(ns, ew)
+            decision = self.engine.make_decision(ns, ew, pedestrian_present=ped_present)
             self.engine.execute_decision(decision)
 
             # fps
@@ -263,6 +272,7 @@ class CameraWorker:
                     "emissions": self.emissions.stats(t_now),
                     "preemption": self.engine._preemption_active(),
                     "transit": {"ns": ns["transit_present"], "ew": ew["transit_present"]},
+                    "pedestrian": {"present": ped_present, "clearance_hold": self.engine._ped_hold_active},
                     "decision": {
                         "phase": decision.recommended_phase.value,
                         "active_direction": self.engine.active_direction,
