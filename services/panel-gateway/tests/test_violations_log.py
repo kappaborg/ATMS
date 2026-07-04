@@ -70,3 +70,20 @@ def test_survives_reopen(tmp_path):
     log.record(1000, "c", "1", 1, "speeding", "P1", {}, None)
     log.close()
     assert len(ViolationsLog(p).query(0, 2000)) == 1
+
+
+def test_plate_query_for_dsar(tmp_path):
+    log = ViolationsLog(str(tmp_path / "v.db"))
+    _seed(log)
+    rows = log.query(0, 3000, plate="abc123")  # case-insensitive input
+    assert len(rows) == 1 and rows[0]["plate"] == "ABC123"
+    assert log.query(0, 3000, plate="NOPE") == []
+
+
+def test_single_record_erasure(tmp_path):
+    log = ViolationsLog(str(tmp_path / "v.db"))
+    _seed(log)
+    vid = log.query(0, 3000, plate="ABC123")[0]["id"]
+    assert log.delete(vid) == 1
+    assert log.query(0, 3000, plate="ABC123") == []
+    assert log.delete(vid) == 0  # already gone

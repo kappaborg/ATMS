@@ -68,7 +68,7 @@ class ViolationsLog:
 
     def query(
         self, since: int, until: int, camera_id: str | None = None,
-        vtype: str | None = None, limit: int = 500,
+        vtype: str | None = None, limit: int = 500, plate: str | None = None,
     ) -> list[dict]:
         q = "SELECT id,ts,camera_id,intersection_id,track_id,type,plate,detail,snapshot FROM violations WHERE ts>=? AND ts<?"
         args: list = [since, until]
@@ -78,6 +78,10 @@ class ViolationsLog:
         if vtype:
             q += " AND type=?"
             args.append(vtype)
+        if plate:
+            # DSAR support: find all records for a specific plate.
+            q += " AND plate=?"
+            args.append(plate.upper())
         q += " ORDER BY ts DESC LIMIT ?"
         args.append(int(limit))
         with self._lock:
@@ -90,6 +94,13 @@ class ViolationsLog:
                 "detail": json.loads(r[7]) if r[7] else {}, "has_snapshot": bool(r[8]),
             })
         return out
+
+    def delete(self, vid: int) -> int:
+        """Erase a single record (DSAR erasure). Returns rows deleted."""
+        with self._lock:
+            cur = self._conn.execute("DELETE FROM violations WHERE id=?", (vid,))
+            self._conn.commit()
+            return int(cur.rowcount)
 
     def snapshot_path(self, vid: int) -> str | None:
         with self._lock:
