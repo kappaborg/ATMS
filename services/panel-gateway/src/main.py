@@ -337,9 +337,10 @@ async def camera_report(camera_id: str, format: str = "csv", _: Principal = _VIE
 @app.get("/violations")
 async def list_violations(
     hours: float = 24.0, camera_id: str | None = None, type: str | None = None,
-    limit: int = 500, _: Principal = _VIEWER,
+    plate: str | None = None, limit: int = 500, _: Principal = _VIEWER,
 ) -> dict:
-    """The persisted violation evidence log (type, plate, detail, snapshot)."""
+    """The persisted violation evidence log (type, plate, detail, snapshot).
+    `plate` filter supports data-subject access requests (DSAR)."""
     import time as _time
 
     import violations_log
@@ -347,9 +348,29 @@ async def list_violations(
     hours = max(0.0, min(hours, 24 * 366))
     now = int(_time.time())
     rows = violations_log.get_log().query(
-        now - int(hours * 3600), now, camera_id, type, min(max(limit, 1), 2000)
+        now - int(hours * 3600), now, camera_id, type,
+        min(max(limit, 1), 2000), plate=plate,
     )
     return {"violations": rows}
+
+
+@app.delete("/violations/{vid}")
+async def delete_violation(vid: int, p: Principal = _OPERATOR, __: None = _RATE) -> dict:
+    """Erase one violation record + its snapshot (DSAR erasure / correction).
+    Audited."""
+    import violations_log
+
+    path = violations_log.get_log().snapshot_path(vid)
+    n = violations_log.get_log().delete(vid)
+    if n == 0:
+        raise HTTPException(status_code=404, detail="violation not found")
+    if path:
+        try:
+            Path(path).unlink()
+        except OSError:
+            pass
+    _audit(p, "delete_violation", f"id={vid}")
+    return {"status": "deleted", "id": vid}
 
 
 @app.get("/violations/{vid}/snapshot")
