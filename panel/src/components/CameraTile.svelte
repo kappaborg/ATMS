@@ -11,6 +11,8 @@
   }: { camera_id: string; event: FrameEvent | undefined; live?: boolean; kind?: string } = $props();
 
   let src = $state<string>("");
+  // camera_id is fixed per tile instance (the grid keys tiles by id).
+  // svelte-ignore state_referenced_locally
   const stop = connectVideo(camera_id, (url) => (src = url));
   onDestroy(stop);
 
@@ -22,7 +24,7 @@
   let scale = $state(1);
   let panX = $state(0);
   let panY = $state(0);
-  let dragging = false;
+  let dragging = $state(false);
   let dragStart = { x: 0, y: 0, panX: 0, panY: 0 };
   const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
