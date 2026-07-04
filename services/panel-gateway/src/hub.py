@@ -83,16 +83,25 @@ class CameraManager:
         return self._detector
 
     def add(
-        self, cam_id: str, source: str | int, *, loop_file: bool = True, intersection_id: str = "1"
+        self, cam_id: str, source: str | int, *,
+        loop_file: bool = True, intersection_id: str = "1", sahi: bool = False,
     ) -> None:
         if cam_id in self._workers:
             raise ValueError(f"camera '{cam_id}' already exists")
         worker = CameraWorker(
             cam_id, source, self._detector_lazy(), self.hub,
             loop_file=loop_file, intersection_id=intersection_id, system=self.system,
+            sahi=sahi,
         )
         self._workers[cam_id] = worker
         worker.start()
+        self._persist()
+
+    def set_sahi(self, cam_id: str, enabled: bool) -> None:
+        worker = self._workers.get(cam_id)
+        if worker is None:
+            raise KeyError(cam_id)
+        worker.sahi_enabled = bool(enabled)  # atomic; worker reads it each frame
         self._persist()
 
     def remove(self, cam_id: str) -> None:
@@ -120,6 +129,7 @@ class CameraManager:
                 "source": str(w.source),
                 "loop_file": w.loop_file,
                 "intersection_id": w.intersection_id,
+                "sahi": w.sahi_enabled,
             }
             payload = w.scene.to_payload()
             if payload:
@@ -140,6 +150,7 @@ class CameraManager:
                     safe,
                     loop_file=entry.get("loop_file", True),
                     intersection_id=str(entry.get("intersection_id", "1")),
+                    sahi=bool(entry.get("sahi", False)),
                 )
                 if entry.get("scene"):
                     self.set_scene(cam_id, SceneConfig.from_payload(entry["scene"]))
@@ -156,6 +167,7 @@ class CameraManager:
                 "kind": source_kind(w.source),
                 "live": is_live_source(w.source),
                 "intersection_id": w.intersection_id,
+                "sahi": w.sahi_enabled,
                 "status": w.status,
                 "error": w.error,
                 "fps": round(w.fps, 1),

@@ -85,6 +85,7 @@ class CameraIn(BaseModel):
     source: str  # "rtsp://...", "http://...", "0" (USB), or a file path
     loop_file: bool = True
     intersection_id: str = "1"  # which ATMS intersection this camera watches
+    sahi: bool = False  # sliced inference for aerial/small-object views (slower)
 
 
 def _resolve_principal(authorization: str | None, token: str | None) -> Principal | None:
@@ -256,12 +257,29 @@ async def add_camera(cam: CameraIn, p: Principal = _OPERATOR, __: None = _RATE) 
         raise HTTPException(status_code=400, detail=f"rejected source: {e}")
     try:
         manager.add(
-            cam.camera_id, safe_source, loop_file=cam.loop_file, intersection_id=cam.intersection_id
+            cam.camera_id, safe_source, loop_file=cam.loop_file,
+            intersection_id=cam.intersection_id, sahi=cam.sahi,
         )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
     _audit(p, "add_camera", f"id={cam.camera_id}")
     return {"status": "added", "camera_id": cam.camera_id}
+
+
+class SahiIn(BaseModel):
+    enabled: bool
+
+
+@app.post("/cameras/{camera_id}/sahi")
+async def set_camera_sahi(camera_id: str, body: SahiIn, p: Principal = _OPERATOR, __: None = _RATE) -> dict:
+    """Toggle SAHI sliced inference for one camera (aerial/small-object views).
+    Slower per frame — enable only where objects are too small for whole-frame."""
+    try:
+        manager.set_sahi(camera_id, body.enabled)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="camera not found")
+    _audit(p, "set_sahi", f"id={camera_id} enabled={body.enabled}")
+    return {"status": "ok", "camera_id": camera_id, "sahi": body.enabled}
 
 
 @app.delete("/cameras/{camera_id}")

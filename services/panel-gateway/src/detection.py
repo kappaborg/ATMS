@@ -141,17 +141,22 @@ class Detector:
                 out.append((cid, float(o.score.value), (float(x1), float(y1), float(x2), float(y2))))
         return out
 
-    def infer(self, frame: np.ndarray) -> list[tuple[int, float, tuple[float, float, float, float]]]:
-        """Return raw detections as (cls_id, confidence, (x1,y1,x2,y2))."""
+    def infer(
+        self, frame: np.ndarray, use_sahi: bool | None = None
+    ) -> list[tuple[int, float, tuple[float, float, float, float]]]:
+        """Return raw detections as (cls_id, confidence, (x1,y1,x2,y2)).
+
+        `use_sahi` overrides the global default per call — each camera chooses
+        sliced (aerial/small-object, slower) vs whole-frame (fast) inference."""
         if self.model is None:
             return []  # mock mode: no synthetic data, just empty
-        if self.use_sahi:
+        sahi = self.use_sahi if use_sahi is None else use_sahi
+        if sahi:
             try:
                 return self._infer_sahi(frame)
             except Exception as e:  # noqa: BLE001 — fall back to whole-frame on any SAHI error
                 import logging
                 logging.getLogger("panel.detect").warning("SAHI failed, using whole-frame: %s", e)
-                self.use_sahi = False
         results = self.model(
             frame, verbose=False, conf=self.confidence, classes=list(_CLASSES.keys())
         )

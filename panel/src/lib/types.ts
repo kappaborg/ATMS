@@ -98,6 +98,7 @@ export interface CameraInfo {
   kind: "rtsp" | "http" | "usb" | "file";
   live: boolean;
   intersection_id: string;
+  sahi: boolean;
   status: string;
   error: string | null;
   fps: number;

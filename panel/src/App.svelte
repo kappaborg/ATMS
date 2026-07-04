@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { connectData, listCameras, listIntersections, listCorridors, downloadReport, authRequired, getMe, logout, getHistory, type Me, type HistoryTotals } from "./lib/gateway";
+  import { connectData, listCameras, listIntersections, listCorridors, downloadReport, authRequired, getMe, logout, getHistory, setSahi, type Me, type HistoryTotals } from "./lib/gateway";
   import type { CameraInfo, FrameEvent, IntersectionInfo, Corridor } from "./lib/types";
   import MetricsBar from "./components/MetricsBar.svelte";
   import CameraTile from "./components/CameraTile.svelte";
@@ -49,6 +49,17 @@
   const shownCameras = $derived(
     activeIntersection ? cameras.filter((c) => c.intersection_id === activeIntersection) : cameras,
   );
+  const selectedCam = $derived(cameras.find((c) => c.camera_id === selected));
+
+  async function toggleSahi() {
+    if (!selected || !selectedCam) return;
+    try {
+      await setSahi(selected, !selectedCam.sahi);
+      await refresh();
+    } catch {
+      /* gateway offline */
+    }
+  }
 
   function openIntersection(id: string) {
     activeIntersection = id;
@@ -155,6 +166,10 @@
           <div class="sel-actions">
             <button onclick={() => downloadReport(selected!)} title="Export session report (CSV)">⤓ Report</button>
             {#if canOperate}
+              <button class:sahion={selectedCam?.sahi} onclick={toggleSahi}
+                title="SAHI sliced inference: detects small/distant objects (aerial views) but is slower. Enable per camera only where needed.">
+                🔬 SAHI {selectedCam?.sahi ? "ON" : "off"}
+              </button>
               <button onclick={() => (calibrating = selected)}>⚙ Calibrate</button>
             {/if}
           </div>
@@ -206,6 +221,7 @@
   .sel-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #1e2230; font-size: 0.85rem; color: #cfe8ff; }
   .sel-actions { display: flex; gap: 6px; }
   .sel-bar button { background: #1b3a52; border: 1px solid #2b6ea3; color: #cfe8ff; border-radius: 5px; padding: 5px 10px; cursor: pointer; font-size: 0.78rem; }
+  .sel-bar button.sahion { background: #1b5233; border-color: #2ecc71; color: #d6ffe6; }
   .hint { grid-column: 1 / -1; display: grid; place-content: center; text-align: center; color: #667; }
   .hint h1 { font-size: 1.1rem; color: #8b95a7; margin: 0 0 6px; }
   .hint p { font-size: 0.85rem; margin: 0; }
