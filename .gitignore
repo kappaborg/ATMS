@@ -126,3 +126,10 @@ coverage.xml
 
 # Panel gateway runtime state
 services/panel-gateway/data/
+
+# Panel gateway runtime state (local, contains PII snapshots/plates)
+panel_state.json
+panel_violations.db
+panel_history.db
+violation_snaps/
+videos/test_downloads/
