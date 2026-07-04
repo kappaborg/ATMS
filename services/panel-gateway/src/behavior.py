@@ -126,17 +126,17 @@ class ErraticDriving:
 
     def __init__(
         self,
-        step_px: float = 14.0,   # record a heading only after this much travel
-        window: int = 6,          # over this many recorded headings
+        step_px: float = 26.0,   # record a heading only after this much travel
+        window: int = 8,          # over this many recorded headings
         min_reversals: int | None = None,
-        turn_deg: float = 30.0,   # only genuine direction swings count
+        turn_deg: float = 38.0,   # only large, genuine direction swings count
         cooldown_s: float = 3.0,
     ):
         self.step_px = step_px
         self.window = window
         self.min_reversals = (
             min_reversals if min_reversals is not None
-            else int(os.getenv("PANEL_ERRATIC_REVERSALS", "3"))
+            else int(os.getenv("PANEL_ERRATIC_REVERSALS", "4"))
         )
         self.turn_cos = math.cos(math.radians(turn_deg))
         self.cooldown_s = cooldown_s
