@@ -49,6 +49,8 @@ class Detection:
     speed_kmh: float | None = None
     approach: str | None = None
     stopped: bool = False
+    speeding: bool = False
+    wrong_way: bool = False
 
     @property
     def center(self) -> tuple[float, float]:
@@ -158,18 +160,23 @@ def annotate(frame: np.ndarray, result: FrameResult, phase: str | None, fps: flo
     """Draw boxes, track ids, and a compact status header onto the frame."""
     for d in result.detections:
         x1, y1, x2, y2 = map(int, d.bbox)
-        if d.stopped:
-            colour = (0, 0, 255)  # red — flagged incident
+        # Most-severe violation wins the box colour/label (BGR).
+        flagged = d.wrong_way or d.stopped or d.speeding
+        if d.wrong_way:
+            colour, tag = (255, 0, 255), f"WRONG-WAY #{d.track_id}"       # magenta
+        elif d.stopped:
+            colour, tag = (0, 0, 255), f"STOPPED #{d.track_id}"           # red
+        elif d.speeding:
+            colour = (0, 140, 255)                                        # orange
+            tag = f"SPEEDING #{d.track_id} {d.speed_kmh:.0f}km/h"
         else:
             _, colour = _CLASSES.get(d.cls_id, ("object", (200, 200, 200)))
-        cv2.rectangle(frame, (x1, y1), (x2, y2), colour, 3 if d.stopped else 2)
-        tag = f"{d.label} #{d.track_id}"
-        if d.stopped:
-            tag = f"STOPPED #{d.track_id}"
-        elif d.speed_kmh is not None:
-            tag += f" {d.speed_kmh:.0f}km/h"
-        else:
-            tag += f" {d.confidence:.0%}"
+            tag = f"{d.label} #{d.track_id}"
+            if d.speed_kmh is not None:
+                tag += f" {d.speed_kmh:.0f}km/h"
+            else:
+                tag += f" {d.confidence:.0%}"
+        cv2.rectangle(frame, (x1, y1), (x2, y2), colour, 3 if flagged else 2)
         (tw, th), _ = cv2.getTextSize(tag, cv2.FONT_HERSHEY_SIMPLEX, 0.45, 1)
         cv2.rectangle(frame, (x1, y1 - th - 6), (x1 + tw + 4, y1), colour, -1)
         cv2.putText(frame, tag, (x1 + 2, y1 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 1)

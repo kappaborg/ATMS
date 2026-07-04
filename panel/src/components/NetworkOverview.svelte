@@ -22,7 +22,7 @@
 
   // Aggregate live camera events for one intersection.
   function agg(cams: string[]) {
-    let vehicles = 0, incidents = 0, streaming = 0;
+    let vehicles = 0, violations = 0, streaming = 0;
     let preemption = false, pedestrian = false;
     let phase: string | null = null;
     for (const id of cams) {
@@ -30,12 +30,12 @@
       if (!e) continue;
       streaming++;
       vehicles += e.counts?.vehicles ?? 0;
-      incidents += e.incidents?.length ?? 0;
+      violations += e.violations?.length ?? 0;
       if (e.preemption) preemption = true;
       if (e.pedestrian?.clearance_hold) pedestrian = true;
       if (!phase) phase = e.decision?.phase ?? null;
     }
-    return { vehicles, incidents, streaming, preemption, pedestrian, phase };
+    return { vehicles, violations, streaming, preemption, pedestrian, phase };
   }
 
   const phaseColour = (p: string | null) =>
@@ -62,7 +62,7 @@
       <div class="alerts">
         {#if a.preemption}<span class="al red">🚨 preempt</span>{/if}
         {#if a.pedestrian}<span class="al amber">🚶 hold</span>{/if}
-        {#if a.incidents > 0}<span class="al red">⚠ {a.incidents}</span>{/if}
+        {#if a.violations > 0}<span class="al red">⚠ {a.violations} violation{a.violations > 1 ? "s" : ""}</span>{/if}
       </div>
     </button>
   {:else}

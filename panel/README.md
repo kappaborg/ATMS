@@ -207,6 +207,17 @@ studies report ~10-30% idle/delay reduction) — never a raw measurement. Tune:
   `PANEL_RATE_LIMIT` (default `30/60` = 30 requests / 60 s). Over-limit
   returns `429` (REST) or closes the socket with `1013`.
 
+## Driver-anomaly detection
+
+Alongside stopped-vehicle incidents, the panel flags **speeding** (measured
+speed over `PANEL_SPEED_LIMIT_KMH`, default 60 — needs calibration) and
+**wrong-way** driving (a vehicle whose sustained motion opposes the learned
+per-approach flow — needs approach zones, so it's disabled when uncalibrated to
+avoid false positives). All three surface as one unified `violations` list in
+`/ws/data`, are drawn on the frame (red STOPPED / orange SPEEDING / magenta
+WRONG-WAY, most-severe wins), and roll up into the network overview. These are
+operator alerts/analytics, not legal enforcement.
+
 ## Unattended monitoring
 
 By default a camera idles at ~0% CPU when no operator is watching (video +

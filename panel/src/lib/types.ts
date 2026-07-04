@@ -57,6 +57,14 @@ export interface Incident {
   label: string;
 }
 
+export interface Violation {
+  type: "stopped_vehicle" | "speeding" | "wrong_way";
+  track_id: number;
+  seconds?: number;
+  speed_kmh?: number;
+  limit_kmh?: number;
+}
+
 export interface FrameEvent {
   type: "frame";
   camera_id: string;
@@ -67,6 +75,7 @@ export interface FrameEvent {
   counts: Counts;
   detections: Detection[];
   incidents: Incident[];
+  violations: Violation[];
   emissions: Emissions | null;
   preemption: "north_south" | "east_west" | null;
   transit: { ns: boolean; ew: boolean };

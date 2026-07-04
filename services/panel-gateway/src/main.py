@@ -40,6 +40,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
 
+# A client closing mid-send makes send_bytes/send_json raise the underlying
+# websockets ConnectionClosed (not WebSocketDisconnect) — treat both as a
+# normal disconnect so a routine close doesn't log an ASGI traceback.
+try:
+    from websockets.exceptions import ConnectionClosed as _WSClosed
+
+    _WS_DISCONNECTS: tuple = (WebSocketDisconnect, _WSClosed)
+except Exception:  # noqa: BLE001
+    _WS_DISCONNECTS = (WebSocketDisconnect,)
+
 from hub import CameraManager, Hub
 from limits import RateLimiter, WSLimiter, max_cameras
 from panel_auth import Principal, auth_enabled, authenticate, issue_token, principal_from_token
@@ -416,7 +426,7 @@ async def ws_data(ws: WebSocket, token: str | None = Query(default=None)) -> Non
         while True:
             event = await q.get()
             await ws.send_json(event)
-    except WebSocketDisconnect:
+    except _WS_DISCONNECTS:
         pass
     finally:
         hub.unregister_data_client(q)
@@ -445,7 +455,7 @@ async def ws_video(ws: WebSocket, camera_id: str, token: str | None = Query(defa
                 await ws.send_bytes(frame)
                 last_sent = fid
             await asyncio.sleep(interval)
-    except WebSocketDisconnect:
+    except _WS_DISCONNECTS:
         pass
     finally:
         hub.remove_video_viewer()
