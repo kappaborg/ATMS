@@ -141,6 +141,35 @@ class Detector:
                 out.append((cid, float(o.score.value), (float(x1), float(y1), float(x2), float(y2))))
         return out
 
+    @staticmethod
+    def _dedup(raw: list) -> list:
+        """Drop duplicate boxes on the SAME physical object.
+
+        YOLO's NMS is class-aware, so one vehicle is often returned as BOTH
+        car and truck (measured: IoU 0.95 pairs on real footage), and loose
+        same-class overlaps (IoU 0.5-0.7) also survive — each duplicate becomes
+        a ghost track that inflates counts. Greedy keep-highest-confidence,
+        class-AGNOSTIC within vehicle classes and within persons. Person-vs-
+        vehicle overlaps are kept (a rider on a motorcycle is legitimate)."""
+        def iou(a, b):
+            ix1, iy1 = max(a[0], b[0]), max(a[1], b[1])
+            ix2, iy2 = min(a[2], b[2]), min(a[3], b[3])
+            inter = max(0.0, ix2 - ix1) * max(0.0, iy2 - iy1)
+            ua = ((a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter)
+            return inter / ua if ua > 0 else 0.0
+
+        kept: list = []
+        for det in sorted(raw, key=lambda r: -r[1]):
+            cls, _conf, box = det
+            group = "veh" if cls in _VEHICLE_IDS else "ped"
+            dup = any(
+                ("veh" if k[0] in _VEHICLE_IDS else "ped") == group and iou(box, k[2]) > 0.55
+                for k in kept
+            )
+            if not dup:
+                kept.append(det)
+        return kept
+
     def infer(
         self, frame: np.ndarray, use_sahi: bool | None = None
     ) -> list[tuple[int, float, tuple[float, float, float, float]]]:
@@ -153,7 +182,7 @@ class Detector:
         sahi = self.use_sahi if use_sahi is None else use_sahi
         if sahi:
             try:
-                return self._infer_sahi(frame)
+                return self._dedup(self._infer_sahi(frame))
             except Exception as e:  # noqa: BLE001 — fall back to whole-frame on any SAHI error
                 import logging
                 logging.getLogger("panel.detect").warning("SAHI failed, using whole-frame: %s", e)
@@ -171,7 +200,7 @@ class Detector:
         clss = boxes.cls.cpu().numpy()
         for i in range(len(boxes)):
             out.append((int(clss[i]), float(confs[i]), tuple(map(float, xyxy[i][:4]))))
-        return out
+        return self._dedup(out)
 
 
 def to_tracker_input(raw) -> list[dict]:
