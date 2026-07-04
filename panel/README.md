@@ -222,6 +222,27 @@ WRONG-WAY, most-severe wins), and roll up into the network overview.  **Reckless
 so tracking jitter can't trigger it (advisory; tune `PANEL_ERRATIC_REVERSALS`). These are
 operator alerts/analytics, not legal enforcement.
 
+## Drift / loss-of-control
+
+Flags a vehicle exceeding tyre grip: lateral acceleration = speed^2 x path
+curvature. Normal cornering stays well under ~0.6g (drivers slow for bends); a
+slide/spin/drift exceeds it. Needs calibration (real speed + world-metre
+curvature) and its accuracy tracks calibration quality. Threshold:
+`PANEL_DRIFT_LAT_G` (default 0.6). This is a physical loss-of-control signal;
+true slip-angle drift would additionally need vehicle orientation (an oriented-
+bbox/pose model).
+
+## License-plate capture (enforcement)
+
+With `PANEL_READ_PLATES=1`, a plate is read for FLAGGED violators (speeding,
+red-light, drift, wrong-way, reckless) using the project's trained plate
+detector + easyocr — only for violators, capped per frame and cached per track,
+so OCR stays off the hot path. The plate appears on the violation and its
+tile badge. PRIVACY: a plate is personal data; capturing/storing it for
+enforcement needs a lawful basis + retention policy + DPIA (this is the
+opposite of the anonymise-by-default posture elsewhere). Model path override:
+`PANEL_PLATE_MODEL`.
+
 ## Unattended monitoring
 
 By default a camera idles at ~0% CPU when no operator is watching (video +
