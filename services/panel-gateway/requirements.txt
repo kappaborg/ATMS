@@ -1,7 +1,24 @@
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-pydantic>=2.0.0
-numpy>=1.26.0,<2.0.0
-opencv-python>=4.8.0
-ultralytics>=8.0.0
-aiokafka>=0.10
+# ATMS Panel Gateway — self-contained runtime dependencies.
+# Pinned to the versions the gateway is verified against.
+#
+# CPU-only torch wheels (no CUDA download) on x86 Linux:
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# --- core API + pipeline ---
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+websockets==15.0.1
+numpy==2.2.6
+opencv-python-headless==4.11.0.86
+
+# --- detection / tracking / ReID ---
+ultralytics==8.3.204
+torch==2.8.0
+torchvision==0.23.0
+
+# --- optional features (comment out to slim the install) ---
+sahi==0.11.36            # PANEL_USE_SAHI / per-camera SAHI (aerial/small objects)
+easyocr==1.7.2           # PANEL_READ_PLATES=1 (license-plate capture)
+yt-dlp>=2025.11.12       # YouTube/webpage live-stream ingestion
+aiokafka==0.12.0         # KAFKA_BOOTSTRAP_SERVERS (full-ATMS decisions bridge)
