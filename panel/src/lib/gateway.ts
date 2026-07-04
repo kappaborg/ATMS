@@ -170,6 +170,23 @@ export async function setPreemption(
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? `preempt ${r.status}`);
 }
 
+export interface HistoryTotals {
+  vehicles: number;
+  co2_kg: number;
+  saved_kg: number;
+  incidents: number;
+}
+
+/** Persisted historical totals for a camera over the last `hours`. */
+export async function getHistory(camera_id: string, hours: number): Promise<HistoryTotals | null> {
+  const r = await fetch(
+    `${BASE}/history?hours=${hours}&camera_id=${encodeURIComponent(camera_id)}`,
+    { headers: authHeaders() },
+  );
+  if (!r.ok) return null;
+  return (await r.json()).totals;
+}
+
 export async function health(): Promise<boolean> {
   try {
     const r = await fetch(`${BASE}/health`);

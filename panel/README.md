@@ -207,6 +207,15 @@ studies report ~10-30% idle/delay reduction) — never a raw measurement. Tune:
   `PANEL_RATE_LIMIT` (default `30/60` = 30 requests / 60 s). Over-limit
   returns `429` (REST) or closes the socket with `1013`.
 
+## Long-horizon history (persisted)
+
+The gateway persists per-interval metric deltas (vehicles, CO2, estimated
+savings, incidents) to a local SQLite file, so totals survive restarts and you
+can report "this month/year". `GET /history?hours=720&camera_id=X` returns
+totals + a time-bucketed series; the report CSV includes last-24h/7d/30d
+windows; the panel shows a 30-day strip. Config: `PANEL_HISTORY_DB` (default
+next to PANEL_STATE_FILE), `PANEL_HISTORY_FLUSH_S` (default 60).
+
 ## Multi-operator access (RBAC)
 
 For agency use, define named operators with roles instead of one shared token:

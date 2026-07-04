@@ -174,11 +174,20 @@ class CameraManager:
     def report_csv(self, cam_id: str) -> str:
         import time
 
+        import history
+
         w = self._workers.get(cam_id)
         if w is None:
             raise KeyError(cam_id)
         now = time.time()
-        return w.report.to_csv(w.emissions.stats(now), now)
+        store = history.get_store()
+        now_i = int(now)
+        hist = {
+            "last_24h": store.totals(now_i - 24 * 3600, now_i, cam_id),
+            "last_7d": store.totals(now_i - 7 * 24 * 3600, now_i, cam_id),
+            "last_30d": store.totals(now_i - 30 * 24 * 3600, now_i, cam_id),
+        }
+        return w.report.to_csv(w.emissions.stats(now), now, history_totals=hist)
 
     def report_json(self, cam_id: str) -> dict:
         import time

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { connectData, listCameras, downloadReport, authRequired, getMe, logout, type Me } from "./lib/gateway";
+  import { connectData, listCameras, downloadReport, authRequired, getMe, logout, getHistory, type Me, type HistoryTotals } from "./lib/gateway";
   import type { CameraInfo, FrameEvent } from "./lib/types";
   import MetricsBar from "./components/MetricsBar.svelte";
   import CameraTile from "./components/CameraTile.svelte";
@@ -25,10 +25,13 @@
   // Operators/admins can mutate; viewers (and auth-disabled dev) accordingly.
   const canOperate = $derived(!authReq || me?.role === "operator" || me?.role === "admin");
 
+  let history30 = $state<HistoryTotals | null>(null);
+
   async function refresh() {
     try {
       cameras = await listCameras();
       if (!selected && cameras.length) selected = cameras[0].camera_id;
+      history30 = selected ? await getHistory(selected, 720) : null; // last 30 days
     } catch {
       /* gateway offline or token expired; MetricsBar shows it */
     }
@@ -118,7 +121,7 @@
           </div>
         </div>
       {/if}
-      <DecisionPanel event={selectedEvent} camera_id={selected} {canOperate} />
+      <DecisionPanel event={selectedEvent} camera_id={selected} {canOperate} {history30} />
       {#if canOperate}
         <CameraManager onchange={refresh} />
       {:else}

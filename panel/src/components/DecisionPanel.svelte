@@ -1,11 +1,12 @@
 <script lang="ts">
   import type { FrameEvent } from "../lib/types";
-  import { setPreemption } from "../lib/gateway";
+  import { setPreemption, type HistoryTotals } from "../lib/gateway";
   let {
     event,
     camera_id = null,
     canOperate = false,
-  }: { event: FrameEvent | undefined; camera_id?: string | null; canOperate?: boolean } = $props();
+    history30 = null,
+  }: { event: FrameEvent | undefined; camera_id?: string | null; canOperate?: boolean; history30?: HistoryTotals | null } = $props();
 
   let preemptErr = $state("");
   async function preempt(direction: "north_south" | "east_west", active: boolean) {
@@ -135,6 +136,17 @@
       <p class="cuncal">🌱 Calibrate this camera to measure CO₂ emissions (needs real speed).</p>
     {/if}
 
+    {#if history30 && history30.vehicles > 0}
+      <div class="hist">
+        <div class="hhead">📊 Persisted history <span>last 30 days</span></div>
+        <div class="hrow">
+          <b>{history30.vehicles.toLocaleString()}</b> vehicles ·
+          <b>{history30.saved_kg.toFixed(1)} kg</b> CO₂ saved ·
+          <b>{history30.incidents}</b> incidents
+        </div>
+      </div>
+    {/if}
+
     {#if d.predicted_congestion}
       <div class="forecast">
         <div class="fhead">🔮 Congestion forecast <span>{d.predicted_congestion.horizon_min} min ahead</span></div>
@@ -191,6 +203,11 @@
   .cm.saved b { color: #2ecc71; }
   .cnote { margin: 8px 0 0; font-size: 0.64rem; color: #6b7688; line-height: 1.35; }
   .cuncal { margin-top: 14px; font-size: 0.72rem; color: #7fd6a0; }
+  .hist { margin-top: 10px; padding: 8px 12px; background: #101722; border: 1px solid #1e2230; border-radius: 8px; }
+  .hhead { font-size: 0.72rem; color: #8b95a7; margin-bottom: 4px; }
+  .hhead span { color: #5a6576; }
+  .hrow { font-size: 0.74rem; color: #cfd8e3; }
+  .hrow b { color: #eaf1f8; }
   .forecast { margin-top: 14px; padding: 10px 12px; background: #0e1622; border: 1px solid #1e2230; border-radius: 8px; }
   .fhead { font-size: 0.74rem; color: #9aa4b2; margin-bottom: 8px; }
   .fhead span { color: #6b7688; }

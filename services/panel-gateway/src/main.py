@@ -281,6 +281,30 @@ async def camera_report(camera_id: str, format: str = "csv", _: Principal = _VIE
     )
 
 
+@app.get("/history")
+async def history_range(
+    hours: float = 24.0,
+    bucket_min: float = 60.0,
+    camera_id: str | None = None,
+    _: Principal = _VIEWER,
+) -> dict:
+    """Long-horizon totals + time-bucketed series over the last `hours`
+    (persisted across restarts). Optionally scoped to one camera."""
+    import time as _time
+
+    import history
+
+    now = int(_time.time())
+    since = now - int(hours * 3600)
+    store = history.get_store()
+    return {
+        "since_epoch": since,
+        "until_epoch": now,
+        "totals": store.totals(since, now, camera_id),
+        "series": store.series(since, now, int(bucket_min * 60), camera_id),
+    }
+
+
 class PreemptIn(BaseModel):
     direction: str  # "north_south" | "east_west"
     active: bool = True

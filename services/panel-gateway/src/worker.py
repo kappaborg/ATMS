@@ -12,6 +12,7 @@ annotate -> publish. Design for responsiveness:
 """
 from __future__ import annotations
 
+import os
 import sys
 import threading
 import time
@@ -30,10 +31,13 @@ from tracking.bytetrack_simple import SimpleByteTracker  # noqa: E402
 from ai_decision_system import AIDecisionEngine  # noqa: E402
 
 from detection import Detector, annotate, summarize, to_tracker_input  # noqa: E402
+import history  # noqa: E402
 from emissions import EmissionAccumulator  # noqa: E402
 from incidents import IncidentDetector  # noqa: E402
 from report import SessionReport  # noqa: E402
 from scene import SceneConfig  # noqa: E402
+
+HISTORY_FLUSH_S = float(os.getenv("PANEL_HISTORY_FLUSH_S", "60"))
 
 _INFER_LOCK = threading.Lock()
 
@@ -79,8 +83,6 @@ class CameraWorker:
         self.tracker = SimpleByteTracker()
         # Predictive congestion on: the panel's per-camera decision reason
         # then shows "Congestion forecast …" (disable with ATMS_USE_PREDICTIONS=0).
-        import os
-
         self.engine = AIDecisionEngine(
             use_predictions=os.getenv("ATMS_USE_PREDICTIONS", "1").lower() in ("1", "true", "yes")
         )
@@ -89,6 +91,11 @@ class CameraWorker:
         self.emissions = EmissionAccumulator()
         self.report = SessionReport(cam_id)
         self._prev_t: float | None = None
+        # Unique vehicles seen this session (calibration-independent, for history).
+        self._seen_vehicles: set[int] = set()
+        # History flush: last-flushed cumulative counters, to persist deltas.
+        self._hist_t: float | None = None
+        self._hist_prev = {"co2_g": 0.0, "saved_g": 0.0, "vehicles": 0, "incidents": 0}
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
         self.status = "starting"
@@ -103,6 +110,38 @@ class CameraWorker:
         self._stop.set()
         if self._thread:
             self._thread.join(timeout=3.0)
+
+    def _flush_history(self, t_now: float) -> None:
+        """Every HISTORY_FLUSH_S, persist the metrics accrued in the interval
+        (deltas vs the last flush) so long-horizon totals survive restarts."""
+        def snapshot() -> dict:
+            cum = self.emissions.cumulative()
+            return {
+                "co2_g": cum["co2_g"],
+                "saved_g": cum["saved_g"],
+                "vehicles": len(self._seen_vehicles),  # all vehicles (not just calibrated)
+                "incidents": self.report.incident_count,
+            }
+
+        if self._hist_t is None:
+            self._hist_t = t_now
+            self._hist_prev = snapshot()
+            return
+        if t_now - self._hist_t < HISTORY_FLUSH_S:
+            return
+        cur = snapshot()
+        d_veh = max(0, cur["vehicles"] - self._hist_prev["vehicles"])
+        d_co2 = max(0.0, cur["co2_g"] - self._hist_prev["co2_g"]) / 1000.0
+        d_saved = max(0.0, cur["saved_g"] - self._hist_prev["saved_g"]) / 1000.0
+        d_inc = max(0, cur["incidents"] - self._hist_prev["incidents"])
+        try:
+            history.get_store().record_interval(
+                self.cam_id, int(t_now), d_veh, d_co2, d_saved, d_inc
+            )
+        except Exception:  # noqa: BLE001 — history is best-effort, never break the loop
+            pass
+        self._hist_prev = cur
+        self._hist_t = t_now
 
     def _run(self) -> None:
         backoff = 0.5
@@ -181,6 +220,7 @@ class CameraWorker:
                         d.speed_kmh = scene.speed.update(d.track_id, cx, cy, t_now)
                     bucket, speeds = (ns, ns_speeds) if direction == "ns" else (ew, ew_speeds)
                     bucket["vehicle_count"] += 1
+                    self._seen_vehicles.add(d.track_id)
                     if d.label == "bus":
                         bucket["transit_present"] = True  # transit signal priority
                     if d.speed_kmh is not None:
@@ -224,6 +264,9 @@ class CameraWorker:
                 self.emissions.stats(t_now),
                 t_now,
             )
+
+            # Persist per-interval deltas to the long-horizon history store.
+            self._flush_history(t_now)
 
             decision = self.engine.make_decision(ns, ew, pedestrian_present=ped_present)
             self.engine.execute_decision(decision)
