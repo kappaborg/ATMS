@@ -238,7 +238,7 @@ With `PANEL_READ_PLATES=1`, a plate is read for FLAGGED violators (speeding,
 red-light, drift, wrong-way, reckless) using the project's trained plate
 detector + easyocr — only for violators, capped per frame and cached per track,
 so OCR stays off the hot path. The plate appears on the violation and its
-tile badge. PRIVACY: a plate is personal data; capturing/storing it for
+tile badge. Accuracy: OCR is never 100% on real footage. The reader maximises correctness and — critically — NEVER reports a wrong plate: it upscales the crop, requires a valid country format (PANEL_PLATE_COUNTRY: generic|uk|us|de|tr|fr|eu), fixes classic OCR confusions (O/0, I/1, B/8...) using the format, and requires multi-frame consensus (PANEL_PLATE_MIN_AGREEMENT reads must agree) before accepting. If uncertain it reports NO plate rather than a guess. Reliable capture needs plates large enough to read (a proper ANPR-positioned camera); tiny distant plates are refused by design. PRIVACY: a plate is personal data; capturing/storing it for
 enforcement needs a lawful basis + retention policy + DPIA (this is the
 opposite of the anonymise-by-default posture elsewhere). Model path override:
 `PANEL_PLATE_MODEL`.
