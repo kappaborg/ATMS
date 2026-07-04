@@ -38,7 +38,7 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # A client closing mid-send makes send_bytes/send_json raise the underlying
 # websockets ConnectionClosed (not WebSocketDisconnect) — treat both as a
@@ -81,10 +81,13 @@ app.add_middleware(
 
 
 class CameraIn(BaseModel):
-    camera_id: str
+    # camera_id/intersection_id are used to build filesystem paths (snapshot
+    # filenames) and route paths — constrain them to a safe charset so a value
+    # like "../../etc" cannot traverse out of the snapshot directory.
+    camera_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,64}$")
     source: str  # "rtsp://...", "http://...", "0" (USB), or a file path
     loop_file: bool = True
-    intersection_id: str = "1"  # which ATMS intersection this camera watches
+    intersection_id: str = Field(default="1", pattern=r"^[A-Za-z0-9_-]{1,64}$")
     sahi: bool = False  # sliced inference for aerial/small-object views (slower)
 
 

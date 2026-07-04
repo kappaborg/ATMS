@@ -9,6 +9,7 @@ client never adds latency for others).
 from __future__ import annotations
 
 import asyncio
+import re
 from typing import Any
 
 import store
@@ -82,10 +83,18 @@ class CameraManager:
             self._detector = Detector()
         return self._detector
 
+    _ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
     def add(
         self, cam_id: str, source: str | int, *,
         loop_file: bool = True, intersection_id: str = "1", sahi: bool = False,
     ) -> None:
+        # Single chokepoint (API + restore): ids build filesystem/route paths,
+        # so reject anything outside a safe charset (path-traversal defence).
+        if not self._ID_RE.match(str(cam_id)):
+            raise ValueError(f"invalid camera_id '{cam_id}'")
+        if not self._ID_RE.match(str(intersection_id)):
+            raise ValueError(f"invalid intersection_id '{intersection_id}'")
         if cam_id in self._workers:
             raise ValueError(f"camera '{cam_id}' already exists")
         worker = CameraWorker(
