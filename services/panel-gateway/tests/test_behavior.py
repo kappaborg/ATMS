@@ -66,15 +66,29 @@ def _establish_flow(det, direction=(5, 0), n=10):
         det.update(vs, float(f))
 
 
-def test_speeding_over_limit_only():
-    det = DriverBehavior(speed_limit_kmh=50)
-    _, sp, _ = det.update([V(1, (0, 0), speed_kmh=70), V(2, (0, 0), speed_kmh=40)], 0.0)
+def test_speeding_sustained_over_limit_only():
+    det = DriverBehavior(speed_limit_kmh=50, speeding_frames=3)
+    sp = set()
+    for k in range(4):  # sustained: over the limit for several frames
+        _, sp, _ = det.update([V(1, (0, 0), speed_kmh=70), V(2, (0, 0), speed_kmh=40)], float(k))
     assert 1 in sp and 2 not in sp
+
+
+def test_single_frame_speed_spike_not_flagged():
+    # A one-frame spike (jitter / association noise) is NOT a violation.
+    det = DriverBehavior(speed_limit_kmh=50, speeding_frames=3)
+    seq = [40, 45, 160, 42, 44, 41]  # one wild spike mid-stream
+    sp = set()
+    for k, s in enumerate(seq):
+        _, sp, _ = det.update([V(1, (0, 0), speed_kmh=float(s))], float(k))
+        assert 1 not in sp
 
 
 def test_speeding_needs_speed():
     det = DriverBehavior(speed_limit_kmh=50)
-    _, sp, _ = det.update([V(1, (0, 0), speed_kmh=None)], 0.0)  # uncalibrated
+    sp = set()
+    for k in range(4):
+        _, sp, _ = det.update([V(1, (0, 0), speed_kmh=None)], float(k))  # uncalibrated
     assert not sp
 
 
@@ -170,6 +184,54 @@ def test_drift_ignores_slow_gentle_turn():
     # r=30 m at low speed -> tiny lateral-g -> not a drift.
     path = [(30 * math.sin(a), 30 * (1 - math.cos(a))) for a in [i * 0.03 for i in range(30)]]
     assert not _run_drift(path)
+
+
+def test_oscillating_parked_box_not_reckless():
+    # Occlusion flicker: a parked car's box bounces between two spots (zero
+    # NET travel) — the progression gate must reject it as reckless.
+    det = ErraticDriving()
+    ids = set()
+    for i in range(30):
+        pos = (100.0, 100.0) if i % 2 == 0 else (140.0, 120.0)  # A <-> B jumps
+        _, ids = det.update([V(1, pos)], float(i))
+    assert 1 not in ids
+
+
+def test_red_light_teleport_does_not_cross():
+    det = RedLightDetector()
+    # box teleports 400px across the stop line while red -> ignored (max_move gate)
+    det.update([V(5, (50, 60))], 0.0, _SL, lambda a: True)
+    _, ids = det.update([V(5, (60, 460))], 1.0, _SL, lambda a: True)
+    assert 5 not in ids
+
+
+def test_drift_teleport_resets_not_flags():
+    det = DriftDetector()
+    ids = set()
+    # normal driving, then a 50 m world-space teleport in 0.1 s
+    path = [(0.0, 0.0), (2.0, 0.0), (4.0, 0.0), (54.0, 30.0), (56.0, 30.0), (58.0, 30.0)]
+    for i, (x, y) in enumerate(path):
+        _, ids = det.update([(1, x, y)], i * 0.1)
+    assert 1 not in ids
+
+
+def test_speed_estimator_teleport_resets():
+    from calibration import GroundPlaneCalibration, SpeedEstimator
+
+    calib = GroundPlaneCalibration(
+        [(0, 0), (100, 0), (100, 100), (0, 100)],
+        [(0, 0), (10, 0), (10, 10), (0, 10)],  # 10px = 1m
+    )
+    est = SpeedEstimator(calib)
+    # steady 36 km/h: 1 m per 0.1 s
+    v = None
+    for i in range(5):
+        v = est.update(1, i * 10.0, 0.0, i * 0.1)
+    assert v is not None and 30 < v < 42
+    # teleport 400 px (40 m) in one step -> reset, report None (not 1440 km/h)
+    assert est.update(1, 440.0, 0.0, 0.5) is None
+    # and the next samples need to re-accumulate (>=3) before reporting again
+    assert est.update(1, 450.0, 0.0, 0.6) is None
 
 
 def test_annotation_uses_most_severe_flag():

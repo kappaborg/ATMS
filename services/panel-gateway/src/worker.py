@@ -12,6 +12,7 @@ annotate -> publish. Design for responsiveness:
 """
 from __future__ import annotations
 
+import math
 import os
 import sys
 import threading
@@ -130,6 +131,10 @@ class CameraWorker:
         self.emergency = EmergencyVehicleDetector()
         self.plate_reader = plates.PlateReader() if plates.enabled() else None
         self._logged_viol: set[tuple[int, str]] = set()  # (track_id, type) already logged
+        # Teleport gate: last center + time per track, to catch identity
+        # glitches (occlusion box-jumps, ID switches) before they poison the
+        # trajectory detectors (fake speeding/reckless/red-light).
+        self._tp_last: dict[int, tuple[float, float, float]] = {}
         self.emissions = EmissionAccumulator()
         self.report = SessionReport(cam_id)
         self._prev_t: float | None = None
@@ -153,6 +158,44 @@ class CameraWorker:
         self._stop.set()
         if self._thread:
             self._thread.join(timeout=3.0)
+
+    def _reset_track(self, tid: int, scene) -> None:
+        """Wipe all per-track state after a teleport (identity glitch): the
+        'vehicle' at this id may be a different physical vehicle now."""
+        if scene.speed is not None:
+            scene.speed.remove(tid)
+        self.incidents.remove(tid)
+        self.behavior.remove(tid)
+        self.redlight.remove(tid)
+        self.erratic.remove(tid)
+        self.drift.remove(tid)
+        self.emergency.remove(tid)
+        if self.plate_reader is not None:
+            self.plate_reader.remove(tid)  # cached plate may belong to the old vehicle
+
+    def _teleport_gate(self, vehicles: list, t_now: float, scene) -> None:
+        """Detect implausible per-frame jumps and reset those tracks.
+
+        Scale-aware: a vehicle plausibly moves a few times its own size per
+        frame; the allowance grows with dt (slow FPS = bigger legit steps)."""
+        live: set[int] = set()
+        for d in vehicles:
+            tid = d.track_id
+            live.add(tid)
+            cx, cy = d.center
+            prev = self._tp_last.get(tid)
+            self._tp_last[tid] = (cx, cy, t_now)
+            if prev is None:
+                continue
+            px, py, pt = prev
+            dt = max(t_now - pt, 1e-3)
+            diag = math.hypot(d.bbox[2] - d.bbox[0], d.bbox[3] - d.bbox[1]) or 40.0
+            limit = max(2.5 * diag, 80.0) * max(1.0, dt / 0.12)
+            if math.hypot(cx - px, cy - py) > limit:
+                self._reset_track(tid, scene)
+        for tid in list(self._tp_last):
+            if tid not in live:
+                self._tp_last.pop(tid, None)
 
     def _log_violation(self, viol: dict, bbox, frame, t_now: float) -> None:
         """Persist one violation to the evidence log with a cropped snapshot."""
@@ -272,6 +315,10 @@ class CameraWorker:
             ew = dict(ns)
             ns_speeds: list[float] = []
             ew_speeds: list[float] = []
+
+            # Identity-glitch gate FIRST: a track whose box teleported gets its
+            # per-track state wiped before any estimator consumes the jump.
+            self._teleport_gate([d for d in result.detections if d.is_vehicle], t_now, scene)
 
             ped_present = False  # a pedestrian in the roadway (crossing)
             dir_by_id: dict[int, str] = {}  # track -> "ns"|"ew" (for alerts)

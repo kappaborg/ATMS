@@ -57,13 +57,19 @@ class IncidentDetector:
             live.add(tid)
             st = self._tracks.get(tid)
             if st is None:
-                self._tracks[tid] = {"pos": (cx, cy), "since": t, "moved": False}
+                self._tracks[tid] = {"pos": (cx, cy), "since": t, "moved": False, "mstreak": 0}
                 continue
             moved = math.hypot(cx - st["pos"][0], cy - st["pos"][1])
             if moved > self.move_threshold_px:
                 st["pos"] = (cx, cy)
                 st["since"] = t  # reset the stationary clock
-                st["moved"] = True  # observed driving — eligible to "stall"
+                # SUSTAINED movement only: one displaced frame (occlusion bump,
+                # box jitter on a parked car) doesn't count as driving.
+                st["mstreak"] = st.get("mstreak", 0) + 1
+                if st["mstreak"] >= 2:
+                    st["moved"] = True  # observed driving — eligible to "stall"
+            else:
+                st["mstreak"] = 0
             stationary_for = t - st["since"]
             if stationary_for >= 2.0:
                 num_stationary += 1

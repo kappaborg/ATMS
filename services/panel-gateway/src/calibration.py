@@ -78,11 +78,22 @@ class SpeedEstimator:
     def update(self, track_id: int, cx: float, cy: float, t: float) -> float | None:
         xm, ym = self.calib.to_ground(cx, cy)
         hist = self._hist.setdefault(track_id, deque(maxlen=32))
+        # Teleport check BEFORE accepting the sample: an implausible jump from
+        # the last point means the track id glitched (occlusion / ID switch) —
+        # RESET history so poisoned points can't produce fake "speeding".
+        if hist:
+            tl, xl, yl = hist[-1]
+            dtl = max(t - tl, 1e-3)
+            step_kmh = (float(np.hypot(xm - xl, ym - yl)) / dtl) * 3.6
+            if step_kmh > self.max_kmh:
+                hist.clear()
         hist.append((t, xm, ym))
         # drop samples older than the window
         while len(hist) > 2 and t - hist[0][0] > self.window_s:
             hist.popleft()
-        if len(hist) < 2:
+        # Require 3+ samples: a speed from a single pair (fresh/re-born track)
+        # is one association away from being garbage.
+        if len(hist) < 3:
             return None
         t0, x0, y0 = hist[0]
         dt = t - t0
