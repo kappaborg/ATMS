@@ -308,6 +308,10 @@ async def history_range(
 
     import history
 
+    # Clamp inputs: guard against a 0/negative bucket (SQL divide-by-zero) and
+    # absurd ranges from a malformed client.
+    hours = max(0.0, min(hours, 24 * 366))          # <= ~1 year
+    bucket_min = min(max(bucket_min, 1.0), 24 * 60)  # 1 min .. 1 day
     now = int(_time.time())
     since = now - int(hours * 3600)
     store = history.get_store()
