@@ -239,3 +239,27 @@ def test_annotation_uses_most_severe_flag():
                   stopped=True, speeding=True, wrong_way=True)
     frame = np.zeros((80, 80, 3), dtype=np.uint8)
     annotate(frame, FrameResult([d], 1, 0), "GREEN", 30.0)  # must not raise; wrong-way wins
+
+
+def test_dedup_drops_cross_class_duplicate():
+    from detection import Detector
+
+    # same physical vehicle boxed as car (2) AND truck (7) — keep higher conf
+    raw = [(2, 0.9, (100, 100, 200, 180)), (7, 0.6, (102, 101, 203, 182))]
+    out = Detector._dedup(raw)
+    assert len(out) == 1 and out[0][0] == 2
+
+
+def test_dedup_keeps_distinct_vehicles():
+    from detection import Detector
+
+    raw = [(2, 0.9, (100, 100, 200, 180)), (2, 0.8, (400, 100, 500, 180))]
+    assert len(Detector._dedup(raw)) == 2
+
+
+def test_dedup_keeps_rider_on_motorcycle():
+    from detection import Detector
+
+    # person (0) overlapping a motorcycle (3) is legitimate — never dedup across groups
+    raw = [(3, 0.9, (100, 100, 160, 200)), (0, 0.8, (105, 90, 155, 190))]
+    assert len(Detector._dedup(raw)) == 2
