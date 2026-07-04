@@ -88,8 +88,9 @@
   </div>
 
   {#if zoom !== null}
-    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-    <div class="lightbox" onclick={() => (zoom = null)}>
+    <div class="lightbox" role="button" tabindex="0" aria-label="close preview"
+      onclick={() => (zoom = null)}
+      onkeydown={(e) => (e.key === "Escape" || e.key === "Enter") && (zoom = null)}>
       <img src={violationSnapshotUrl(zoom)} alt="evidence enlarged" />
     </div>
   {/if}

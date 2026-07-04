@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { connectData, listCameras, listIntersections, listCorridors, downloadReport, authRequired, getMe, logout, getHistory, setSahi, type Me, type HistoryTotals } from "./lib/gateway";
   import type { CameraInfo, FrameEvent, IntersectionInfo, Corridor } from "./lib/types";
   import MetricsBar from "./components/MetricsBar.svelte";
@@ -101,17 +101,21 @@
     me = null;
   }
 
-  onMount(async () => {
-    authReq = await authRequired();
-    if (authReq) {
-      me = await getMe(); // resume a valid stored session
-      if (me) start();
-    } else {
-      start(); // auth disabled (local dev)
-    }
-    ready = true;
-    return () => stopFns.forEach((f) => f());
+  // NOTE: an async onMount's returned cleanup is IGNORED by Svelte — use a
+  // sync onMount + onDestroy so the sockets/intervals are actually torn down.
+  onMount(() => {
+    (async () => {
+      authReq = await authRequired();
+      if (authReq) {
+        me = await getMe(); // resume a valid stored session
+        if (me) start();
+      } else {
+        start(); // auth disabled (local dev)
+      }
+      ready = true;
+    })();
   });
+  onDestroy(() => stopFns.forEach((f) => f()));
 
   const selectedEvent = $derived(selected ? events[selected] : undefined);
 </script>
@@ -149,7 +153,8 @@
   <div class="body">
     <div class="grid" style="--cols:{shownCameras.length <= 1 ? 1 : 2}">
       {#each shownCameras as cam (cam.camera_id)}
-        <div class="cell" class:sel={selected === cam.camera_id} onclick={() => (selected = cam.camera_id)} role="button" tabindex="0">
+        <div class="cell" class:sel={selected === cam.camera_id} onclick={() => (selected = cam.camera_id)}
+          onkeydown={(e) => (e.key === "Enter" || e.key === " ") && (selected = cam.camera_id)} role="button" tabindex="0">
           <CameraTile camera_id={cam.camera_id} event={events[cam.camera_id]} live={cam.live} kind={cam.kind} />
         </div>
       {:else}

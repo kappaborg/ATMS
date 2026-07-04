@@ -195,8 +195,8 @@
         {:else if !backdrop}
           <div class="err-box">Capturing frame…</div>
         {:else}
-          <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-          <div class="stage" bind:clientWidth={stageW} bind:clientHeight={stageH} onclick={stageClick}>
+          <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions a11y_no_noninteractive_element_interactions a11y_missing_attribute -->
+          <div class="stage" role="presentation" bind:clientWidth={stageW} bind:clientHeight={stageH} onclick={stageClick}>
             <img src={backdrop} alt="frame" bind:this={imgEl} />
             <svg viewBox="0 0 {stageW} {stageH}">
               {#each zones as z}
