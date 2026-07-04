@@ -52,6 +52,7 @@ class Detection:
     speeding: bool = False
     wrong_way: bool = False
     red_light: bool = False
+    reckless: bool = False
 
     @property
     def center(self) -> tuple[float, float]:
@@ -162,11 +163,13 @@ def annotate(frame: np.ndarray, result: FrameResult, phase: str | None, fps: flo
     for d in result.detections:
         x1, y1, x2, y2 = map(int, d.bbox)
         # Most-severe violation wins the box colour/label (BGR).
-        flagged = d.wrong_way or d.red_light or d.stopped or d.speeding
+        flagged = d.wrong_way or d.red_light or d.reckless or d.stopped or d.speeding
         if d.wrong_way:
             colour, tag = (255, 0, 255), f"WRONG-WAY #{d.track_id}"       # magenta
         elif d.red_light:
             colour, tag = (0, 0, 200), f"RED-LIGHT #{d.track_id}"         # dark red
+        elif d.reckless:
+            colour, tag = (255, 0, 128), f"RECKLESS #{d.track_id}"        # purple
         elif d.stopped:
             colour, tag = (0, 0, 255), f"STOPPED #{d.track_id}"           # red
         elif d.speeding:

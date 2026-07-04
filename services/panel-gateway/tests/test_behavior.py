@@ -5,7 +5,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from behavior import DriverBehavior, RedLightDetector
+import math
+
+from behavior import DriverBehavior, ErraticDriving, RedLightDetector
 from detection import Detection, FrameResult, annotate
 from incidents import IncidentDetector
 from scene import SceneConfig
@@ -120,6 +122,29 @@ def test_detections_flags_match_violation_list():
     flagged_ids = stopped | speeding | wrong
     listed_ids = {v["track_id"] for v in violations}
     assert flagged_ids == listed_ids  # perfect agreement
+
+
+def _run_erratic(path):
+    det = ErraticDriving()
+    ids = set()
+    for i, (x, y) in enumerate(path):
+        _, ids = det.update([V(1, (x, y))], float(i))
+    return 1 in ids
+
+
+def test_weaving_is_reckless():
+    weave = [(i * 10, 100 + (20 if i % 2 == 0 else -20)) for i in range(20)]
+    assert _run_erratic(weave)
+
+
+def test_straight_line_not_reckless():
+    assert not _run_erratic([(i * 10, 100) for i in range(20)])
+
+
+def test_smooth_turn_not_reckless():
+    # A legitimate turn is a monotonic heading change — must NOT be flagged.
+    turn = [(math.cos(t) * 100 + 100, math.sin(t) * 100 + 100) for t in [i * 0.15 for i in range(20)]]
+    assert not _run_erratic(turn)
 
 
 def test_annotation_uses_most_severe_flag():

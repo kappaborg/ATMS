@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import math
 import os
+from collections import deque
 
 
 class DriverBehavior:
@@ -112,6 +113,89 @@ class DriverBehavior:
     def remove(self, track_id: int) -> None:
         self._pos.pop(track_id, None)
         self._streak.pop(track_id, None)
+
+
+class ErraticDriving:
+    """Flags reckless/erratic driving = repeated left-right HEADING reversals
+    (weaving), which a normal path — even a turn — doesn't produce. Purely
+    trajectory-based (no lane geometry, no calibration). Conservative by design
+    (needs several significant reversals) since it's an ADVISORY signal with a
+    higher false-positive rate than the clean violations. Tune with
+    PANEL_ERRATIC_REVERSALS.
+    """
+
+    def __init__(
+        self,
+        step_px: float = 14.0,   # record a heading only after this much travel
+        window: int = 6,          # over this many recorded headings
+        min_reversals: int | None = None,
+        turn_deg: float = 30.0,   # only genuine direction swings count
+        cooldown_s: float = 3.0,
+    ):
+        self.step_px = step_px
+        self.window = window
+        self.min_reversals = (
+            min_reversals if min_reversals is not None
+            else int(os.getenv("PANEL_ERRATIC_REVERSALS", "3"))
+        )
+        self.turn_cos = math.cos(math.radians(turn_deg))
+        self.cooldown_s = cooldown_s
+        self._last_pos: dict[int, tuple[float, float]] = {}
+        self._vecs: dict[int, deque] = {}
+        self._flagged_until: dict[int, float] = {}
+
+    def update(self, vehicles: list, t: float) -> tuple[list[dict], set[int]]:
+        violations: list[dict] = []
+        ids: set[int] = set()
+        live: set[int] = set()
+        for v in vehicles:
+            tid = int(v.track_id)
+            live.add(tid)
+            cur = v.center
+            if self._flagged_until.get(tid, 0.0) > t:
+                ids.add(tid)
+            lp = self._last_pos.get(tid)
+            if lp is None:
+                self._last_pos[tid] = cur
+                continue
+            dx, dy = cur[0] - lp[0], cur[1] - lp[1]
+            mag = math.hypot(dx, dy)
+            # Only record a new heading after a real displacement step — this
+            # averages out per-frame tracking jitter (the false-positive source).
+            if mag < self.step_px:
+                continue
+            self._last_pos[tid] = cur
+            dq = self._vecs.setdefault(tid, deque(maxlen=self.window))
+            dq.append((dx / mag, dy / mag))
+            if len(dq) < self.window:
+                continue
+            # Count sign changes of the turn direction, over SIGNIFICANT turns
+            # only. Weaving -> many reversals; a straight path or a single turn
+            # -> ~0.
+            reversals, last_sign = 0, 0
+            seq = list(dq)
+            for a, b in zip(seq, seq[1:]):
+                if a[0] * b[0] + a[1] * b[1] >= self.turn_cos:
+                    continue  # heading barely changed — not a turn
+                sign = 1 if (a[0] * b[1] - a[1] * b[0]) > 0 else -1
+                if last_sign and sign != last_sign:
+                    reversals += 1
+                last_sign = sign
+            if reversals >= self.min_reversals:
+                ids.add(tid)
+                self._flagged_until[tid] = t + self.cooldown_s
+                violations.append({"type": "reckless", "track_id": tid, "reversals": reversals})
+        for tid in list(self._last_pos):
+            if tid not in live:
+                self._last_pos.pop(tid, None)
+                self._vecs.pop(tid, None)
+                self._flagged_until.pop(tid, None)
+        return violations, ids
+
+    def remove(self, track_id: int) -> None:
+        self._last_pos.pop(track_id, None)
+        self._vecs.pop(track_id, None)
+        self._flagged_until.pop(track_id, None)
 
 
 def _segments_cross(p1, p2, p3, p4) -> bool:
