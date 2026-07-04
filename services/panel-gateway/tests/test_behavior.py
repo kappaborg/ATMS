@@ -5,10 +5,47 @@ from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from behavior import DriverBehavior
+from behavior import DriverBehavior, RedLightDetector
 from detection import Detection, FrameResult, annotate
 from incidents import IncidentDetector
+from scene import SceneConfig
 import numpy as np
+
+
+_SL = [{"approach": "ns", "points": [[0, 100], [200, 100]]}]  # horizontal line at y=100
+
+
+def test_red_light_flagged_on_red_crossing():
+    det = RedLightDetector()
+    det.update([V(1, (50, 80))], 0.0, _SL, lambda a: True)
+    viol, ids = det.update([V(1, (50, 120))], 1.0, _SL, lambda a: True)  # cross while RED
+    assert 1 in ids and viol and viol[0]["type"] == "red_light"
+
+
+def test_red_light_not_flagged_on_green():
+    det = RedLightDetector()
+    det.update([V(2, (50, 80))], 0.0, _SL, lambda a: False)
+    _, ids = det.update([V(2, (50, 120))], 1.0, _SL, lambda a: False)  # cross while GREEN
+    assert 2 not in ids
+
+
+def test_red_light_needs_a_crossing():
+    det = RedLightDetector()
+    det.update([V(3, (10, 80))], 0.0, _SL, lambda a: True)
+    _, ids = det.update([V(3, (190, 80))], 1.0, _SL, lambda a: True)  # never crosses the line
+    assert 3 not in ids
+
+
+def test_scene_parses_and_serialises_stop_lines():
+    sc = SceneConfig.from_payload({"stop_lines": [{"approach": "ns", "points": [[10, 20], [30, 40]]}]})
+    assert len(sc.stop_lines) == 1 and sc.stop_lines[0]["approach"] == "ns"
+    assert sc.to_payload()["stop_lines"][0]["points"] == [[10.0, 20.0], [30.0, 40.0]]
+
+
+def test_scene_rejects_bad_stop_line():
+    import pytest
+    with pytest.raises(ValueError):
+        SceneConfig.from_payload({"stop_lines": [{"approach": "ns", "points": [[1, 2]]}]})  # 1 point
 
 
 @dataclass

@@ -213,7 +213,9 @@ Alongside stopped-vehicle incidents, the panel flags **speeding** (measured
 speed over `PANEL_SPEED_LIMIT_KMH`, default 60 — needs calibration) and
 **wrong-way** driving (a vehicle whose sustained motion opposes the learned
 per-approach flow — needs approach zones, so it's disabled when uncalibrated to
-avoid false positives). All three surface as one unified `violations` list in
+avoid false positives). **Red-light running** flags a vehicle crossing a
+**stop-line** while its approach is red (draw stop-lines in the Calibrate →
+Stop-lines tab; works in image space, no ground-plane calibration needed). All three surface as one unified `violations` list in
 `/ws/data`, are drawn on the frame (red STOPPED / orange SPEEDING / magenta
 WRONG-WAY, most-severe wins), and roll up into the network overview. These are
 operator alerts/analytics, not legal enforcement.

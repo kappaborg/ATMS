@@ -112,3 +112,57 @@ class DriverBehavior:
     def remove(self, track_id: int) -> None:
         self._pos.pop(track_id, None)
         self._streak.pop(track_id, None)
+
+
+def _segments_cross(p1, p2, p3, p4) -> bool:
+    """True if segment p1-p2 crosses segment p3-p4 (orientation test)."""
+    def ccw(a, b, c):
+        return (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
+    return ccw(p1, p3, p4) != ccw(p2, p3, p4) and ccw(p1, p2, p3) != ccw(p1, p2, p4)
+
+
+class RedLightDetector:
+    """Flags a vehicle that crosses an approach's stop-line while that approach
+    is RED. Works in image space (no ground-plane calibration needed) — it just
+    needs the stop-line drawn and the current signal phase."""
+
+    def __init__(self, cooldown_s: float = 3.0, min_move_px: float = 3.0):
+        self.cooldown_s = cooldown_s
+        self.min_move_px = min_move_px
+        self._pos: dict[int, tuple[float, float]] = {}
+        self._flagged_until: dict[int, float] = {}
+
+    def update(self, vehicles: list, t: float, stop_lines: list, is_red) -> tuple[list[dict], set[int]]:
+        """`stop_lines` = [{"approach","points":[[x1,y1],[x2,y2]]}]; `is_red(approach)`
+        returns True when that approach's signal is red."""
+        violations: list[dict] = []
+        ids: set[int] = set()
+        live: set[int] = set()
+        for v in vehicles:
+            tid = int(v.track_id)
+            live.add(tid)
+            cur = v.center
+            prev = self._pos.get(tid)
+            self._pos[tid] = cur
+            if self._flagged_until.get(tid, 0.0) > t:
+                ids.add(tid)  # keep marked briefly so the operator sees it
+            if prev is None:
+                continue
+            if math.hypot(cur[0] - prev[0], cur[1] - prev[1]) < self.min_move_px:
+                continue
+            for sl in stop_lines:
+                p3, p4 = sl["points"]
+                if _segments_cross(prev, cur, p3, p4) and is_red(sl["approach"]):
+                    ids.add(tid)
+                    self._flagged_until[tid] = t + self.cooldown_s
+                    violations.append({"type": "red_light", "track_id": tid, "approach": sl["approach"]})
+                    break
+        for tid in list(self._pos):
+            if tid not in live:
+                self._pos.pop(tid, None)
+                self._flagged_until.pop(tid, None)
+        return violations, ids
+
+    def remove(self, track_id: int) -> None:
+        self._pos.pop(track_id, None)
+        self._flagged_until.pop(track_id, None)
