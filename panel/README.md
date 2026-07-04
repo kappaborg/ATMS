@@ -207,6 +207,15 @@ studies report ~10-30% idle/delay reduction) — never a raw measurement. Tune:
   `PANEL_RATE_LIMIT` (default `30/60` = 30 requests / 60 s). Over-limit
   returns `429` (REST) or closes the socket with `1013`.
 
+## Real-data / strict live mode
+
+For government/production use, set `ATMS_STRICT_LIVE=1`: it forbids recorded
+file sources (only RTSP/HTTP streams and USB/Continuity cameras are accepted)
+and forces mock detection off regardless of any other flag — so every number
+comes from a real live stream. Each camera reports its `kind` (rtsp/http/usb/
+file) and a `live` flag; the panel shows a green **● LIVE** badge for real
+streams and **FILE** for recordings. `/health` reports `strict_live`.
+
 ## Notes for production
 
 - Regenerate real app icons: `npm run tauri icon path/to/logo.png`.

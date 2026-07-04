@@ -14,7 +14,7 @@ from typing import Any
 import store
 from detection import Detector
 from scene import SceneConfig
-from security import validate_source
+from security import is_live_source, source_kind, validate_source
 from worker import CameraWorker
 
 
@@ -152,6 +152,8 @@ class CameraManager:
             {
                 "camera_id": w.cam_id,
                 "source": str(w.source),
+                "kind": source_kind(w.source),
+                "live": is_live_source(w.source),
                 "status": w.status,
                 "error": w.error,
                 "fps": round(w.fps, 1),

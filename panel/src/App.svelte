@@ -57,7 +57,7 @@
     <div class="grid" style="--cols:{cameras.length <= 1 ? 1 : 2}">
       {#each cameras as cam (cam.camera_id)}
         <div class="cell" class:sel={selected === cam.camera_id} onclick={() => (selected = cam.camera_id)} role="button" tabindex="0">
-          <CameraTile camera_id={cam.camera_id} event={events[cam.camera_id]} />
+          <CameraTile camera_id={cam.camera_id} event={events[cam.camera_id]} live={cam.live} kind={cam.kind} />
         </div>
       {:else}
         <div class="hint">
