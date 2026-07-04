@@ -156,6 +156,20 @@ export async function downloadReport(camera_id: string): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
+/** Emergency-vehicle preemption: force `direction` green, or clear it. */
+export async function setPreemption(
+  camera_id: string,
+  direction: "north_south" | "east_west",
+  active: boolean,
+): Promise<void> {
+  const r = await fetch(`${BASE}/cameras/${encodeURIComponent(camera_id)}/preempt`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ direction, active }),
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? `preempt ${r.status}`);
+}
+
 export async function health(): Promise<boolean> {
   try {
     const r = await fetch(`${BASE}/health`);

@@ -1,6 +1,22 @@
 <script lang="ts">
   import type { FrameEvent } from "../lib/types";
-  let { event }: { event: FrameEvent | undefined } = $props();
+  import { setPreemption } from "../lib/gateway";
+  let {
+    event,
+    camera_id = null,
+    canOperate = false,
+  }: { event: FrameEvent | undefined; camera_id?: string | null; canOperate?: boolean } = $props();
+
+  let preemptErr = $state("");
+  async function preempt(direction: "north_south" | "east_west", active: boolean) {
+    preemptErr = "";
+    if (!camera_id) return;
+    try {
+      await setPreemption(camera_id, direction, active);
+    } catch (e) {
+      preemptErr = e instanceof Error ? e.message : "failed";
+    }
+  }
 
   const d = $derived(event?.decision);
   const sys = $derived(event?.system);
@@ -51,6 +67,20 @@
     {/if}
     <p class="src">real decision-engine output. Panel estimate below.</p>
     <hr />
+  {/if}
+  {#if event?.preemption}
+    <div class="preempt-banner">🚨 EMERGENCY PREEMPTION ACTIVE — {event.preemption === "north_south" ? "N–S" : "E–W"} cleared</div>
+  {/if}
+  {#if canOperate && camera_id}
+    <div class="preempt-ctl">
+      <span>🚨 Emergency preempt</span>
+      <div class="pbtns">
+        <button class:on={event?.preemption === "north_south"} onclick={() => preempt("north_south", event?.preemption !== "north_south")}>N–S</button>
+        <button class:on={event?.preemption === "east_west"} onclick={() => preempt("east_west", event?.preemption !== "east_west")}>E–W</button>
+        {#if event?.preemption}<button class="clear" onclick={() => preempt(event!.preemption!, false)}>Clear</button>{/if}
+      </div>
+    </div>
+    {#if preemptErr}<p class="perr">{preemptErr}</p>{/if}
   {/if}
   <h2>{sys ? "Panel estimate" : "Decision"}</h2>
   {#if d}
@@ -127,6 +157,18 @@
   dt { color: #8b95a7; }
   dd { margin: 0; color: #dfe6ee; }
   .reason { font-size: 0.78rem; color: #b7c0cd; }
+  .preempt-banner {
+    margin: 10px 16px 0; padding: 8px 12px; border-radius: 6px; text-align: center;
+    background: #e74c3c; color: #fff; font-weight: 700; font-size: 0.8rem;
+    animation: ppulse 1s ease-in-out infinite; box-shadow: 0 0 16px rgba(231,76,60,0.7);
+  }
+  @keyframes ppulse { 0%,100% { opacity: 1; } 50% { opacity: 0.65; } }
+  .preempt-ctl { display: flex; align-items: center; justify-content: space-between; margin: 10px 16px 0; padding: 8px 12px; background: #1a1113; border: 1px solid #3a1c1c; border-radius: 8px; font-size: 0.74rem; color: #e6a4a4; }
+  .preempt-ctl .pbtns { display: flex; gap: 6px; }
+  .preempt-ctl button { background: #2a1618; border: 1px solid #5a2b2b; color: #f0c4c4; border-radius: 5px; padding: 4px 10px; cursor: pointer; font-size: 0.74rem; }
+  .preempt-ctl button.on { background: #e74c3c; color: #fff; border-color: #e74c3c; }
+  .preempt-ctl button.clear { border-color: #2b3547; color: #9aa4b2; background: none; }
+  .perr { margin: 6px 16px 0; color: #e74c3c; font-size: 0.72rem; }
   .carbon { margin-top: 14px; padding: 10px 12px; background: #0d1a12; border: 1px solid #1c3a28; border-radius: 8px; }
   .chead { font-size: 0.74rem; color: #7fd6a0; margin-bottom: 8px; }
   .chead span { color: #5a7566; }

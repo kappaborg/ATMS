@@ -258,6 +258,7 @@ class CameraWorker:
                     "calibrated": self.scene.calibration is not None,
                     "incidents": incidents,
                     "emissions": self.emissions.stats(t_now),
+                    "preemption": self.engine._preemption_active(),
                     "decision": {
                         "phase": decision.recommended_phase.value,
                         "active_direction": self.engine.active_direction,

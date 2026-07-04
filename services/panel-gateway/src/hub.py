@@ -162,6 +162,15 @@ class CameraManager:
             for w in self._workers.values()
         ]
 
+    def preempt(self, cam_id: str, direction: str, active: bool, hold_s: float | None = None) -> None:
+        w = self._workers.get(cam_id)
+        if w is None:
+            raise KeyError(cam_id)
+        if active:
+            w.engine.request_preemption(direction, hold_s)
+        else:
+            w.engine.clear_preemption()
+
     def report_csv(self, cam_id: str) -> str:
         import time
 
