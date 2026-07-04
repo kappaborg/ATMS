@@ -281,6 +281,27 @@ async def camera_report(camera_id: str, format: str = "csv", _: Principal = _VIE
     )
 
 
+class PreemptIn(BaseModel):
+    direction: str  # "north_south" | "east_west"
+    active: bool = True
+    hold_s: float | None = None  # auto-clear after N seconds; None = hold
+
+
+@app.post("/cameras/{camera_id}/preempt")
+async def preempt(camera_id: str, body: PreemptIn, p: Principal = _OPERATOR, __: None = _RATE) -> dict:
+    """Emergency-vehicle preemption — force an approach to green for an
+    approaching ambulance/fire/police, then release. Operator-triggered here;
+    production integrates dispatch/V2X (Opticom-style)."""
+    try:
+        manager.preempt(camera_id, body.direction, body.active, body.hold_s)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="camera not found")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    _audit(p, "preempt", f"id={camera_id} dir={body.direction} active={body.active}")
+    return {"status": "ok", "preemption": body.direction if body.active else None}
+
+
 @app.post("/cameras/{camera_id}/scene")
 async def set_scene(camera_id: str, payload: dict, p: Principal = _OPERATOR, __: None = _RATE) -> dict:
     """Set calibration and/or approach zones for a camera.

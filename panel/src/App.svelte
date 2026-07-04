@@ -118,7 +118,7 @@
           </div>
         </div>
       {/if}
-      <DecisionPanel event={selectedEvent} />
+      <DecisionPanel event={selectedEvent} camera_id={selected} {canOperate} />
       {#if canOperate}
         <CameraManager onchange={refresh} />
       {:else}

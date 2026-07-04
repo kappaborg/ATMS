@@ -109,6 +109,9 @@ class AIDecisionEngine:
         self.prediction_horizon_min = prediction_horizon_min
         self._last_prediction: Optional[Dict] = None
         self._last_anomaly: Optional[str] = None
+        # Emergency-vehicle preemption: forced-green approach + optional expiry.
+        self._preempt_direction: Optional[str] = None
+        self._preempt_until: Optional[float] = None
         self._now = now_fn or time.monotonic
         self._phase_started_at = self._now()
         self.phase_history = []
@@ -210,13 +213,28 @@ class AIDecisionEngine:
             priority_data = east_west
             other_data = north_south
         
+        # Emergency-vehicle preemption overrides demand entirely: the preempted
+        # approach is forced to priority. The phase state machine STILL enforces
+        # clearance (yellow/all-red) so the transition is never unsafe.
+        preempt = self._preemption_active()
+        if preempt is not None:
+            priority_direction = preempt
+            priority_score, other_score = 999.0, 0.0
+            if preempt == "north_south":
+                priority_data, other_data = north_south, east_west
+            else:
+                priority_data, other_data = east_west, north_south
+
         previous_phase = self.current_phase
 
         # Decide whether demand justifies handing green to the other approach.
         # The phase state machine then enforces min-green / clearance timing.
-        wants_switch = self._rule_based_wants_switch(
-            priority_direction, priority_score, other_score
-        )
+        if preempt is not None:
+            wants_switch = self.active_direction != preempt
+        else:
+            wants_switch = self._rule_based_wants_switch(
+                priority_direction, priority_score, other_score
+            )
 
         # Phase 2: Use RL agent if available — its action overrides the
         # rule-based switch request, but never the safety timing below.
@@ -293,7 +311,10 @@ class AIDecisionEngine:
         # Emergency priority for anomalies
         if anomaly_type in ["CONGESTION", "HIGH_TRAFFIC"]:
             priority = DecisionPriority.EMERGENCY
-        
+        # Emergency-vehicle preemption is the highest priority of all.
+        if preempt is not None:
+            priority = DecisionPriority.EMERGENCY
+
         # Generate reason
         reason = self._generate_reason(
             priority_direction,
@@ -324,7 +345,11 @@ class AIDecisionEngine:
         if self._last_anomaly:
             expected_impact["anomaly"] = self._last_anomaly
             reason = reason.rstrip(".") + f". ⚠ Anomaly: {self._last_anomaly}."
-        
+        if preempt is not None:
+            label = "N-S" if preempt == "north_south" else "E-W"
+            reason = f"🚨 EMERGENCY VEHICLE PREEMPTION — clearing {label}. " + reason
+            expected_impact["preemption"] = preempt
+
         # Create decision
         decision = TrafficDecision(
             decision_id=str(uuid.uuid4()),
@@ -348,6 +373,34 @@ class AIDecisionEngine:
         
         return decision
     
+    def request_preemption(self, direction: str, hold_s: Optional[float] = None) -> None:
+        """Trigger emergency-vehicle preemption for an approach.
+
+        `direction` is 'north_south' or 'east_west'. `hold_s`, if given,
+        auto-clears the preemption after that many seconds (else it holds until
+        clear_preemption()). Typically driven by dispatch/V2X (Opticom-style)
+        or an operator; visual auto-detection needs a trained EV detector.
+        """
+        if direction not in ("north_south", "east_west"):
+            raise ValueError(f"invalid direction: {direction}")
+        self._preempt_direction = direction
+        self._preempt_until = (self._now() + hold_s) if hold_s else None
+        logger.warning("🚨 Emergency preemption requested: %s", direction)
+
+    def clear_preemption(self) -> None:
+        if self._preempt_direction is not None:
+            logger.warning("Emergency preemption cleared")
+        self._preempt_direction = None
+        self._preempt_until = None
+
+    def _preemption_active(self) -> Optional[str]:
+        if self._preempt_direction is None:
+            return None
+        if self._preempt_until is not None and self._now() >= self._preempt_until:
+            self.clear_preemption()
+            return None
+        return self._preempt_direction
+
     def _apply_prediction(
         self, north_south: Dict, east_west: Dict, ns_score: float, ew_score: float
     ):
