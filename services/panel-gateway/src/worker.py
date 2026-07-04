@@ -33,6 +33,7 @@ from ai_decision_system import AIDecisionEngine  # noqa: E402
 from detection import Detector, annotate, summarize, to_tracker_input  # noqa: E402
 import history  # noqa: E402
 from behavior import DriftDetector, DriverBehavior, ErraticDriving, RedLightDetector  # noqa: E402
+from emergency import EmergencyVehicleDetector  # noqa: E402
 from emissions import EmissionAccumulator  # noqa: E402
 from incidents import IncidentDetector  # noqa: E402
 import plates  # noqa: E402
@@ -69,10 +70,21 @@ def _open_capture(source: str | int) -> cv2.VideoCapture:
     if isinstance(source, int) or (isinstance(source, str) and source.isdigit()):
         return cv2.VideoCapture(int(source))
     if isinstance(source, str) and source.lower().startswith(("rtsp://", "http://", "https://")):
+        url = source
+        # Web-page live streams (YouTube Live etc.): resolve to the underlying
+        # HLS manifest NOW — resolved URLs expire, so doing this per-open makes
+        # a 24/7 live camera self-healing across reconnects.
+        import streams
+
+        if streams.is_web_page_stream(source):
+            resolved = streams.resolve_stream_url(source)
+            if resolved:
+                url = resolved
+            # else: fall through; the open will fail -> worker retries/backoff
         cap = cv2.VideoCapture(
-            source,
+            url,
             cv2.CAP_FFMPEG,
-            [cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 8000, cv2.CAP_PROP_READ_TIMEOUT_MSEC, 5000],
+            [cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 15000, cv2.CAP_PROP_READ_TIMEOUT_MSEC, 10000],
         )
         # Keep the internal buffer tiny so we decode the freshest frame.
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -111,6 +123,7 @@ class CameraWorker:
         self.redlight = RedLightDetector()
         self.erratic = ErraticDriving()
         self.drift = DriftDetector()
+        self.emergency = EmergencyVehicleDetector()
         self.plate_reader = plates.PlateReader() if plates.enabled() else None
         self._logged_viol: set[tuple[int, str]] = set()  # (track_id, type) already logged
         self.emissions = EmissionAccumulator()
@@ -257,6 +270,7 @@ class CameraWorker:
             ew_speeds: list[float] = []
 
             ped_present = False  # a pedestrian in the roadway (crossing)
+            dir_by_id: dict[int, str] = {}  # track -> "ns"|"ew" (for alerts)
             for d in result.detections:
                 cx, cy = d.center
                 # Approach from operator zones, else left/right-of-centre fallback.
@@ -268,6 +282,7 @@ class CameraWorker:
                     d.approach = direction
 
                 if d.is_vehicle:
+                    dir_by_id[d.track_id] = "ns" if direction == "ns" else "ew"
                     # Real speed from ground-plane calibration, when available.
                     if scene.speed is not None:
                         d.speed_kmh = scene.speed.update(d.track_id, cx, cy, t_now)
@@ -298,6 +313,7 @@ class CameraWorker:
                 self.redlight.remove(rid)
                 self.erratic.remove(rid)
                 self.drift.remove(rid)
+                self.emergency.remove(rid)
                 if self.plate_reader is not None:
                     self.plate_reader.remove(rid)
                 for _vt in ("stopped_vehicle", "speeding", "wrong_way", "red_light", "reckless", "drift"):
@@ -329,12 +345,17 @@ class CameraWorker:
                 )
             # Reckless/erratic (weaving) — trajectory-based, advisory.
             eviol, reckless_ids = self.erratic.update(vehicles, t_now)
+            # Emergency vehicle: flashing blue/red light bar on a tracked
+            # vehicle. An ALERT for the operator (one-click preempt), never an
+            # automatic preemption — a colour heuristic must not move signals.
+            emergency_ids = self.emergency.update(frame, vehicles, t_now)
             # Drift / loss-of-control (lateral-G) — needs calibration for
             # real speed + world-metre curvature.
             dviol, drift_ids = [], set()
             if scene.calibration is not None:
                 world = [(d.track_id, *scene.calibration.to_ground(*d.center)) for d in vehicles]
                 dviol, drift_ids = self.drift.update(world, t_now)
+            emergency_dir = None  # which approach the emergency vehicle is on
             for d in result.detections:
                 d.stopped = d.track_id in stopped_ids
                 d.speeding = d.track_id in speeding_ids
@@ -342,6 +363,11 @@ class CameraWorker:
                 d.red_light = d.track_id in redlight_ids
                 d.reckless = d.track_id in reckless_ids
                 d.drift = d.track_id in drift_ids
+                d.emergency = d.track_id in emergency_ids
+                if d.emergency and emergency_dir is None:
+                    emergency_dir = (
+                        "east_west" if dir_by_id.get(d.track_id) == "ew" else "north_south"
+                    )
             violations = [
                 {"type": "stopped_vehicle", "track_id": i["track_id"], "seconds": i["seconds"]}
                 for i in incidents
@@ -454,6 +480,12 @@ class CameraWorker:
                     "incidents": incidents,
                     "emissions": self.emissions.stats(t_now),
                     "preemption": self.engine._preemption_active(),
+                    # Flashing-light emergency vehicle detected (operator alert;
+                    # direction suggests which approach to preempt).
+                    "emergency_vehicle": (
+                        {"direction": emergency_dir, "count": len(emergency_ids)}
+                        if emergency_ids else None
+                    ),
                     "transit": {"ns": ns["transit_present"], "ew": ew["transit_present"]},
                     "pedestrian": {"present": ped_present, "clearance_hold": self.engine._ped_hold_active},
                     "decision": {

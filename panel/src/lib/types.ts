@@ -82,6 +82,7 @@ export interface FrameEvent {
   violations: Violation[];
   emissions: Emissions | null;
   preemption: "north_south" | "east_west" | null;
+  emergency_vehicle: { direction: "north_south" | "east_west"; count: number } | null;
   transit: { ns: boolean; ew: boolean };
   pedestrian: { present: boolean; clearance_hold: boolean };
   approaches: { ns: ApproachStat; ew: ApproachStat };
