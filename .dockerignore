@@ -44,3 +44,7 @@ experiments/
 scratchpad/
 *.md
 !README.md
+
+# panel-gateway image bakes in these weights (exceptions to the excludes above)
+!yolov8n.pt
+!models/license_plate_training/outputs/license_plate_model/weights/best.pt

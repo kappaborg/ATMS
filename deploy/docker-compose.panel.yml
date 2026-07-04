@@ -1,0 +1,38 @@
+# ATMS Panel Gateway — single-node deployment.
+#
+#   docker compose -f deploy/docker-compose.panel.yml up -d --build
+#
+# Then point the desktop app (or a browser client) at http://<host>:8090.
+# SECURITY: the container is network-reachable — configure operators below.
+
+services:
+  panel-gateway:
+    build:
+      context: ..
+      dockerfile: services/panel-gateway/Dockerfile
+    image: atms-panel-gateway
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    volumes:
+      - atms-panel-data:/data
+      # Optional: expose recorded videos to the FILE camera source:
+      # - /path/to/videos:/videos:ro
+    environment:
+      # --- access control (REQUIRED for network deployments) ---
+      # PANEL_USERS: "chief:admin:sha256:<hex>,op1:operator:pw,view:viewer:pw"
+      # PANEL_AUTH_SECRET: "change-me-32-chars-minimum"
+      # --- region / features ---
+      PANEL_PLATE_COUNTRY: "ba"
+      PANEL_READ_PLATES: "1"
+      PANEL_ALWAYS_RECORD: "1"      # keep detecting with no viewer attached
+      PANEL_RECORD_FPS: "6"
+      PANEL_VIOLATION_RETENTION_DAYS: "30"
+      # PANEL_SPEED_LIMIT_KMH: "60"
+      # ATMS_STRICT_LIVE: "1"       # forbid file sources; live streams only
+      # --- full-ATMS integration (optional) ---
+      # KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      # PANEL_CONTROLLER_URLS: "1=http://traffic-controller:8010"
+
+volumes:
+  atms-panel-data:
