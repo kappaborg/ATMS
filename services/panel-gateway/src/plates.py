@@ -33,13 +33,14 @@ def enabled() -> bool:
 
 
 class PlateReader:
-    def __init__(self, model_path: str | None = None, max_per_frame: int = 1):
+    def __init__(self, model_path: str | None = None, max_per_frame: int = 1, max_tries: int = 6):
         self.model_path = model_path or os.getenv("PANEL_PLATE_MODEL", str(_DEFAULT_MODEL))
         self.max_per_frame = max_per_frame
+        self.max_tries = int(os.getenv("PANEL_PLATE_MAX_TRIES", str(max_tries)))
         self._model = None
         self._ocr = None
-        self._cache: dict[int, str] = {}   # track_id -> plate text
-        self._tried: set[int] = set()      # tracks we've already attempted
+        self._cache: dict[int, str] = {}     # track_id -> plate text (once read)
+        self._attempts: dict[int, int] = {}  # track_id -> read attempts so far
         self._budget = 0
 
     def _lazy(self) -> bool:
@@ -73,10 +74,12 @@ class PlateReader:
         tid = int(track_id)
         if tid in self._cache:
             return self._cache[tid]
-        if tid in self._tried or self._budget <= 0:
+        # Retry across frames (a plate may only be readable as the vehicle
+        # nears/clears), but bounded so OCR can't run unbounded per track.
+        if self._attempts.get(tid, 0) >= self.max_tries or self._budget <= 0:
             return None
         self._budget -= 1
-        self._tried.add(tid)
+        self._attempts[tid] = self._attempts.get(tid, 0) + 1
         if not self._lazy():
             return None
         try:
@@ -99,7 +102,9 @@ class PlateReader:
                 return None
             texts = self._ocr.readtext(np.ascontiguousarray(plate_img), detail=0)
             plate = _PLATE_RE.sub("", "".join(texts).upper())
-            if len(plate) >= 4:  # ignore junk reads
+            # Plausible-plate sanity: 4-10 alphanumerics rejects garbled multi-
+            # region reads (real plate validation is country-specific).
+            if 4 <= len(plate) <= 10:
                 self._cache[tid] = plate
                 return plate
         except Exception as e:  # noqa: BLE001 — plate reading is best-effort
@@ -108,4 +113,4 @@ class PlateReader:
 
     def remove(self, track_id: int) -> None:
         self._cache.pop(track_id, None)
-        self._tried.discard(track_id)
+        self._attempts.pop(track_id, None)

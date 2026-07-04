@@ -291,6 +291,58 @@ async def camera_report(camera_id: str, format: str = "csv", _: Principal = _VIE
     )
 
 
+@app.get("/violations")
+async def list_violations(
+    hours: float = 24.0, camera_id: str | None = None, type: str | None = None,
+    limit: int = 500, _: Principal = _VIEWER,
+) -> dict:
+    """The persisted violation evidence log (type, plate, detail, snapshot)."""
+    import time as _time
+
+    import violations_log
+
+    hours = max(0.0, min(hours, 24 * 366))
+    now = int(_time.time())
+    rows = violations_log.get_log().query(
+        now - int(hours * 3600), now, camera_id, type, min(max(limit, 1), 2000)
+    )
+    return {"violations": rows}
+
+
+@app.get("/violations/{vid}/snapshot")
+async def violation_snapshot(vid: int, _: Principal = _VIEWER):
+    """The evidence snapshot image for a violation."""
+    import violations_log
+
+    path = violations_log.get_log().snapshot_path(vid)
+    if not path or not Path(path).is_file():
+        raise HTTPException(status_code=404, detail="no snapshot")
+    return Response(content=Path(path).read_bytes(), media_type="image/jpeg")
+
+
+@app.get("/violations/export")
+async def export_violations(hours: float = 168.0, _: Principal = _VIEWER):
+    """CSV export of the violation log (for enforcement / audit)."""
+    import csv
+    import io
+    import time as _time
+
+    import violations_log
+
+    hours = max(0.0, min(hours, 24 * 366))
+    now = int(_time.time())
+    rows = violations_log.get_log().query(now - int(hours * 3600), now, None, None, 5000)
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(["id", "timestamp_epoch", "camera_id", "intersection_id", "track_id",
+                "type", "plate", "detail", "has_snapshot"])
+    for r in rows:
+        w.writerow([r["id"], r["ts"], r["camera_id"], r["intersection_id"], r["track_id"],
+                    r["type"], r["plate"] or "", r["detail"], r["has_snapshot"]])
+    return Response(content=out.getvalue(), media_type="text/csv",
+                    headers={"Content-Disposition": 'attachment; filename="atms-violations.csv"'})
+
+
 @app.get("/intersections")
 async def list_intersections(_: Principal = _VIEWER) -> list[dict]:
     """Network overview: every intersection with its cameras and the

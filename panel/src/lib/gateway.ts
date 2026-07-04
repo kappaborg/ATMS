@@ -214,6 +214,46 @@ export async function getHistory(camera_id: string, hours: number): Promise<Hist
   return (await r.json()).totals;
 }
 
+export interface ViolationRecord {
+  id: number;
+  ts: number;
+  camera_id: string;
+  intersection_id: string;
+  track_id: number;
+  type: string;
+  plate: string | null;
+  detail: Record<string, unknown>;
+  has_snapshot: boolean;
+}
+
+export async function getViolations(hours = 24, camera_id?: string, type?: string): Promise<ViolationRecord[]> {
+  const q = new URLSearchParams({ hours: String(hours) });
+  if (camera_id) q.set("camera_id", camera_id);
+  if (type) q.set("type", type);
+  const r = await fetch(`${BASE}/violations?${q}`, { headers: authHeaders() });
+  if (!r.ok) return [];
+  return (await r.json()).violations;
+}
+
+/** Snapshot image URL (token passed as query since <img> can't set headers). */
+export function violationSnapshotUrl(id: number): string {
+  return `${BASE}/violations/${id}/snapshot${TOKEN ? `?token=${encodeURIComponent(TOKEN)}` : ""}`;
+}
+
+export async function exportViolations(): Promise<void> {
+  const r = await fetch(`${BASE}/violations/export`, { headers: authHeaders() });
+  if (!r.ok) throw new Error(`export ${r.status}`);
+  const blob = new Blob([await r.text()], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "atms-violations.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function health(): Promise<boolean> {
   try {
     const r = await fetch(`${BASE}/health`);
