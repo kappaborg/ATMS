@@ -36,6 +36,7 @@ from behavior import DriftDetector, DriverBehavior, ErraticDriving, RedLightDete
 from emissions import EmissionAccumulator  # noqa: E402
 from incidents import IncidentDetector  # noqa: E402
 import plates  # noqa: E402
+import violations_log  # noqa: E402
 from report import SessionReport  # noqa: E402
 from scene import SceneConfig  # noqa: E402
 
@@ -46,6 +47,16 @@ HISTORY_FLUSH_S = float(os.getenv("PANEL_HISTORY_FLUSH_S", "60"))
 # deployment turns this on so history/alerts never have gaps.
 ALWAYS_RECORD = os.getenv("PANEL_ALWAYS_RECORD", "").lower() in ("1", "true", "yes")
 RECORD_FPS = float(os.getenv("PANEL_RECORD_FPS", "5"))
+
+
+def _snapshot_dir() -> str:
+    d = os.getenv("PANEL_VIOLATIONS_DIR")
+    if not d:
+        state = os.getenv("PANEL_STATE_FILE")
+        base = os.path.dirname(os.path.abspath(state)) if state else "."
+        d = os.path.join(base or ".", "violation_snaps")
+    os.makedirs(d, exist_ok=True)
+    return d
 
 _INFER_LOCK = threading.Lock()
 
@@ -101,6 +112,7 @@ class CameraWorker:
         self.erratic = ErraticDriving()
         self.drift = DriftDetector()
         self.plate_reader = plates.PlateReader() if plates.enabled() else None
+        self._logged_viol: set[tuple[int, str]] = set()  # (track_id, type) already logged
         self.emissions = EmissionAccumulator()
         self.report = SessionReport(cam_id)
         self._prev_t: float | None = None
@@ -124,6 +136,31 @@ class CameraWorker:
         self._stop.set()
         if self._thread:
             self._thread.join(timeout=3.0)
+
+    def _log_violation(self, viol: dict, bbox, frame, t_now: float) -> None:
+        """Persist one violation to the evidence log with a cropped snapshot."""
+        snap_path = None
+        try:
+            if bbox is not None:
+                h, w = frame.shape[:2]
+                pad = 24
+                x1, y1 = max(0, int(bbox[0]) - pad), max(0, int(bbox[1]) - pad)
+                x2, y2 = min(w, int(bbox[2]) + pad), min(h, int(bbox[3]) + pad)
+                crop = frame[y1:y2, x1:x2]
+                if crop.size:
+                    fn = f"{int(t_now)}_{self.cam_id}_{viol['track_id']}_{viol['type']}.jpg"
+                    snap_path = os.path.join(_snapshot_dir(), fn)
+                    cv2.imwrite(snap_path, crop)
+        except Exception:  # noqa: BLE001 — snapshot is best-effort
+            snap_path = None
+        detail = {k: v for k, v in viol.items() if k not in ("type", "track_id", "plate")}
+        try:
+            violations_log.get_log().record(
+                int(t_now), self.cam_id, self.intersection_id, viol["track_id"],
+                viol["type"], viol.get("plate"), detail, snap_path,
+            )
+        except Exception:  # noqa: BLE001 — logging must never break the loop
+            pass
 
     def _flush_history(self, t_now: float) -> None:
         """Every HISTORY_FLUSH_S, persist the metrics accrued in the interval
@@ -263,6 +300,8 @@ class CameraWorker:
                 self.drift.remove(rid)
                 if self.plate_reader is not None:
                     self.plate_reader.remove(rid)
+                for _vt in ("stopped_vehicle", "speeding", "wrong_way", "red_light", "reckless", "drift"):
+                    self._logged_viol.discard((rid, _vt))
 
             # Unified violation detection: stopped (incident) + speeding +
             # wrong-way, all flagged on the detections and merged into one list
@@ -308,11 +347,12 @@ class CameraWorker:
                 for i in incidents
             ] + bviol + rlviol + eviol + dviol
 
+            bbox_by_id = {d.track_id: d.bbox for d in result.detections} if violations else {}
+
             # License-plate capture for flagged violators (enforcement evidence).
             # Only for moving-vehicle violations (not stalls); capped + cached.
             if self.plate_reader is not None and violations:
                 self.plate_reader.begin_frame()
-                bbox_by_id = {d.track_id: d.bbox for d in result.detections}
                 for viol in violations:
                     if viol["type"] == "stopped_vehicle":
                         continue
@@ -322,6 +362,14 @@ class CameraWorker:
                         plate = self.plate_reader.read(frame, bbox_by_id[tid], tid)
                     if plate:
                         viol["plate"] = plate
+
+            # Evidence log: persist each DISTINCT violation once (with a snapshot).
+            for viol in violations:
+                key = (viol["track_id"], viol["type"])
+                if key in self._logged_viol:
+                    continue
+                self._logged_viol.add(key)
+                self._log_violation(viol, bbox_by_id.get(viol["track_id"]), frame, t_now)
 
             # Carbon: accumulate real CO2 from measured speed (needs calibration).
             dt = (t_now - self._prev_t) if self._prev_t is not None else 0.0

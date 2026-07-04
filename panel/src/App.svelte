@@ -9,13 +9,14 @@
   import CalibrationOverlay from "./components/CalibrationOverlay.svelte";
   import NetworkOverview from "./components/NetworkOverview.svelte";
   import CorridorsPanel from "./components/CorridorsPanel.svelte";
+  import ViolationsLog from "./components/ViolationsLog.svelte";
   import Login from "./components/Login.svelte";
 
   let events = $state<Record<string, FrameEvent>>({});
   let cameras = $state<CameraInfo[]>([]);
   let intersections = $state<IntersectionInfo[]>([]);
   let corridors = $state<Corridor[]>([]);
-  let view = $state<"overview" | "cameras">("cameras");
+  let view = $state<"overview" | "cameras" | "violations">("cameras");
   let activeIntersection = $state<string | null>(null);
   let connected = $state(false);
   let selected = $state<string | null>(null);
@@ -113,6 +114,7 @@
     <div class="viewtabs">
       <button class:on={view === "overview"} onclick={() => { view = "overview"; activeIntersection = null; }}>Network</button>
       <button class:on={view === "cameras"} onclick={() => (view = "cameras")}>Cameras</button>
+      <button class:on={view === "violations"} onclick={() => (view = "violations")}>Violations</button>
       {#if view === "cameras" && activeIntersection}
         <span class="crumb">Intersection {activeIntersection}
           <button class="clr" onclick={() => (activeIntersection = null)}>× all</button>
@@ -130,6 +132,8 @@
       <NetworkOverview {intersections} {events} onselect={openIntersection} />
       <CorridorsPanel {corridors} {intersections} {canOperate} onchange={refresh} />
     </div>
+  {:else if view === "violations"}
+    <ViolationsLog />
   {:else}
   <div class="body">
     <div class="grid" style="--cols:{shownCameras.length <= 1 ? 1 : 2}">

@@ -21,23 +21,29 @@ def test_cache_returned_without_reload():
     assert r.read(None, (0, 0, 10, 10), 7) == "ABC123"
 
 
-def test_per_frame_budget_and_tried(monkeypatch):
+def test_per_frame_budget(monkeypatch):
     r = plates.PlateReader(max_per_frame=1)
     calls = []
-    monkeypatch.setattr(r, "_lazy", lambda: (calls.append(1), False)[1])  # pretend models unavailable
+    monkeypatch.setattr(r, "_lazy", lambda: (calls.append(1), False)[1])  # models unavailable
     r.begin_frame()
-    r.read(None, (0, 0, 10, 10), 1)  # consumes the budget, attempts _lazy
-    r.read(None, (0, 0, 10, 10), 2)  # budget exhausted -> no _lazy call
+    r.read(None, (0, 0, 10, 10), 1)  # consumes the frame's budget
+    r.read(None, (0, 0, 10, 10), 2)  # budget exhausted -> no attempt
     assert len(calls) == 1
-    # track 1 is marked tried -> not retried next frame within budget
-    r.begin_frame()
-    r.read(None, (0, 0, 10, 10), 1)
-    assert len(calls) == 1
+
+
+def test_attempts_bounded_by_max_tries(monkeypatch):
+    r = plates.PlateReader(max_per_frame=10, max_tries=3)
+    calls = []
+    monkeypatch.setattr(r, "_lazy", lambda: (calls.append(1), False)[1])
+    for _ in range(10):  # same track over 10 frames
+        r.begin_frame()
+        r.read(None, (0, 0, 10, 10), 1)
+    assert len(calls) == 3  # retried, but capped at max_tries
 
 
 def test_remove_clears_state():
     r = plates.PlateReader()
     r._cache[3] = "XYZ"
-    r._tried.add(3)
+    r._attempts[3] = 2
     r.remove(3)
-    assert r.cached(3) is None and 3 not in r._tried
+    assert r.cached(3) is None and 3 not in r._attempts
