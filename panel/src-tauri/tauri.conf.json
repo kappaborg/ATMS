@@ -21,7 +21,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: http://ipc.localhost ws://127.0.0.1:8090 http://127.0.0.1:8090 ws://localhost:8090 http://localhost:8090 ws://localhost:1420"
+      "csp": "default-src 'self'; img-src 'self' blob: data: http://127.0.0.1:8090 http://localhost:8090; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: http://ipc.localhost ws://127.0.0.1:8090 http://127.0.0.1:8090 ws://localhost:8090 http://localhost:8090 ws://localhost:1420"
     }
   },
   "bundle": {
