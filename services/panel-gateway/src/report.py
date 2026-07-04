@@ -49,6 +49,10 @@ class SessionReport:
                 }
             )
 
+    @property
+    def incident_count(self) -> int:
+        return len(self._incident_ids)
+
     def summary(self, emissions: dict | None, now: float) -> dict:
         dur = round(now - self.start) if self.start is not None else 0
         e = emissions or {}
@@ -66,7 +70,7 @@ class SessionReport:
             "savings_ratio": e.get("savings_ratio", ""),
         }
 
-    def to_csv(self, emissions: dict | None, now: float) -> str:
+    def to_csv(self, emissions: dict | None, now: float, history_totals: dict | None = None) -> str:
         out = io.StringIO()
         out.write(f"# ATMS Panel session report — camera {self.camera_id}\n")
         out.write("# Measured values are real; estimated_saved_kg is a model "
@@ -75,6 +79,12 @@ class SessionReport:
         w.writerow(["metric", "value"])
         for k, v in self.summary(emissions, now).items():
             w.writerow([k, v])
+        # Persisted historical totals (survive restarts) — the "this month" view.
+        if history_totals:
+            out.write("\n")
+            w.writerow(["historical_window", "vehicles", "co2_kg", "saved_kg", "incidents"])
+            for label, tot in history_totals.items():
+                w.writerow([label, tot["vehicles"], tot["co2_kg"], tot["saved_kg"], tot["incidents"]])
         snaps = list(self._snapshots)
         if snaps:
             out.write("\n")

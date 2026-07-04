@@ -75,6 +75,15 @@ class EmissionAccumulator:
             self.total_co2_g += g
             self.vehicle_km += dist_km
 
+    def cumulative(self) -> dict:
+        """Raw cumulative counters (grams, unique vehicles) since session start
+        — used to compute per-interval deltas for the history store."""
+        return {
+            "co2_g": self.total_co2_g,
+            "saved_g": self.idle_co2_g * self.savings_ratio,
+            "vehicles": len(self._seen),
+        }
+
     def stats(self, now: float) -> dict | None:
         if self._start is None:
             return None  # nothing measured yet (uncalibrated / no vehicles)
