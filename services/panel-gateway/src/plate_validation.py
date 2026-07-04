@@ -20,6 +20,15 @@ import re
 _PATTERNS: dict[str, list[str]] = {
     # Fallback: 4-10 alphanumerics (rejects garble, accepts most real plates).
     "generic": [r"[A-Z0-9]{4,10}"],
+    # Bosnia & Herzegovina (2009 unified): A00-A-000 -> L DD L DDD. The unified
+    # plate uses only the 7 letters common to Latin+Cyrillic (A,E,J,K,M,O,T);
+    # the strict pattern is first (best for disambiguation), then a looser BiH
+    # form, then an EU-wide fallback so mixed/EU footage still validates.
+    "ba": [
+        r"[AEJKMOT][0-9]{2}[AEJKMOT][0-9]{3}",
+        r"[A-Z][0-9]{2}[A-Z][0-9]{3}",
+        r"[A-Z0-9]{5,9}",
+    ],
     # UK current: LL DD LLL ; older: L D{1,3} LLL and LLL D{1,3} L
     "uk": [r"[A-Z]{2}[0-9]{2}[A-Z]{3}", r"[A-Z][0-9]{1,3}[A-Z]{3}", r"[A-Z]{3}[0-9]{1,3}[A-Z]"],
     # US: state-dependent; general 5-8 alphanumerics.
@@ -42,7 +51,8 @@ _TO_LETTER = {"0": "O", "1": "I", "2": "Z", "5": "S", "8": "B", "6": "G"}
 
 
 def country() -> str:
-    return os.getenv("PANEL_PLATE_COUNTRY", "generic").lower()
+    # Default: Bosnia & Herzegovina (with an EU-wide fallback in its patterns).
+    return os.getenv("PANEL_PLATE_COUNTRY", "ba").lower()
 
 
 def _patterns(c: str | None = None) -> list[str]:

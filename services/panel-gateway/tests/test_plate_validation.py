@@ -15,6 +15,20 @@ def test_generic_rejects_garble_and_accepts_plates(monkeypatch):
     assert not pv.is_valid("")
 
 
+def test_default_is_bosnia(monkeypatch):
+    monkeypatch.delenv("PANEL_PLATE_COUNTRY", raising=False)
+    assert pv.country() == "ba"
+
+
+def test_bosnia_format(monkeypatch):
+    monkeypatch.setenv("PANEL_PLATE_COUNTRY", "ba")
+    assert pv.is_valid("A12K345")   # L DD L DDD (unified BiH letters)
+    assert pv.is_valid("E01M234")
+    assert pv.is_valid("GX15OGJ")   # EU fallback -> mixed/UK test footage still validates
+    assert not pv.is_valid("AB")    # too short
+    assert not pv.is_valid("DAKELANEMIOR")  # garbled OCR
+
+
 def test_uk_format(monkeypatch):
     monkeypatch.setenv("PANEL_PLATE_COUNTRY", "uk")
     assert pv.is_valid("AB12CDE")           # current LL DD LLL
