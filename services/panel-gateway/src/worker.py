@@ -117,7 +117,14 @@ class CameraWorker:
         # Per-camera SAHI: sliced inference for aerial/small-object views
         # (slower); toggled at runtime via POST /cameras/{id}/sahi.
         self.sahi_enabled = sahi
-        self.tracker = SimpleByteTracker()
+        # New tracks are only spawned from detections above `high_thresh`. On
+        # dim/small-object scenes (night, distant motorcycles) real objects are
+        # detected at 0.3-0.5 and would be seen-but-never-counted at the stock
+        # 0.5. PANEL_TRACK_NEW lowers the new-track bar so they get counted.
+        self.tracker = SimpleByteTracker(
+            track_thresh=float(os.getenv("PANEL_TRACK_LOW", "0.25")),
+            high_thresh=float(os.getenv("PANEL_TRACK_NEW", "0.35")),
+        )
         # Predictive congestion on: the panel's per-camera decision reason
         # then shows "Congestion forecast …" (disable with ATMS_USE_PREDICTIONS=0).
         self.engine = AIDecisionEngine(
@@ -223,7 +230,11 @@ class CameraWorker:
                 x2, y2 = min(w, int(bbox[2]) + pad), min(h, int(bbox[3]) + pad)
                 crop = frame[y1:y2, x1:x2]
                 if crop.size:
-                    fn = f"{int(t_now)}_{self.cam_id}_{viol['track_id']}_{viol['type']}.jpg"
+                    # Defence in depth: cam_id is already charset-validated at
+                    # the API, but basename() guarantees the filename cannot
+                    # escape the snapshot directory even if that ever changes.
+                    safe_cam = os.path.basename(str(self.cam_id))
+                    fn = f"{int(t_now)}_{safe_cam}_{viol['track_id']}_{viol['type']}.jpg"
                     snap_path = os.path.join(_snapshot_dir(), fn)
                     cv2.imwrite(snap_path, crop)
         except Exception:  # noqa: BLE001 — snapshot is best-effort

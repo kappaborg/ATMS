@@ -57,3 +57,25 @@ def test_set_sahi_toggles_and_unknown_raises():
 
 def test_empty_has_no_intersections():
     assert _manager_with({}).intersections() == []
+
+
+def test_add_rejects_path_traversal_camera_id():
+    import pytest
+
+    m = _manager_with({})
+    m._persist = lambda: None
+    m._detector_lazy = lambda: None
+    m.hub = type("H", (), {"_frames": {}})()
+    for bad in ["../../etc/passwd", "a/b", "..", "x" * 65, "a b", ""]:
+        with pytest.raises(ValueError):
+            m.add(bad, "videos/x.mp4")
+
+
+def test_add_rejects_bad_intersection_id():
+    import pytest
+
+    m = _manager_with({})
+    m._persist = lambda: None
+    m._detector_lazy = lambda: None
+    with pytest.raises(ValueError):
+        m.add("cam1", "videos/x.mp4", intersection_id="../../evil")

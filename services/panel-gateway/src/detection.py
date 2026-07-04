@@ -73,11 +73,17 @@ class FrameResult:
 
 
 def _resolve_model_path() -> str | None:
+    # PANEL_MODEL lets a deployment trade speed for accuracy without code
+    # changes: yolov8n (fast, default) < yolov8s < yolov8m (best small/night
+    # detection). Accepts a bare name (ultralytics fetches) or a full path.
+    name = os.getenv("PANEL_MODEL", "yolov8n.pt")
+    if os.path.isabs(name) and os.path.exists(name):
+        return name
     root = Path(__file__).resolve().parents[3]
-    for p in (root / "models/yolov8n.pt", root / "yolov8n.pt"):
+    for p in (root / "models" / name, root / name):
         if p.exists():
             return str(p)
-    return "yolov8n.pt"  # ultralytics will fetch if network is available
+    return name  # ultralytics will fetch by name if network is available
 
 
 class Detector:
@@ -85,7 +91,11 @@ class Detector:
     camera workers; ultralytics inference is called under the worker's own
     lock to keep the model single-threaded)."""
 
-    def __init__(self, confidence: float = 0.35, model_path: str | None = None):
+    def __init__(self, confidence: float | None = None, model_path: str | None = None):
+        # PANEL_CONFIDENCE tunes recall vs precision globally (lower = detect
+        # more, e.g. dim/small night objects, at some false-positive cost).
+        if confidence is None:
+            confidence = float(os.getenv("PANEL_CONFIDENCE", "0.35"))
         self.confidence = confidence
         self.model = None
         self._model_path = model_path or _resolve_model_path()
