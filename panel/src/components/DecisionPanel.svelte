@@ -71,6 +71,11 @@
   {#if event?.preemption}
     <div class="preempt-banner">🚨 EMERGENCY PREEMPTION ACTIVE — {event.preemption === "north_south" ? "N–S" : "E–W"} cleared</div>
   {/if}
+  {#if event?.pedestrian?.clearance_hold}
+    <div class="ped-banner">🚶 Holding all-red — pedestrian in crossing</div>
+  {:else if event?.pedestrian?.present}
+    <div class="ped-note">🚶 Pedestrian detected in roadway</div>
+  {/if}
   {#if canOperate && camera_id}
     <div class="preempt-ctl">
       <span>🚨 Emergency preempt</span>
@@ -162,6 +167,12 @@
     background: #e74c3c; color: #fff; font-weight: 700; font-size: 0.8rem;
     animation: ppulse 1s ease-in-out infinite; box-shadow: 0 0 16px rgba(231,76,60,0.7);
   }
+  .ped-banner {
+    margin: 10px 16px 0; padding: 8px 12px; border-radius: 6px; text-align: center;
+    background: #f39c12; color: #1a1206; font-weight: 700; font-size: 0.78rem;
+    animation: ppulse 1.1s ease-in-out infinite;
+  }
+  .ped-note { margin: 10px 16px 0; padding: 6px 12px; border-radius: 6px; background: #1c2230; color: #f0c674; font-size: 0.74rem; text-align: center; }
   @keyframes ppulse { 0%,100% { opacity: 1; } 50% { opacity: 0.65; } }
   .preempt-ctl { display: flex; align-items: center; justify-content: space-between; margin: 10px 16px 0; padding: 8px 12px; background: #1a1113; border: 1px solid #3a1c1c; border-radius: 8px; font-size: 0.74rem; color: #e6a4a4; }
   .preempt-ctl .pbtns { display: flex; gap: 6px; }
