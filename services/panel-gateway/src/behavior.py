@@ -29,6 +29,7 @@ class DriverBehavior:
         wrong_way_frames: int = 5,
         min_move_px: float = 2.0,
         oppose_dot: float = -0.3,  # cos < -0.3  ->  > ~107° from the flow
+        speeding_frames: int | None = None,
     ):
         self.speed_limit_kmh = (
             speed_limit_kmh
@@ -38,9 +39,17 @@ class DriverBehavior:
         self.wrong_way_frames = wrong_way_frames
         self.min_move_px = min_move_px
         self.oppose_dot = oppose_dot
+        # SUSTAINED speeding only: a real speeder is over the limit for many
+        # consecutive measurements; a single-frame spike (jitter/association
+        # noise) is not a violation.
+        self.speeding_frames = (
+            speeding_frames if speeding_frames is not None
+            else int(os.getenv("PANEL_SPEEDING_FRAMES", "3"))
+        )
         self._pos: dict[int, tuple[float, float]] = {}
         self._flow: dict[str, tuple[float, float]] = {}  # approach -> unit flow vector
         self._streak: dict[int, int] = {}  # consecutive against-flow frames
+        self._speed_streak: dict[int, int] = {}  # consecutive over-limit frames
 
     def update(
         self, vehicles: list, t: float, wrong_way: bool = True
@@ -63,13 +72,17 @@ class DriverBehavior:
             live.add(tid)
             cx, cy = v.center
 
-            # --- speeding ---
+            # --- speeding (sustained over consecutive measurements) ---
             if v.speed_kmh is not None and v.speed_kmh > self.speed_limit_kmh:
-                speeding.add(tid)
-                violations.append({
-                    "type": "speeding", "track_id": tid,
-                    "speed_kmh": round(v.speed_kmh, 1), "limit_kmh": self.speed_limit_kmh,
-                })
+                self._speed_streak[tid] = self._speed_streak.get(tid, 0) + 1
+                if self._speed_streak[tid] >= self.speeding_frames:
+                    speeding.add(tid)
+                    violations.append({
+                        "type": "speeding", "track_id": tid,
+                        "speed_kmh": round(v.speed_kmh, 1), "limit_kmh": self.speed_limit_kmh,
+                    })
+            elif v.speed_kmh is not None:
+                self._speed_streak[tid] = 0
 
             # --- wrong-way (direction vs learned per-approach flow) ---
             if not wrong_way:
@@ -108,11 +121,13 @@ class DriverBehavior:
             if tid not in live:
                 self._pos.pop(tid, None)
                 self._streak.pop(tid, None)
+                self._speed_streak.pop(tid, None)
         return violations, speeding, wrong
 
     def remove(self, track_id: int) -> None:
         self._pos.pop(track_id, None)
         self._streak.pop(track_id, None)
+        self._speed_streak.pop(track_id, None)
 
 
 class ErraticDriving:
@@ -142,6 +157,7 @@ class ErraticDriving:
         self.cooldown_s = cooldown_s
         self._last_pos: dict[int, tuple[float, float]] = {}
         self._vecs: dict[int, deque] = {}
+        self._step_pos: dict[int, deque] = {}  # position at each recorded step
         self._flagged_until: dict[int, float] = {}
 
     def update(self, vehicles: list, t: float) -> tuple[list[dict], set[int]]:
@@ -167,7 +183,14 @@ class ErraticDriving:
             self._last_pos[tid] = cur
             dq = self._vecs.setdefault(tid, deque(maxlen=self.window))
             dq.append((dx / mag, dy / mag))
+            pq = self._step_pos.setdefault(tid, deque(maxlen=self.window + 1))
+            pq.append(cur)
             if len(dq) < self.window:
+                continue
+            # PROGRESSION gate: a weaving driver still advances; a parked car
+            # whose box oscillates (occlusion flicker) has ~zero NET travel.
+            net = math.hypot(pq[-1][0] - pq[0][0], pq[-1][1] - pq[0][1])
+            if net < 0.3 * self.step_px * self.window:
                 continue
             # Count sign changes of the turn direction, over SIGNIFICANT turns
             # only. Weaving -> many reversals; a straight path or a single turn
@@ -189,12 +212,14 @@ class ErraticDriving:
             if tid not in live:
                 self._last_pos.pop(tid, None)
                 self._vecs.pop(tid, None)
+                self._step_pos.pop(tid, None)
                 self._flagged_until.pop(tid, None)
         return violations, ids
 
     def remove(self, track_id: int) -> None:
         self._last_pos.pop(track_id, None)
         self._vecs.pop(track_id, None)
+        self._step_pos.pop(track_id, None)
         self._flagged_until.pop(track_id, None)
 
 
@@ -237,9 +262,14 @@ class DriftDetector:
                 ids.add(tid)
             dq = self._pts.setdefault(tid, deque(maxlen=3))
             if dq:
-                lx, ly, _ = dq[-1]
-                if math.hypot(X - lx, Y - ly) < self.step_m:
+                lx, ly, lt = dq[-1]
+                step = math.hypot(X - lx, Y - ly)
+                if step < self.step_m:
                     continue  # not moved a full step — skip (de-jitter)
+                # Teleport: an impossible ground-plane jump (ID switch) —
+                # reset the trajectory rather than compute a monster lateral-G.
+                if step / max(t - lt, 1e-3) > 70.0:  # > 250 km/h between samples
+                    dq.clear()
             dq.append((X, Y, t))
             if len(dq) < 3:
                 continue
@@ -287,9 +317,12 @@ class RedLightDetector:
     is RED. Works in image space (no ground-plane calibration needed) — it just
     needs the stop-line drawn and the current signal phase."""
 
-    def __init__(self, cooldown_s: float = 3.0, min_move_px: float = 3.0):
+    def __init__(self, cooldown_s: float = 3.0, min_move_px: float = 3.0, max_move_px: float = 240.0):
         self.cooldown_s = cooldown_s
         self.min_move_px = min_move_px
+        # A motion segment longer than this is a track teleport (ID switch /
+        # occlusion jump), not a vehicle crossing the line — ignore it.
+        self.max_move_px = max_move_px
         self._pos: dict[int, tuple[float, float]] = {}
         self._flagged_until: dict[int, float] = {}
 
@@ -309,8 +342,9 @@ class RedLightDetector:
                 ids.add(tid)  # keep marked briefly so the operator sees it
             if prev is None:
                 continue
-            if math.hypot(cur[0] - prev[0], cur[1] - prev[1]) < self.min_move_px:
-                continue
+            step = math.hypot(cur[0] - prev[0], cur[1] - prev[1])
+            if step < self.min_move_px or step > self.max_move_px:
+                continue  # too small to judge / too large to be real motion
             for sl in stop_lines:
                 p3, p4 = sl["points"]
                 if _segments_cross(prev, cur, p3, p4) and is_red(sl["approach"]):
