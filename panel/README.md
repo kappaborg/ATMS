@@ -207,6 +207,15 @@ studies report ~10-30% idle/delay reduction) — never a raw measurement. Tune:
   `PANEL_RATE_LIMIT` (default `30/60` = 30 requests / 60 s). Over-limit
   returns `429` (REST) or closes the socket with `1013`.
 
+## Unattended monitoring
+
+By default a camera idles at ~0% CPU when no operator is watching (video +
+pipeline paused). For a government/24-7 deployment set `PANEL_ALWAYS_RECORD=1`:
+the detection/decision/history pipeline keeps running even with no viewer —
+throttled to `PANEL_RECORD_FPS` (default 5) and skipping video encoding — so
+history, incidents and the network overview never have gaps. Cameras then
+report status `recording`.
+
 ## Long-horizon history (persisted)
 
 The gateway persists per-interval metric deltas (vehicles, CO2, estimated

@@ -38,6 +38,12 @@ from report import SessionReport  # noqa: E402
 from scene import SceneConfig  # noqa: E402
 
 HISTORY_FLUSH_S = float(os.getenv("PANEL_HISTORY_FLUSH_S", "60"))
+# Unattended monitoring: keep the full pipeline (detection/decision/history)
+# running even with no operator watching, throttled to PANEL_RECORD_FPS and
+# skipping video encoding. Off by default (idle at ~0% CPU); a government
+# deployment turns this on so history/alerts never have gaps.
+ALWAYS_RECORD = os.getenv("PANEL_ALWAYS_RECORD", "").lower() in ("1", "true", "yes")
+RECORD_FPS = float(os.getenv("PANEL_RECORD_FPS", "5"))
 
 _INFER_LOCK = threading.Lock()
 
@@ -91,11 +97,12 @@ class CameraWorker:
         self.emissions = EmissionAccumulator()
         self.report = SessionReport(cam_id)
         self._prev_t: float | None = None
-        # Unique vehicles seen this session (calibration-independent, for history).
-        self._seen_vehicles: set[int] = set()
-        # History flush: last-flushed cumulative counters, to persist deltas.
+        # Distinct vehicle track-ids seen in the CURRENT history interval
+        # (cleared on each flush → bounded memory over a long session).
+        self._interval_veh_ids: set[int] = set()
+        # History flush: last-flushed cumulative CO2 counters, to persist deltas.
         self._hist_t: float | None = None
-        self._hist_prev = {"co2_g": 0.0, "saved_g": 0.0, "vehicles": 0, "incidents": 0}
+        self._hist_prev = {"co2_g": 0.0, "saved_g": 0.0, "incidents": 0}
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
         self.status = "starting"
@@ -114,23 +121,20 @@ class CameraWorker:
     def _flush_history(self, t_now: float) -> None:
         """Every HISTORY_FLUSH_S, persist the metrics accrued in the interval
         (deltas vs the last flush) so long-horizon totals survive restarts."""
-        def snapshot() -> dict:
-            cum = self.emissions.cumulative()
-            return {
-                "co2_g": cum["co2_g"],
-                "saved_g": cum["saved_g"],
-                "vehicles": len(self._seen_vehicles),  # all vehicles (not just calibrated)
-                "incidents": self.report.incident_count,
-            }
+        def cum_snapshot() -> dict:
+            c = self.emissions.cumulative()
+            return {"co2_g": c["co2_g"], "saved_g": c["saved_g"],
+                    "incidents": self.report.incident_count}
 
         if self._hist_t is None:
             self._hist_t = t_now
-            self._hist_prev = snapshot()
+            self._hist_prev = cum_snapshot()
+            self._interval_veh_ids.clear()
             return
         if t_now - self._hist_t < HISTORY_FLUSH_S:
             return
-        cur = snapshot()
-        d_veh = max(0, cur["vehicles"] - self._hist_prev["vehicles"])
+        cur = cum_snapshot()
+        d_veh = len(self._interval_veh_ids)  # distinct vehicles this interval
         d_co2 = max(0.0, cur["co2_g"] - self._hist_prev["co2_g"]) / 1000.0
         d_saved = max(0.0, cur["saved_g"] - self._hist_prev["saved_g"]) / 1000.0
         d_inc = max(0, cur["incidents"] - self._hist_prev["incidents"])
@@ -142,6 +146,7 @@ class CameraWorker:
             pass
         self._hist_prev = cur
         self._hist_t = t_now
+        self._interval_veh_ids.clear()  # bound memory: only one interval retained
 
     def _run(self) -> None:
         backoff = 0.5
@@ -162,16 +167,20 @@ class CameraWorker:
         frame_idx = 0
         fps_t0, fps_n = time.time(), 0
         while not self._stop.is_set():
-            # Idle when no client is watching: keep the capture warm (read and
-            # discard a frame at a low rate) but skip the expensive YOLO
-            # pipeline. A newly-connecting viewer resumes full processing within
-            # a frame. This makes an always-on gateway cheap.
-            if self.hub.viewer_count() == 0:
+            # No viewer: by default idle (keep the capture warm, skip the
+            # expensive YOLO pipeline) so an always-on gateway is cheap. With
+            # PANEL_ALWAYS_RECORD, instead keep monitoring/history alive but
+            # throttled to RECORD_FPS and without video encoding.
+            viewers = self.hub.viewer_count()
+            if viewers == 0 and not ALWAYS_RECORD:
                 self.status = "idle"
                 cap.read()
                 time.sleep(0.25)
                 continue
-            if self.status == "idle":
+            if viewers == 0:
+                self.status = "recording"
+                time.sleep(1.0 / max(RECORD_FPS, 0.1))
+            elif self.status in ("idle", "recording"):
                 self.status = "live"
 
             t_cap = time.time()
@@ -220,7 +229,7 @@ class CameraWorker:
                         d.speed_kmh = scene.speed.update(d.track_id, cx, cy, t_now)
                     bucket, speeds = (ns, ns_speeds) if direction == "ns" else (ew, ew_speeds)
                     bucket["vehicle_count"] += 1
-                    self._seen_vehicles.add(d.track_id)
+                    self._interval_veh_ids.add(d.track_id)
                     if d.label == "bus":
                         bucket["transit_present"] = True  # transit signal priority
                     if d.speed_kmh is not None:
@@ -277,12 +286,16 @@ class CameraWorker:
                 self.fps = fps_n / (time.time() - fps_t0)
                 fps_t0, fps_n = time.time(), 0
 
-            annotated = annotate(frame, result, decision.recommended_phase.value, self.fps)
-            ok_enc, buf = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            # Video encoding is only worth it when someone is watching; in
+            # record-only mode we skip it and just publish the data event
+            # (which feeds decisions, the network overview, and history).
+            if viewers > 0:
+                annotated = annotate(frame, result, decision.recommended_phase.value, self.fps)
+                ok_enc, buf = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                if ok_enc:
+                    self.hub.set_frame(self.cam_id, buf.tobytes())
             latency_ms = (time.time() - t_cap) * 1000.0
 
-            if ok_enc:
-                self.hub.set_frame(self.cam_id, buf.tobytes())
             self.hub.publish_event(
                 {
                     "type": "frame",
