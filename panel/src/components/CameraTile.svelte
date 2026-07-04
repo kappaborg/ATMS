@@ -82,9 +82,15 @@
         <span class="stat lat">{event.pipeline_latency_ms.toFixed(0)} ms</span>
       {/if}
     </div>
-    {#if event?.incidents?.length}
-      <div class="incident">⚠ {event.incidents.length === 1 ? "Stopped vehicle" : `${event.incidents.length} stopped vehicles`}
-        <span>#{event.incidents[0].track_id} · {event.incidents[0].seconds.toFixed(0)}s</span>
+    {#if event?.violations?.length}
+      <div class="violations">
+        {#each event.violations.slice(0, 3) as v}
+          <div class="vio {v.type}">
+            {#if v.type === "wrong_way"}⛔ WRONG-WAY <span>#{v.track_id}</span>
+            {:else if v.type === "speeding"}⚡ SPEEDING <span>#{v.track_id} · {v.speed_kmh?.toFixed(0)}/{v.limit_kmh} km/h</span>
+            {:else}⚠ STOPPED <span>#{v.track_id} · {v.seconds?.toFixed(0)}s</span>{/if}
+          </div>
+        {/each}
       </div>
     {/if}
     <button class="remove" title="Remove camera" onclick={() => removeCamera(camera_id)}>✕</button>
@@ -107,13 +113,16 @@
     border-radius: 4px; padding: 3px 8px; font-size: 0.68rem; cursor: pointer;
   }
   .placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: #667; font-size: 0.85rem; }
-  .incident {
-    position: absolute; top: 8px; left: 8px; display: flex; align-items: center; gap: 6px;
-    background: rgba(231,76,60,0.92); color: #fff; padding: 4px 10px; border-radius: 6px;
-    font-size: 0.74rem; font-weight: 600; box-shadow: 0 0 12px rgba(231,76,60,0.6);
+  .violations { position: absolute; top: 8px; left: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .vio {
+    display: flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 6px;
+    font-size: 0.72rem; font-weight: 700; color: #fff;
     animation: incpulse 1.2s ease-in-out infinite;
   }
-  .incident span { font-weight: 400; opacity: 0.85; }
+  .vio span { font-weight: 400; opacity: 0.85; }
+  .vio.stopped_vehicle { background: rgba(231,76,60,0.92); box-shadow: 0 0 12px rgba(231,76,60,0.6); }
+  .vio.wrong_way { background: rgba(200,0,200,0.92); box-shadow: 0 0 12px rgba(200,0,200,0.6); }
+  .vio.speeding { background: rgba(230,126,34,0.92); box-shadow: 0 0 12px rgba(230,126,34,0.5); }
   @keyframes incpulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
   .badge {
     position: absolute; left: 8px; bottom: 8px; display: flex; align-items: center; gap: 8px;

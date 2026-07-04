@@ -32,6 +32,7 @@ from ai_decision_system import AIDecisionEngine  # noqa: E402
 
 from detection import Detector, annotate, summarize, to_tracker_input  # noqa: E402
 import history  # noqa: E402
+from behavior import DriverBehavior  # noqa: E402
 from emissions import EmissionAccumulator  # noqa: E402
 from incidents import IncidentDetector  # noqa: E402
 from report import SessionReport  # noqa: E402
@@ -94,6 +95,7 @@ class CameraWorker:
         )
         self.scene = SceneConfig()  # calibration/zones applied at runtime
         self.incidents = IncidentDetector()
+        self.behavior = DriverBehavior()
         self.emissions = EmissionAccumulator()
         self.report = SessionReport(cam_id)
         self._prev_t: float | None = None
@@ -250,13 +252,26 @@ class CameraWorker:
                 if scene.speed is not None:
                     scene.speed.remove(rid)
                 self.incidents.remove(rid)
+                self.behavior.remove(rid)
 
-            # Incident detection: flag vehicles stopped mid-scene.
+            # Unified violation detection: stopped (incident) + speeding +
+            # wrong-way, all flagged on the detections and merged into one list
+            # so the frame overlay, the WS flags, and the aggregate agree.
             vehicles = [d for d in result.detections if d.is_vehicle]
             incidents, stopped_ids = self.incidents.update(vehicles, t_now)
+            # Wrong-way needs real approach zones (calibrated) — the crude
+            # left/right split isn't per-approach flow and would false-positive.
+            bviol, speeding_ids, wrong_ids = self.behavior.update(
+                vehicles, t_now, wrong_way=scene.zones is not None
+            )
             for d in result.detections:
-                if d.track_id in stopped_ids:
-                    d.stopped = True
+                d.stopped = d.track_id in stopped_ids
+                d.speeding = d.track_id in speeding_ids
+                d.wrong_way = d.track_id in wrong_ids
+            violations = [
+                {"type": "stopped_vehicle", "track_id": i["track_id"], "seconds": i["seconds"]}
+                for i in incidents
+            ] + bviol
 
             # Carbon: accumulate real CO2 from measured speed (needs calibration).
             dt = (t_now - self._prev_t) if self._prev_t is not None else 0.0
@@ -324,6 +339,10 @@ class CameraWorker:
                         "ew": {"vehicles": ew["vehicle_count"], "avg_speed_kmh": round(ew["average_velocity"], 1)},
                     },
                     "calibrated": self.scene.calibration is not None,
+                    # Unified driver/vehicle violations (stopped, speeding,
+                    # wrong-way). `incidents` kept as the stopped-only subset
+                    # for backward compatibility.
+                    "violations": violations,
                     "incidents": incidents,
                     "emissions": self.emissions.stats(t_now),
                     "preemption": self.engine._preemption_active(),
