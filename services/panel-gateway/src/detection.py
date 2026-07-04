@@ -87,7 +87,18 @@ class Detector:
     def __init__(self, confidence: float = 0.35, model_path: str | None = None):
         self.confidence = confidence
         self.model = None
-        self._load(model_path or _resolve_model_path())
+        self._model_path = model_path or _resolve_model_path()
+        # SAHI (Slicing Aided Hyper Inference): tile the frame so small, distant
+        # objects (aerial/drone views) become detectable. Much slower (N tiles
+        # per frame) — opt-in via PANEL_USE_SAHI, tune tile size with
+        # PANEL_SAHI_SLICE (px).
+        self.use_sahi = os.getenv("PANEL_USE_SAHI", "").lower() in ("1", "true", "yes")
+        # Smaller tiles detect smaller objects but are slower (more tiles);
+        # 384 balances aerial detection vs speed. Use 256 for very dense/high
+        # aerial views, 512 for lighter load.
+        self.slice = int(os.getenv("PANEL_SAHI_SLICE", "384"))
+        self._sahi = None
+        self._load(self._model_path)
 
     def _load(self, model_path: str | None) -> None:
         try:
@@ -102,10 +113,44 @@ class Detector:
             return
         self.model = YOLO(model_path)
 
+    def _sahi_model(self):
+        if self._sahi is None:
+            from sahi import AutoDetectionModel
+
+            self._sahi = AutoDetectionModel.from_pretrained(
+                model_type="ultralytics", model_path=self._model_path,
+                confidence_threshold=self.confidence, device="cpu",
+            )
+        return self._sahi
+
+    def _infer_sahi(self, frame):
+        from sahi.predict import get_sliced_prediction
+
+        res = get_sliced_prediction(
+            frame, self._sahi_model(),
+            slice_height=self.slice, slice_width=self.slice,
+            overlap_height_ratio=0.2, overlap_width_ratio=0.2,
+            verbose=0, postprocess_type="NMS",
+        )
+        out = []
+        for o in res.object_prediction_list:
+            cid = int(o.category.id)
+            if cid in _CLASSES:
+                x1, y1, x2, y2 = o.bbox.to_xyxy()
+                out.append((cid, float(o.score.value), (float(x1), float(y1), float(x2), float(y2))))
+        return out
+
     def infer(self, frame: np.ndarray) -> list[tuple[int, float, tuple[float, float, float, float]]]:
         """Return raw detections as (cls_id, confidence, (x1,y1,x2,y2))."""
         if self.model is None:
             return []  # mock mode: no synthetic data, just empty
+        if self.use_sahi:
+            try:
+                return self._infer_sahi(frame)
+            except Exception as e:  # noqa: BLE001 — fall back to whole-frame on any SAHI error
+                import logging
+                logging.getLogger("panel.detect").warning("SAHI failed, using whole-frame: %s", e)
+                self.use_sahi = False
         results = self.model(
             frame, verbose=False, conf=self.confidence, classes=list(_CLASSES.keys())
         )

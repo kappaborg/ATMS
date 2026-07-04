@@ -1,3 +1,10 @@
 {
-  "cameras": []
+  "cameras": [
+    {
+      "camera_id": "01",
+      "source": "https://www.youtube.com/watch?v=1EiC9bvVGnk&pp=ygUTaGlnaHdheSBsaXZlIHN0cmVhbQ%3D%3D",
+      "loop_file": false,
+      "intersection_id": "1"
+    }
+  ]
 }
