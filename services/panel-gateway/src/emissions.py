@@ -64,7 +64,11 @@ class EmissionAccumulator:
             return
         if self._start is None:
             self._start = t
-        self._seen.add(int(track_id))
+        # Cap the unique-vehicle set so a multi-day session can't leak memory.
+        # Past the cap the vehicle COUNT saturates; the CO2 totals (the metric
+        # that matters) keep accumulating exactly regardless.
+        if len(self._seen) < 500_000:
+            self._seen.add(int(track_id))
         if speed_kmh <= self.idle_speed_kmh:
             g = self.idle_g_per_s * dt_s  # idling: emits over time, ~0 distance
             self.idle_co2_g += g
