@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import math
 
-from behavior import DriverBehavior, ErraticDriving, RedLightDetector
+from behavior import DriftDetector, DriverBehavior, ErraticDriving, RedLightDetector
 from detection import Detection, FrameResult, annotate
 from incidents import IncidentDetector
 from scene import SceneConfig
@@ -145,6 +145,31 @@ def test_smooth_turn_not_reckless():
     # A legitimate turn is a monotonic heading change — must NOT be flagged.
     turn = [(math.cos(t) * 100 + 100, math.sin(t) * 100 + 100) for t in [i * 0.15 for i in range(20)]]
     assert not _run_erratic(turn)
+
+
+def _run_drift(world_path, dt=0.1):
+    det = DriftDetector()
+    ids = set()
+    for i, (x, y) in enumerate(world_path):
+        _, ids = det.update([(1, x, y)], i * dt)
+    return 1 in ids
+
+
+def test_drift_flags_high_speed_slide():
+    # r=12 m circle stepped ~2 m (dt 0.1 -> 20 m/s); lateral ~3.4g -> drift.
+    r, step = 12.0, 2.0
+    path = [(r * math.sin(i * step / r), r * (1 - math.cos(i * step / r))) for i in range(20)]
+    assert _run_drift(path)
+
+
+def test_drift_ignores_straight_line():
+    assert not _run_drift([(i * 2.0, 0.0) for i in range(15)])  # 72 km/h straight
+
+
+def test_drift_ignores_slow_gentle_turn():
+    # r=30 m at low speed -> tiny lateral-g -> not a drift.
+    path = [(30 * math.sin(a), 30 * (1 - math.cos(a))) for a in [i * 0.03 for i in range(30)]]
+    assert not _run_drift(path)
 
 
 def test_annotation_uses_most_severe_flag():

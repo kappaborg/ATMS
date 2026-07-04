@@ -198,6 +198,83 @@ class ErraticDriving:
         self._flagged_until.pop(track_id, None)
 
 
+class DriftDetector:
+    """Flags drifting / loss-of-control from PHYSICS: lateral acceleration =
+    v^2 * path-curvature. A tyre grips to ~0.9g; normal cornering stays well
+    under (drivers slow for bends), so exceeding ~0.6g means the car is
+    sliding/drifting/spinning. Needs calibration (real speed + world-metre
+    curvature). Note: this is a physical loss-of-control signal — true
+    slip-angle drift would additionally need vehicle orientation (an oriented-
+    bbox/pose model), which the axis-aligned detector doesn't provide.
+    """
+
+    def __init__(
+        self,
+        lat_g_thresh: float | None = None,
+        min_speed_kmh: float = 15.0,
+        step_m: float = 0.8,
+        cooldown_s: float = 3.0,
+    ):
+        self.lat_accel_thresh = (
+            (lat_g_thresh if lat_g_thresh is not None
+             else float(os.getenv("PANEL_DRIFT_LAT_G", "0.6"))) * 9.81
+        )
+        self.min_speed_kmh = min_speed_kmh
+        self.step_m = step_m
+        self.cooldown_s = cooldown_s
+        self._pts: dict[int, deque] = {}   # tid -> deque[(X, Y, t)] spaced by step_m
+        self._flagged_until: dict[int, float] = {}
+
+    def update(self, world_positions: list, t: float) -> tuple[list[dict], set[int]]:
+        """`world_positions` = [(track_id, X_m, Y_m)] in ground-plane metres."""
+        violations: list[dict] = []
+        ids: set[int] = set()
+        live: set[int] = set()
+        for tid, X, Y in world_positions:
+            tid = int(tid)
+            live.add(tid)
+            if self._flagged_until.get(tid, 0.0) > t:
+                ids.add(tid)
+            dq = self._pts.setdefault(tid, deque(maxlen=3))
+            if dq:
+                lx, ly, _ = dq[-1]
+                if math.hypot(X - lx, Y - ly) < self.step_m:
+                    continue  # not moved a full step — skip (de-jitter)
+            dq.append((X, Y, t))
+            if len(dq) < 3:
+                continue
+            (ax, ay, at), (bx, by, _bt), (cx, cy, ct) = dq
+            span_t = ct - at
+            if span_t <= 0:
+                continue
+            v = math.hypot(cx - ax, cy - ay) / span_t  # m/s over the 2-step span
+            if v * 3.6 < self.min_speed_kmh:
+                continue  # drift needs speed; slow tight turns aren't drifts
+            # Menger curvature of A,B,C: kappa = 2*Area / (|AB||BC||CA|)
+            area2 = abs((bx - ax) * (cy - ay) - (by - ay) * (cx - ax))  # 2*Area
+            denom = (math.hypot(bx - ax, by - ay) * math.hypot(cx - bx, cy - by)
+                     * math.hypot(ax - cx, ay - cy))
+            if denom < 1e-6:
+                continue
+            lat_accel = v * v * (2.0 * area2 / denom)
+            if lat_accel > self.lat_accel_thresh:
+                ids.add(tid)
+                self._flagged_until[tid] = t + self.cooldown_s
+                violations.append({
+                    "type": "drift", "track_id": tid,
+                    "lateral_g": round(lat_accel / 9.81, 2), "speed_kmh": round(v * 3.6, 1),
+                })
+        for tid in list(self._pts):
+            if tid not in live:
+                self._pts.pop(tid, None)
+                self._flagged_until.pop(tid, None)
+        return violations, ids
+
+    def remove(self, track_id: int) -> None:
+        self._pts.pop(track_id, None)
+        self._flagged_until.pop(track_id, None)
+
+
 def _segments_cross(p1, p2, p3, p4) -> bool:
     """True if segment p1-p2 crosses segment p3-p4 (orientation test)."""
     def ccw(a, b, c):

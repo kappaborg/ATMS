@@ -32,9 +32,10 @@ from ai_decision_system import AIDecisionEngine  # noqa: E402
 
 from detection import Detector, annotate, summarize, to_tracker_input  # noqa: E402
 import history  # noqa: E402
-from behavior import DriverBehavior, ErraticDriving, RedLightDetector  # noqa: E402
+from behavior import DriftDetector, DriverBehavior, ErraticDriving, RedLightDetector  # noqa: E402
 from emissions import EmissionAccumulator  # noqa: E402
 from incidents import IncidentDetector  # noqa: E402
+import plates  # noqa: E402
 from report import SessionReport  # noqa: E402
 from scene import SceneConfig  # noqa: E402
 
@@ -98,6 +99,8 @@ class CameraWorker:
         self.behavior = DriverBehavior()
         self.redlight = RedLightDetector()
         self.erratic = ErraticDriving()
+        self.drift = DriftDetector()
+        self.plate_reader = plates.PlateReader() if plates.enabled() else None
         self.emissions = EmissionAccumulator()
         self.report = SessionReport(cam_id)
         self._prev_t: float | None = None
@@ -257,6 +260,9 @@ class CameraWorker:
                 self.behavior.remove(rid)
                 self.redlight.remove(rid)
                 self.erratic.remove(rid)
+                self.drift.remove(rid)
+                if self.plate_reader is not None:
+                    self.plate_reader.remove(rid)
 
             # Unified violation detection: stopped (incident) + speeding +
             # wrong-way, all flagged on the detections and merged into one list
@@ -284,16 +290,38 @@ class CameraWorker:
                 )
             # Reckless/erratic (weaving) — trajectory-based, advisory.
             eviol, reckless_ids = self.erratic.update(vehicles, t_now)
+            # Drift / loss-of-control (lateral-G) — needs calibration for
+            # real speed + world-metre curvature.
+            dviol, drift_ids = [], set()
+            if scene.calibration is not None:
+                world = [(d.track_id, *scene.calibration.to_ground(*d.center)) for d in vehicles]
+                dviol, drift_ids = self.drift.update(world, t_now)
             for d in result.detections:
                 d.stopped = d.track_id in stopped_ids
                 d.speeding = d.track_id in speeding_ids
                 d.wrong_way = d.track_id in wrong_ids
                 d.red_light = d.track_id in redlight_ids
                 d.reckless = d.track_id in reckless_ids
+                d.drift = d.track_id in drift_ids
             violations = [
                 {"type": "stopped_vehicle", "track_id": i["track_id"], "seconds": i["seconds"]}
                 for i in incidents
-            ] + bviol + rlviol + eviol
+            ] + bviol + rlviol + eviol + dviol
+
+            # License-plate capture for flagged violators (enforcement evidence).
+            # Only for moving-vehicle violations (not stalls); capped + cached.
+            if self.plate_reader is not None and violations:
+                self.plate_reader.begin_frame()
+                bbox_by_id = {d.track_id: d.bbox for d in result.detections}
+                for viol in violations:
+                    if viol["type"] == "stopped_vehicle":
+                        continue
+                    tid = viol["track_id"]
+                    plate = self.plate_reader.cached(tid)
+                    if plate is None and tid in bbox_by_id:
+                        plate = self.plate_reader.read(frame, bbox_by_id[tid], tid)
+                    if plate:
+                        viol["plate"] = plate
 
             # Carbon: accumulate real CO2 from measured speed (needs calibration).
             dt = (t_now - self._prev_t) if self._prev_t is not None else 0.0

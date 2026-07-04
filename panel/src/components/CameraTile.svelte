@@ -86,10 +86,11 @@
       <div class="violations">
         {#each event.violations.slice(0, 3) as v}
           <div class="vio {v.type}">
-            {#if v.type === "wrong_way"}⛔ WRONG-WAY <span>#{v.track_id}</span>
-            {:else if v.type === "red_light"}🚦 RAN RED <span>#{v.track_id} · {v.approach?.toUpperCase()}</span>
-            {:else if v.type === "reckless"}🌀 RECKLESS <span>#{v.track_id}</span>
-            {:else if v.type === "speeding"}⚡ SPEEDING <span>#{v.track_id} · {v.speed_kmh?.toFixed(0)}/{v.limit_kmh} km/h</span>
+            {#if v.type === "drift"}💨 DRIFT <span>#{v.track_id} · {v.lateral_g}g{v.plate ? " · " + v.plate : ""}</span>
+            {:else if v.type === "wrong_way"}⛔ WRONG-WAY <span>#{v.track_id}{v.plate ? " · " + v.plate : ""}</span>
+            {:else if v.type === "red_light"}🚦 RAN RED <span>#{v.track_id} · {v.approach?.toUpperCase()}{v.plate ? " · " + v.plate : ""}</span>
+            {:else if v.type === "reckless"}🌀 RECKLESS <span>#{v.track_id}{v.plate ? " · " + v.plate : ""}</span>
+            {:else if v.type === "speeding"}⚡ SPEEDING <span>#{v.track_id} · {v.speed_kmh?.toFixed(0)}/{v.limit_kmh} km/h{v.plate ? " · " + v.plate : ""}</span>
             {:else}⚠ STOPPED <span>#{v.track_id} · {v.seconds?.toFixed(0)}s</span>{/if}
           </div>
         {/each}
@@ -126,6 +127,7 @@
   .vio.wrong_way { background: rgba(200,0,200,0.92); box-shadow: 0 0 12px rgba(200,0,200,0.6); }
   .vio.red_light { background: rgba(180,20,20,0.95); box-shadow: 0 0 12px rgba(180,20,20,0.7); }
   .vio.reckless { background: rgba(155,30,120,0.92); box-shadow: 0 0 12px rgba(155,30,120,0.6); }
+  .vio.drift { background: rgba(0,180,190,0.92); box-shadow: 0 0 12px rgba(0,180,190,0.6); }
   .vio.speeding { background: rgba(230,126,34,0.92); box-shadow: 0 0 12px rgba(230,126,34,0.5); }
   @keyframes incpulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
   .badge {
