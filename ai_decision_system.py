@@ -84,6 +84,7 @@ class AIDecisionEngine:
         yellow_s: float = 3.0,
         all_red_s: float = 2.0,
         switch_threshold: float = 1.2,
+        min_switch_vehicles: int = 3,
         prediction_weight: float = 0.15,
         prediction_horizon_min: int = 15,
         now_fn: Optional[Callable[[], float]] = None,
@@ -103,6 +104,11 @@ class AIDecisionEngine:
         self.yellow_s = yellow_s
         self.all_red_s = all_red_s
         self.switch_threshold = switch_threshold
+        # Minimum-benefit gate: don't pay clearance (yellow+all-red) to switch
+        # green to an approach with only a trivial queue while the current
+        # approach is still flowing. Prevents wasted clearance under light,
+        # balanced demand (where fixed-time is otherwise near-optimal).
+        self.min_switch_vehicles = min_switch_vehicles
         # Predictive congestion: how much a short-horizon forecast can nudge a
         # direction's score (bounded so it never overrides real demand).
         self.prediction_weight = prediction_weight
@@ -232,8 +238,15 @@ class AIDecisionEngine:
         if preempt is not None:
             wants_switch = self.active_direction != preempt
         else:
+            # priority_data is the demand winner; when it isn't the active
+            # approach, it is the one waiting for green, and other_data is the
+            # approach currently holding it.
             wants_switch = self._rule_based_wants_switch(
-                priority_direction, priority_score, other_score
+                priority_direction,
+                priority_score,
+                other_score,
+                waiting_vehicles=int(priority_data.get("vehicle_count", 0)),
+                current_vehicles=int(other_data.get("vehicle_count", 0)),
             )
 
         # Phase 2: Use RL agent if available — its action overrides the
@@ -432,17 +445,31 @@ class AIDecisionEngine:
             return ns_score, ew_score, None
 
     def _rule_based_wants_switch(
-        self, priority_direction: str, priority_score: float, other_score: float
+        self,
+        priority_direction: str,
+        priority_score: float,
+        other_score: float,
+        waiting_vehicles: int = 999,
+        current_vehicles: int = 0,
     ) -> bool:
         """Should green move to the other approach?
 
-        True only when the demand winner is NOT the approach currently
-        holding green and its score clears the hysteresis threshold —
-        prevents flapping on near-balanced traffic.
+        True only when the demand winner is NOT the approach currently holding
+        green AND its score clears the hysteresis threshold (prevents flapping)
+        AND the switch is worth the clearance cost: the waiting approach has a
+        non-trivial queue, or the current approach has gapped out (empty).
+        `waiting_vehicles` defaults high so callers that don't pass counts keep
+        the pure-ratio behaviour.
         """
         if priority_direction == self.active_direction:
             return False
-        return priority_score > other_score * self.switch_threshold
+        if priority_score <= other_score * self.switch_threshold:
+            return False
+        # Minimum-benefit gate: hold green rather than pay clearance to serve a
+        # couple of cars while the current approach is still discharging.
+        if waiting_vehicles < self.min_switch_vehicles and current_vehicles > 0:
+            return False
+        return True
 
     def _advance_phase(self, wants_switch: bool, other_demand: float) -> TrafficPhase:
         """Advance the signal state machine one decision tick.
