@@ -1,4 +1,4 @@
-import type { CameraInfo, FrameEvent } from "./types";
+import type { CameraInfo, FrameEvent, IntersectionInfo } from "./types";
 
 const BASE = import.meta.env.VITE_GATEWAY ?? "http://127.0.0.1:8090";
 const WS_BASE = BASE.replace(/^http/, "ws");
@@ -60,6 +60,12 @@ export function logout() {
 export async function listCameras(): Promise<CameraInfo[]> {
   const r = await fetch(`${BASE}/cameras`, { headers: authHeaders() });
   if (!r.ok) throw new Error(`listCameras ${r.status}`);
+  return r.json();
+}
+
+export async function listIntersections(): Promise<IntersectionInfo[]> {
+  const r = await fetch(`${BASE}/intersections`, { headers: authHeaders() });
+  if (!r.ok) throw new Error(`listIntersections ${r.status}`);
   return r.json();
 }
 

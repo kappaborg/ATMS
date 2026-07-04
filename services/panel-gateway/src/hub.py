@@ -154,12 +154,23 @@ class CameraManager:
                 "source": str(w.source),
                 "kind": source_kind(w.source),
                 "live": is_live_source(w.source),
+                "intersection_id": w.intersection_id,
                 "status": w.status,
                 "error": w.error,
                 "fps": round(w.fps, 1),
                 "scene": w.scene.info(),
             }
             for w in self._workers.values()
+        ]
+
+    def intersections(self) -> list[dict[str, Any]]:
+        """Group cameras by intersection for the network overview console."""
+        groups: dict[str, list[str]] = {}
+        for w in self._workers.values():
+            groups.setdefault(w.intersection_id, []).append(w.cam_id)
+        return [
+            {"intersection_id": iid, "cameras": sorted(cams)}
+            for iid, cams in sorted(groups.items())
         ]
 
     def preempt(self, cam_id: str, direction: str, active: bool, hold_s: float | None = None) -> None:
