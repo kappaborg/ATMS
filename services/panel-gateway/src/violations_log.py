@@ -107,6 +107,26 @@ class ViolationsLog:
             self._conn.commit()
         return paths
 
+    def sweep(self, retention_days: float, now: float) -> int:
+        """Enforce retention: delete rows older than `retention_days` AND their
+        snapshot files. Returns rows deleted. No-op when retention is 0/off."""
+        if retention_days <= 0:
+            return 0
+        cutoff = int(now - retention_days * 86400)
+        with self._lock:
+            n = self._conn.execute(
+                "SELECT COUNT(*) FROM violations WHERE ts<?", (cutoff,)
+            ).fetchone()[0]
+        if n == 0:
+            return 0
+        paths = self.prune(cutoff)
+        for p in paths:
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
+        return int(n)
+
     def close(self) -> None:
         with self._lock:
             self._conn.close()

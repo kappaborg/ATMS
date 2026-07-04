@@ -168,6 +168,31 @@ async def _startup() -> None:
         mapping = parse_mapping(CONTROLLER_URLS)
         asyncio.create_task(run_controller_poller(mapping, system, _stop, CONTROLLER_POLL_S))
 
+    # Violation-evidence retention: enforce PANEL_VIOLATION_RETENTION_DAYS
+    # (rows + snapshot files) at startup and every 6 hours. 0/unset = keep.
+    retention_days = float(os.getenv("PANEL_VIOLATION_RETENTION_DAYS", "0"))
+    if retention_days > 0:
+        async def _retention_loop() -> None:
+            import time as _time
+
+            import violations_log
+
+            while not _stop.is_set():
+                try:
+                    n = await asyncio.get_running_loop().run_in_executor(
+                        None, violations_log.get_log().sweep, retention_days, _time.time()
+                    )
+                    if n:
+                        log.info("retention: pruned %d violation(s) older than %.0f days", n, retention_days)
+                except Exception as e:  # noqa: BLE001 — retention must never kill the gateway
+                    log.warning("retention sweep failed: %s", e)
+                try:
+                    await asyncio.wait_for(_stop.wait(), timeout=6 * 3600)
+                except asyncio.TimeoutError:
+                    pass
+
+        asyncio.create_task(_retention_loop())
+
 
 @app.on_event("shutdown")
 async def _shutdown() -> None:
