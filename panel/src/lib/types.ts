@@ -69,6 +69,7 @@ export interface FrameEvent {
   incidents: Incident[];
   emissions: Emissions | null;
   preemption: "north_south" | "east_west" | null;
+  transit: { ns: boolean; ew: boolean };
   approaches: { ns: ApproachStat; ew: ApproachStat };
   calibrated: boolean;
   decision: Decision;

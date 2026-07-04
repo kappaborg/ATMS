@@ -85,6 +85,7 @@ class AIDecisionEngine:
         all_red_s: float = 2.0,
         switch_threshold: float = 1.2,
         min_switch_vehicles: int = 3,
+        transit_weight: float = 0.2,
         prediction_weight: float = 0.15,
         prediction_horizon_min: int = 15,
         now_fn: Optional[Callable[[], float]] = None,
@@ -109,6 +110,12 @@ class AIDecisionEngine:
         # approach is still flowing. Prevents wasted clearance under light,
         # balanced demand (where fixed-time is otherwise near-optimal).
         self.min_switch_vehicles = min_switch_vehicles
+        # Transit signal priority: bounded score bonus for an approach with a
+        # detected transit vehicle (bus). Soft priority — it can extend/expedite
+        # green for a bus but heavy cross-demand can still override it (unlike
+        # emergency preemption, which is a hard override).
+        self.transit_weight = transit_weight
+        self._last_transit: Optional[Dict] = None
         # Predictive congestion: how much a short-horizon forecast can nudge a
         # direction's score (bounded so it never overrides real demand).
         self.prediction_weight = prediction_weight
@@ -192,6 +199,13 @@ class AIDecisionEngine:
             TrafficDecision object with recommended action
         """
         self.decision_count += 1
+
+        # Transit signal priority: note which approaches have a bus (for
+        # surfacing); the score bonus itself is applied in the score function.
+        self._last_transit = {
+            "north_south": bool(north_south.get("transit_present")),
+            "east_west": bool(east_west.get("transit_present")),
+        }
 
         # Calculate scores for each direction (current demand)
         ns_score = self._calculate_direction_score(north_south)
@@ -358,6 +372,10 @@ class AIDecisionEngine:
         if self._last_anomaly:
             expected_impact["anomaly"] = self._last_anomaly
             reason = reason.rstrip(".") + f". ⚠ Anomaly: {self._last_anomaly}."
+        if self._last_transit and (self._last_transit["north_south"] or self._last_transit["east_west"]):
+            tdir = "N-S" if self._last_transit["north_south"] else "E-W"
+            reason = reason.rstrip(".") + f". 🚌 Transit priority {tdir}."
+            expected_impact["transit_priority"] = tdir
         if preempt is not None:
             label = "N-S" if preempt == "north_south" else "E-W"
             reason = f"🚨 EMERGENCY VEHICLE PREEMPTION — clearing {label}. " + reason
@@ -544,10 +562,14 @@ class AIDecisionEngine:
             flow_score * self.weights['traffic_flow']
         )
         
+        # Transit signal priority: soft bounded bonus when a bus is present.
+        if direction_data.get('transit_present'):
+            score += self.transit_weight
+
         # Boost for high environmental impact
         if env_score > 70:
             score *= 1.2  # 20% boost for high emissions
-        
+
         return score
     
     def _determine_priority(
