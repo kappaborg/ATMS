@@ -217,7 +217,9 @@ avoid false positives). **Red-light running** flags a vehicle crossing a
 **stop-line** while its approach is red (draw stop-lines in the Calibrate →
 Stop-lines tab; works in image space, no ground-plane calibration needed). All three surface as one unified `violations` list in
 `/ws/data`, are drawn on the frame (red STOPPED / orange SPEEDING / magenta
-WRONG-WAY, most-severe wins), and roll up into the network overview. These are
+WRONG-WAY, most-severe wins), and roll up into the network overview.  **Reckless/erratic** driving flags repeated left-right heading reversals
+(weaving) — distinguished from a normal turn, computed over a displacement step
+so tracking jitter can't trigger it (advisory; tune `PANEL_ERRATIC_REVERSALS`). These are
 operator alerts/analytics, not legal enforcement.
 
 ## Unattended monitoring

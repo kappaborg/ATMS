@@ -32,7 +32,7 @@ from ai_decision_system import AIDecisionEngine  # noqa: E402
 
 from detection import Detector, annotate, summarize, to_tracker_input  # noqa: E402
 import history  # noqa: E402
-from behavior import DriverBehavior, RedLightDetector  # noqa: E402
+from behavior import DriverBehavior, ErraticDriving, RedLightDetector  # noqa: E402
 from emissions import EmissionAccumulator  # noqa: E402
 from incidents import IncidentDetector  # noqa: E402
 from report import SessionReport  # noqa: E402
@@ -97,6 +97,7 @@ class CameraWorker:
         self.incidents = IncidentDetector()
         self.behavior = DriverBehavior()
         self.redlight = RedLightDetector()
+        self.erratic = ErraticDriving()
         self.emissions = EmissionAccumulator()
         self.report = SessionReport(cam_id)
         self._prev_t: float | None = None
@@ -255,6 +256,7 @@ class CameraWorker:
                 self.incidents.remove(rid)
                 self.behavior.remove(rid)
                 self.redlight.remove(rid)
+                self.erratic.remove(rid)
 
             # Unified violation detection: stopped (incident) + speeding +
             # wrong-way, all flagged on the detections and merged into one list
@@ -280,15 +282,18 @@ class CameraWorker:
                 rlviol, redlight_ids = self.redlight.update(
                     vehicles, t_now, scene.stop_lines, _is_red
                 )
+            # Reckless/erratic (weaving) — trajectory-based, advisory.
+            eviol, reckless_ids = self.erratic.update(vehicles, t_now)
             for d in result.detections:
                 d.stopped = d.track_id in stopped_ids
                 d.speeding = d.track_id in speeding_ids
                 d.wrong_way = d.track_id in wrong_ids
                 d.red_light = d.track_id in redlight_ids
+                d.reckless = d.track_id in reckless_ids
             violations = [
                 {"type": "stopped_vehicle", "track_id": i["track_id"], "seconds": i["seconds"]}
                 for i in incidents
-            ] + bviol + rlviol
+            ] + bviol + rlviol + eviol
 
             # Carbon: accumulate real CO2 from measured speed (needs calibration).
             dt = (t_now - self._prev_t) if self._prev_t is not None else 0.0
