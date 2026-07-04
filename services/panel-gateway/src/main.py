@@ -281,6 +281,20 @@ async def camera_report(camera_id: str, format: str = "csv", _: Principal = _VIE
     )
 
 
+@app.get("/intersections")
+async def list_intersections(_: Principal = _VIEWER) -> list[dict]:
+    """Network overview: every intersection with its cameras and the
+    authoritative controller/failsafe state (from the ATMS decisions topic +
+    controller polling, when connected)."""
+    out = []
+    for grp in manager.intersections():
+        out.append({
+            **grp,
+            "system": system.get(grp["intersection_id"]) if system else None,
+        })
+    return out
+
+
 @app.get("/history")
 async def history_range(
     hours: float = 24.0,

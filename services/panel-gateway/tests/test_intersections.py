@@ -1,0 +1,42 @@
+"""Network overview: cameras grouped by intersection, and intersection_id
+surfaced in the camera list."""
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from hub import CameraManager, Hub
+
+
+def _manager_with(workers):
+    m = CameraManager(Hub())
+    m._workers = workers
+    return m
+
+
+def _w(cam_id, iid, src="videos/x.mp4"):
+    return SimpleNamespace(
+        cam_id=cam_id, intersection_id=iid, source=src, loop_file=True,
+        status="running", error=None, fps=30.0,
+        scene=SimpleNamespace(to_payload=lambda: {}, info=lambda: {}),
+    )
+
+
+def test_intersections_grouped_and_sorted():
+    m = _manager_with({
+        "a": _w("a", "1"), "b": _w("b", "1"), "c": _w("c", "2"),
+    })
+    got = m.intersections()
+    assert got == [
+        {"intersection_id": "1", "cameras": ["a", "b"]},
+        {"intersection_id": "2", "cameras": ["c"]},
+    ]
+
+
+def test_camera_list_includes_intersection_id():
+    m = _manager_with({"a": _w("a", "7")})
+    assert m.list()[0]["intersection_id"] == "7"
+
+
+def test_empty_has_no_intersections():
+    assert _manager_with({}).intersections() == []

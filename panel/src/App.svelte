@@ -1,16 +1,20 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { connectData, listCameras, downloadReport, authRequired, getMe, logout, getHistory, type Me, type HistoryTotals } from "./lib/gateway";
-  import type { CameraInfo, FrameEvent } from "./lib/types";
+  import { connectData, listCameras, listIntersections, downloadReport, authRequired, getMe, logout, getHistory, type Me, type HistoryTotals } from "./lib/gateway";
+  import type { CameraInfo, FrameEvent, IntersectionInfo } from "./lib/types";
   import MetricsBar from "./components/MetricsBar.svelte";
   import CameraTile from "./components/CameraTile.svelte";
   import DecisionPanel from "./components/DecisionPanel.svelte";
   import CameraManager from "./components/CameraManager.svelte";
   import CalibrationOverlay from "./components/CalibrationOverlay.svelte";
+  import NetworkOverview from "./components/NetworkOverview.svelte";
   import Login from "./components/Login.svelte";
 
   let events = $state<Record<string, FrameEvent>>({});
   let cameras = $state<CameraInfo[]>([]);
+  let intersections = $state<IntersectionInfo[]>([]);
+  let view = $state<"overview" | "cameras">("cameras");
+  let activeIntersection = $state<string | null>(null);
   let connected = $state(false);
   let selected = $state<string | null>(null);
   let dataHz = $state(0);
@@ -30,11 +34,23 @@
   async function refresh() {
     try {
       cameras = await listCameras();
+      intersections = await listIntersections();
       if (!selected && cameras.length) selected = cameras[0].camera_id;
       history30 = selected ? await getHistory(selected, 720) : null; // last 30 days
     } catch {
       /* gateway offline or token expired; MetricsBar shows it */
     }
+  }
+
+  const shownCameras = $derived(
+    activeIntersection ? cameras.filter((c) => c.intersection_id === activeIntersection) : cameras,
+  );
+
+  function openIntersection(id: string) {
+    activeIntersection = id;
+    view = "cameras";
+    const first = cameras.find((c) => c.intersection_id === id);
+    if (first) selected = first.camera_id;
   }
 
   function start() {
@@ -90,15 +106,28 @@
 {:else}
 <main>
   <MetricsBar {events} {connected} {dataHz} />
-  {#if me}
-    <div class="userbar">
-      <span class="who"><b>{me.username}</b> · <span class="role role-{me.role}">{me.role}</span></span>
-      <button onclick={signOut}>Sign out</button>
+  <div class="topbar">
+    <div class="viewtabs">
+      <button class:on={view === "overview"} onclick={() => { view = "overview"; activeIntersection = null; }}>Network</button>
+      <button class:on={view === "cameras"} onclick={() => (view = "cameras")}>Cameras</button>
+      {#if view === "cameras" && activeIntersection}
+        <span class="crumb">Intersection {activeIntersection}
+          <button class="clr" onclick={() => (activeIntersection = null)}>× all</button>
+        </span>
+      {/if}
     </div>
-  {/if}
+    {#if me}
+      <span class="userbar"><b>{me.username}</b> · <span class="role role-{me.role}">{me.role}</span>
+        <button onclick={signOut}>Sign out</button></span>
+    {/if}
+  </div>
+
+  {#if view === "overview"}
+    <NetworkOverview {intersections} {events} onselect={openIntersection} />
+  {:else}
   <div class="body">
-    <div class="grid" style="--cols:{cameras.length <= 1 ? 1 : 2}">
-      {#each cameras as cam (cam.camera_id)}
+    <div class="grid" style="--cols:{shownCameras.length <= 1 ? 1 : 2}">
+      {#each shownCameras as cam (cam.camera_id)}
         <div class="cell" class:sel={selected === cam.camera_id} onclick={() => (selected = cam.camera_id)} role="button" tabindex="0">
           <CameraTile camera_id={cam.camera_id} event={events[cam.camera_id]} live={cam.live} kind={cam.kind} />
         </div>
@@ -129,6 +158,7 @@
       {/if}
     </aside>
   </div>
+  {/if}
 
   {#if calibrating}
     <CalibrationOverlay
@@ -144,7 +174,13 @@
 
 <style>
   main { display: flex; flex-direction: column; height: 100vh; }
-  .userbar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 4px 16px; background: #0a0c11; border-bottom: 1px solid #1e2230; font-size: 0.74rem; color: #9aa4b2; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 4px 12px; background: #0a0c11; border-bottom: 1px solid #1e2230; }
+  .viewtabs { display: flex; align-items: center; gap: 4px; }
+  .viewtabs button { background: none; border: 1px solid transparent; color: #8b95a7; border-radius: 6px; padding: 4px 12px; cursor: pointer; font-size: 0.78rem; }
+  .viewtabs button.on { background: #12202e; border-color: #2b6ea3; color: #cfe8ff; }
+  .crumb { font-size: 0.72rem; color: #8b95a7; margin-left: 8px; }
+  .crumb .clr { background: none; border: none; color: #6b7688; cursor: pointer; font-size: 0.72rem; padding: 0 4px; }
+  .userbar { display: flex; align-items: center; gap: 10px; font-size: 0.74rem; color: #9aa4b2; }
   .userbar .role { text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.66rem; padding: 1px 6px; border-radius: 4px; background: #1a2331; }
   .userbar .role-admin { color: #f1c40f; }
   .userbar .role-operator { color: #7fd1ff; }

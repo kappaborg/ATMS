@@ -83,7 +83,14 @@ export interface CameraInfo {
   source: string;
   kind: "rtsp" | "http" | "usb" | "file";
   live: boolean;
+  intersection_id: string;
   status: string;
   error: string | null;
   fps: number;
+}
+
+export interface IntersectionInfo {
+  intersection_id: string;
+  cameras: string[];
+  system: SystemDecision | null;
 }
