@@ -44,6 +44,26 @@ def test_retention_prune_returns_snapshot_paths(tmp_path):
     assert len(log.query(0, 3000)) == 1  # only the drift (ts 2000) remains
 
 
+def test_sweep_enforces_retention_and_unlinks_snapshots(tmp_path):
+    snap = tmp_path / "old.jpg"
+    snap.write_bytes(b"jpeg")
+    log = ViolationsLog(str(tmp_path / "v.db"))
+    log.record(1000, "c", "1", 1, "speeding", "P1", {}, str(snap))       # old
+    log.record(9_000_000, "c", "1", 2, "speeding", "P2", {}, None)      # recent
+    # retention 30 days, "now" far past the first record
+    n = log.sweep(retention_days=30, now=9_000_000 + 10)
+    assert n == 1
+    assert not snap.exists()  # snapshot file deleted with the row
+    assert [r["track_id"] for r in log.query(0, 10_000_000)] == [2]
+
+
+def test_sweep_noop_when_retention_off(tmp_path):
+    log = ViolationsLog(str(tmp_path / "v.db"))
+    log.record(1000, "c", "1", 1, "speeding", None, {}, None)
+    assert log.sweep(retention_days=0, now=10_000_000) == 0
+    assert len(log.query(0, 10_000_000)) == 1
+
+
 def test_survives_reopen(tmp_path):
     p = str(tmp_path / "v.db")
     log = ViolationsLog(p)
