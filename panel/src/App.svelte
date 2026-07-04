@@ -1,18 +1,20 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { connectData, listCameras, listIntersections, downloadReport, authRequired, getMe, logout, getHistory, type Me, type HistoryTotals } from "./lib/gateway";
-  import type { CameraInfo, FrameEvent, IntersectionInfo } from "./lib/types";
+  import { connectData, listCameras, listIntersections, listCorridors, downloadReport, authRequired, getMe, logout, getHistory, type Me, type HistoryTotals } from "./lib/gateway";
+  import type { CameraInfo, FrameEvent, IntersectionInfo, Corridor } from "./lib/types";
   import MetricsBar from "./components/MetricsBar.svelte";
   import CameraTile from "./components/CameraTile.svelte";
   import DecisionPanel from "./components/DecisionPanel.svelte";
   import CameraManager from "./components/CameraManager.svelte";
   import CalibrationOverlay from "./components/CalibrationOverlay.svelte";
   import NetworkOverview from "./components/NetworkOverview.svelte";
+  import CorridorsPanel from "./components/CorridorsPanel.svelte";
   import Login from "./components/Login.svelte";
 
   let events = $state<Record<string, FrameEvent>>({});
   let cameras = $state<CameraInfo[]>([]);
   let intersections = $state<IntersectionInfo[]>([]);
+  let corridors = $state<Corridor[]>([]);
   let view = $state<"overview" | "cameras">("cameras");
   let activeIntersection = $state<string | null>(null);
   let connected = $state(false);
@@ -35,6 +37,7 @@
     try {
       cameras = await listCameras();
       intersections = await listIntersections();
+      corridors = await listCorridors();
       if (!selected && cameras.length) selected = cameras[0].camera_id;
       history30 = selected ? await getHistory(selected, 720) : null; // last 30 days
     } catch {
@@ -123,7 +126,10 @@
   </div>
 
   {#if view === "overview"}
-    <NetworkOverview {intersections} {events} onselect={openIntersection} />
+    <div class="overview-scroll">
+      <NetworkOverview {intersections} {events} onselect={openIntersection} />
+      <CorridorsPanel {corridors} {intersections} {canOperate} onchange={refresh} />
+    </div>
   {:else}
   <div class="body">
     <div class="grid" style="--cols:{shownCameras.length <= 1 ? 1 : 2}">
@@ -174,6 +180,7 @@
 
 <style>
   main { display: flex; flex-direction: column; height: 100vh; }
+  .overview-scroll { flex: 1; overflow: auto; min-height: 0; }
   .topbar { display: flex; align-items: center; justify-content: space-between; padding: 4px 12px; background: #0a0c11; border-bottom: 1px solid #1e2230; }
   .viewtabs { display: flex; align-items: center; gap: 4px; }
   .viewtabs button { background: none; border: 1px solid transparent; color: #8b95a7; border-radius: 6px; padding: 4px 12px; cursor: pointer; font-size: 0.78rem; }

@@ -75,6 +75,7 @@ class CameraManager:
         self.system = system  # SystemState | None
         self._detector: Detector | None = None
         self._workers: dict[str, CameraWorker] = {}
+        self._corridors: dict = {}  # corridor_id -> Corridor
 
     def _detector_lazy(self) -> Detector:
         if self._detector is None:
@@ -162,6 +163,38 @@ class CameraManager:
             }
             for w in self._workers.values()
         ]
+
+    def _apply_coordination(self, corr, clear: bool = False) -> None:
+        """Push (or clear) the green-wave offset onto every camera engine at
+        each of the corridor's intersections."""
+        for stop in corr.stops:
+            hint = corr.coordination_for(stop.intersection_id, corr.direction)
+            for w in self._workers.values():
+                if w.intersection_id != stop.intersection_id:
+                    continue
+                if clear:
+                    w.engine.clear_coordination()
+                elif hint:
+                    w.engine.set_coordination(
+                        hint["offset_s"], hint["cycle_s"], hint["green_s"], hint["direction"]
+                    )
+
+    def add_corridor(self, payload: dict) -> dict:
+        from corridor import build_corridor
+
+        corr = build_corridor(payload)
+        self._corridors[corr.corridor_id] = corr
+        self._apply_coordination(corr)
+        return corr.to_dict()
+
+    def remove_corridor(self, corridor_id: str) -> None:
+        corr = self._corridors.pop(corridor_id, None)
+        if corr is None:
+            raise KeyError(corridor_id)
+        self._apply_coordination(corr, clear=True)
+
+    def list_corridors(self) -> list[dict]:
+        return [c.to_dict() for c in self._corridors.values()]
 
     def intersections(self) -> list[dict[str, Any]]:
         """Group cameras by intersection for the network overview console."""
