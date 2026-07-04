@@ -327,7 +327,15 @@ class CameraWorker:
             # wrong-way, all flagged on the detections and merged into one list
             # so the frame overlay, the WS flags, and the aggregate agree.
             vehicles = [d for d in result.detections if d.is_vehicle]
-            incidents, stopped_ids = self.incidents.update(vehicles, t_now)
+            # With zones drawn, only stops INSIDE the roadway can be incidents
+            # (a car standing in a parking bay is parked, not stalled).
+            roadway_ids = (
+                {d.track_id for d in vehicles if d.approach is not None}
+                if scene.zones is not None else None
+            )
+            incidents, stopped_ids = self.incidents.update(
+                vehicles, t_now, roadway_ids=roadway_ids
+            )
             # Wrong-way needs real approach zones (calibrated) — the crude
             # left/right split isn't per-approach flow and would false-positive.
             bviol, speeding_ids, wrong_ids = self.behavior.update(
