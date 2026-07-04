@@ -38,6 +38,7 @@ from emergency import EmergencyVehicleDetector  # noqa: E402
 from emissions import EmissionAccumulator  # noqa: E402
 from incidents import IncidentDetector  # noqa: E402
 import plates  # noqa: E402
+import reid as reid_mod  # noqa: E402
 import violations_log  # noqa: E402
 from report import SessionReport  # noqa: E402
 from scene import SceneConfig  # noqa: E402
@@ -135,6 +136,11 @@ class CameraWorker:
         # glitches (occlusion box-jumps, ID switches) before they poison the
         # trajectory detectors (fake speeding/reckless/red-light).
         self._tp_last: dict[int, tuple[float, float, float]] = {}
+        # Deep ReID: raw tracker id -> canonical (possibly recovered) id.
+        self.reid = reid_mod.DeepReID() if reid_mod.enabled() else None
+        self._alias: dict[int, int] = {}
+        self._raw_age: dict[int, int] = {}  # raw tracker id -> frames seen
+        self._pending_forget: dict[int, float] = {}  # lost cid -> t_lost
         self.emissions = EmissionAccumulator()
         self.report = SessionReport(cam_id)
         self._prev_t: float | None = None
@@ -159,6 +165,14 @@ class CameraWorker:
         if self._thread:
             self._thread.join(timeout=3.0)
 
+    def _forget_identity(self, tid: int) -> None:
+        """Forget identity-bound state (plate, violation dedup) for a vehicle
+        that is truly gone (or whose identity is no longer trustworthy)."""
+        if self.plate_reader is not None:
+            self.plate_reader.remove(tid)
+        for _vt in ("stopped_vehicle", "speeding", "wrong_way", "red_light", "reckless", "drift"):
+            self._logged_viol.discard((tid, _vt))
+
     def _reset_track(self, tid: int, scene) -> None:
         """Wipe all per-track state after a teleport (identity glitch): the
         'vehicle' at this id may be a different physical vehicle now."""
@@ -170,8 +184,9 @@ class CameraWorker:
         self.erratic.remove(tid)
         self.drift.remove(tid)
         self.emergency.remove(tid)
-        if self.plate_reader is not None:
-            self.plate_reader.remove(tid)  # cached plate may belong to the old vehicle
+        if self.reid is not None:
+            self.reid.remove(tid)  # fingerprint no longer trustworthy either
+        self._forget_identity(tid)  # cached plate may belong to the old vehicle
 
     def _teleport_gate(self, vehicles: list, t_now: float, scene) -> None:
         """Detect implausible per-frame jumps and reset those tracks.
@@ -306,6 +321,35 @@ class CameraWorker:
             tracked = self.tracker.update(to_tracker_input(raw))
             result = summarize(tracked)
 
+            # Deep ReID: restore identity across occlusions BEFORE anything
+            # consumes track ids. A re-born track that matches a recently-lost
+            # vehicle's appearance fingerprint gets its OLD id back (plate
+            # cache, violation dedup and history stay attached to the vehicle).
+            if self.reid is not None:
+                fdiag = math.hypot(frame.shape[1], frame.shape[0])
+                recover_budget = 2  # at most N recovery embeds per frame (CPU)
+                for d in result.detections:
+                    if not d.is_vehicle:
+                        continue
+                    raw_id = d.track_id
+                    age = self._raw_age.get(raw_id, 0) + 1
+                    self._raw_age[raw_id] = age
+                    cid = self._alias.get(raw_id)
+                    if cid is None:
+                        cid = raw_id
+                        # Defer recovery to the 2nd sighting: 1-frame flicker
+                        # tracks never cost an embedding.
+                        if age >= 2:
+                            if recover_budget > 0:
+                                recover_budget -= 1
+                                rec = self.reid.recover(frame, d.bbox, d.center, t_now, fdiag)
+                                if rec is not None:
+                                    cid = rec
+                                    self._pending_forget.pop(rec, None)  # it came back
+                            self._alias[raw_id] = cid
+                    d.track_id = cid
+                    self.reid.note_seen(cid, frame, d.bbox, d.center)
+
             scene = self.scene
             w = frame.shape[1]
             # Per-direction aggregates fed to the decision engine.
@@ -356,7 +400,13 @@ class CameraWorker:
                     bucket["average_velocity"] = sum(speeds) / len(speeds)
 
             # Release per-track state for tracks the tracker expired this frame.
-            for rid in getattr(self.tracker, "last_removed_ids", []):
+            # With ReID, identity may come back: motion state resets immediately
+            # (continuity is broken anyway), but the plate cache and violation
+            # dedup are KEPT for the recovery window and forgotten only if the
+            # vehicle never returns.
+            for raw_rid in getattr(self.tracker, "last_removed_ids", []):
+                self._raw_age.pop(raw_rid, None)
+                rid = self._alias.pop(raw_rid, raw_rid)  # canonical id
                 if scene.speed is not None:
                     scene.speed.remove(rid)
                 self.incidents.remove(rid)
@@ -365,10 +415,19 @@ class CameraWorker:
                 self.erratic.remove(rid)
                 self.drift.remove(rid)
                 self.emergency.remove(rid)
-                if self.plate_reader is not None:
-                    self.plate_reader.remove(rid)
-                for _vt in ("stopped_vehicle", "speeding", "wrong_way", "red_light", "reckless", "drift"):
-                    self._logged_viol.discard((rid, _vt))
+                if self.reid is not None:
+                    self.reid.note_lost(rid, t_now)  # fingerprint -> recovery gallery
+                    self._pending_forget[rid] = t_now
+                else:
+                    self._forget_identity(rid)
+
+            # Identities that never came back within the recovery window.
+            if self.reid is not None and self._pending_forget:
+                ttl = self.reid.ttl_s + 2.0
+                for rid in [r for r, tl in self._pending_forget.items() if t_now - tl > ttl]:
+                    self._pending_forget.pop(rid, None)
+                    self.reid.remove(rid)
+                    self._forget_identity(rid)
 
             # Unified violation detection: stopped (incident) + speeding +
             # wrong-way, all flagged on the detections and merged into one list
