@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- Connections at `intersection`. Only the through movements are wired —
-     no turns. linkIndex is assigned by netconvert in order. -->
-<connections xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-             xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/connections_file.xsd">
-  <connection from="ns_in" to="ns_out" fromLane="0" toLane="0"/>
-  <connection from="ew_in" to="ew_out" fromLane="0" toLane="0"/>
-</connections>

@@ -45,8 +45,6 @@ SAFETY_SCOPE = (
     "shared/atms_common",
     "services/traffic-controller/src",
     "services/decision-engine/src",
-    "services/v2x-interface/src",
-    "services/sensor-fusion/src",
     "services/ai-perception/src",
 )
 

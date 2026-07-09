@@ -10,40 +10,6 @@
 # When a file is refactored and its callsites are moved to monotonic_ns()
 # or marked `# noqa: ATMS-CLOCK` for legitimate display-only uses, REMOVE
 # its entry from this file. The lint will then enforce the rule on it.
-#
-# Tracked in PRODUCTION_GAPS.md as A2 ("Real /live, /ready, /startup probes /
-# shared-lib bootstrap") — these three services remain on the partial list:
-#   - sensor-fusion
-#   - ai-perception
-#   - video-processor
-
-# --- sensor-fusion (A2 pending) ---
-services/sensor-fusion/src/main.py
-services/sensor-fusion/src/adapters/camera.py
-services/sensor-fusion/src/adapters/mjpeg_camera.py
-services/sensor-fusion/src/sync/synchronizer.py
 
 # --- ai-perception (A2 pending) ---
-services/ai-perception/src/main.py
-services/ai-perception/src/integrated_perception_service.py
-services/ai-perception/src/integrated_perception_service_optimized.py
-services/ai-perception/src/trajectory_integration.py
-services/ai-perception/src/frame_batch_processor.py
-services/ai-perception/src/license_plate_processor.py
-services/ai-perception/src/optimization/atms_optimizer.py
-services/ai-perception/src/optimization/cache_manager.py
-services/ai-perception/src/optimization/benchmark_suite.py
-services/ai-perception/src/optimization/async_processor.py
-services/ai-perception/src/optimization/model_quantization.py
-services/ai-perception/src/optimization/performance_profiler.py
-services/ai-perception/src/trajectory_reuse/predictor.py
 services/ai-perception/src/tracking/object_tracker.py
-services/ai-perception/src/kafka/producer.py
-services/ai-perception/src/detection/model_optimizer.py
-services/ai-perception/src/detection/yolo_detector.py
-services/ai-perception/src/license_plate/ocr/plate_ocr.py
-services/ai-perception/src/license_plate/ocr/professional_ocr.py
-services/ai-perception/src/license_plate/ocr/advanced_ocr.py
-services/ai-perception/src/license_plate/detection/plate_detector.py
-services/ai-perception/src/license_plate/detection/sahi_plate_detector.py
-services/ai-perception/src/license_plate/validation/plate_validator.py

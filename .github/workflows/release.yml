@@ -37,17 +37,8 @@ jobs:
       fail-fast: false
       matrix:
         service:
-          - ai-perception
-          - analytics
-          - api-gateway
-          - dashboard
-          - data-aggregator
           - decision-engine
-          - intersection-coordinator
-          - ntcip-interface
-          - sensor-fusion
           - traffic-controller
-          - video-processor
     steps:
       - uses: actions/checkout@v4
 

@@ -1,9 +1,10 @@
 # ATMS Project Makefile
-# Modular Microservices Architecture
+# Panel product: services/panel-gateway + panel/ (Tauri app)
 
-.PHONY: help setup dev-up dev-down test lint format clean install-service \
+.PHONY: help test lint format typecheck clean structure install-service \
+        run-service test-service \
         secrets-decrypt secrets-encrypt secrets-edit secrets-rotate-recipients \
-        secrets-check simulate backup-db
+        secrets-check
 
 # Colors
 BLUE := \033[0;34m
@@ -17,18 +18,14 @@ help:
 	@echo "$(BLUE)╚════════════════════════════════════════════════════════╝$(NC)"
 	@echo ""
 	@echo "$(GREEN)Setup Commands:$(NC)"
-	@echo "  make setup              - Initial project setup"
 	@echo "  make install-service    - Install service dependencies (SERVICE=name)"
 	@echo ""
 	@echo "$(GREEN)Development:$(NC)"
-	@echo "  make dev-up            - Start development infrastructure"
-	@echo "  make dev-down          - Stop development infrastructure"
 	@echo "  make run-service       - Run a specific service (SERVICE=name)"
 	@echo ""
 	@echo "$(GREEN)Testing:$(NC)"
-	@echo "  make test              - Run all tests"
+	@echo "  make test              - Run all test suites (panel-gateway, decision-engine, traffic-controller)"
 	@echo "  make test-service      - Run tests for specific service (SERVICE=name)"
-	@echo "  make test-coverage     - Run tests with coverage report"
 	@echo ""
 	@echo "$(GREEN)Code Quality:$(NC)"
 	@echo "  make lint              - Run linters"
@@ -37,7 +34,6 @@ help:
 	@echo ""
 	@echo "$(GREEN)Utilities:$(NC)"
 	@echo "  make clean             - Clean temporary files"
-	@echo "  make logs SERVICE=name - View service logs"
 	@echo "  make structure         - Show project structure"
 	@echo ""
 	@echo "$(GREEN)Secrets (Phase A5):$(NC)"
@@ -47,39 +43,10 @@ help:
 	@echo "  make secrets-rotate-recipients             - Re-encrypt after .sops.yaml change"
 	@echo "  make secrets-check                         - Verify committed *.sops files look encrypted"
 	@echo ""
-	@echo "$(GREEN)Simulation (Phase C3):$(NC)"
-	@echo "  make simulate SCENARIO=rush-hour           - Run a SUMO scenario, write report.html"
-	@echo ""
-
-setup:
-	@echo "$(YELLOW)Setting up ATMS project...$(NC)"
-	@bash scripts/setup.sh
-
-dev-up:
-	@echo "$(YELLOW)Starting development infrastructure...$(NC)"
-	@if [ -f docker-compose.dev.yml ]; then \
-		docker-compose -f docker-compose.dev.yml up -d; \
-		echo "$(GREEN)✓ Infrastructure started$(NC)"; \
-		echo ""; \
-		echo "Services available at:"; \
-		echo "  - Kafka UI:    http://localhost:8080"; \
-		echo "  - pgAdmin:     http://localhost:5050"; \
-		echo "  - Grafana:     http://localhost:3000"; \
-		echo "  - Prometheus:  http://localhost:9090"; \
-	else \
-		echo "$(YELLOW)⚠ Docker Compose not configured$(NC)"; \
-	fi
-
-dev-down:
-	@echo "$(YELLOW)Stopping development infrastructure...$(NC)"
-	@if [ -f docker-compose.dev.yml ]; then \
-		docker-compose -f docker-compose.dev.yml down; \
-		echo "$(GREEN)✓ Infrastructure stopped$(NC)"; \
-	fi
 
 install-service:
 	@if [ -z "$(SERVICE)" ]; then \
-		echo "$(YELLOW)Usage: make install-service SERVICE=sensor-fusion$(NC)"; \
+		echo "$(YELLOW)Usage: make install-service SERVICE=panel-gateway$(NC)"; \
 		exit 1; \
 	fi
 	@echo "$(YELLOW)Installing dependencies for $(SERVICE)...$(NC)"
@@ -91,7 +58,7 @@ install-service:
 
 run-service:
 	@if [ -z "$(SERVICE)" ]; then \
-		echo "$(YELLOW)Usage: make run-service SERVICE=sensor-fusion$(NC)"; \
+		echo "$(YELLOW)Usage: make run-service SERVICE=panel-gateway$(NC)"; \
 		exit 1; \
 	fi
 	@echo "$(YELLOW)Running $(SERVICE) service...$(NC)"
@@ -101,23 +68,20 @@ run-service:
 		python main.py
 
 test:
-	@echo "$(YELLOW)Running all tests...$(NC)"
-	@pytest tests/ -v --tb=short
+	@echo "$(YELLOW)Running all test suites...$(NC)"
+	@cd services/panel-gateway && pytest tests/ -q
+	@cd services/decision-engine && pytest tests/ -q
+	@cd services/traffic-controller && pytest tests/ -q
 
 test-service:
 	@if [ -z "$(SERVICE)" ]; then \
-		echo "$(YELLOW)Usage: make test-service SERVICE=sensor-fusion$(NC)"; \
+		echo "$(YELLOW)Usage: make test-service SERVICE=panel-gateway$(NC)"; \
 		exit 1; \
 	fi
 	@echo "$(YELLOW)Testing $(SERVICE) service...$(NC)"
 	@cd services/$(SERVICE) && \
 		. venv/bin/activate && \
 		pytest tests/ -v
-
-test-coverage:
-	@echo "$(YELLOW)Running tests with coverage...$(NC)"
-	@pytest tests/ -v --cov=services --cov=shared --cov-report=html --cov-report=term
-	@echo "$(GREEN)✓ Coverage report generated in htmlcov/$(NC)"
 
 lint:
 	@echo "$(YELLOW)Running linters...$(NC)"
@@ -126,7 +90,7 @@ lint:
 
 format:
 	@echo "$(YELLOW)Formatting code...$(NC)"
-	@black services/ shared/ tests/ || true
+	@black services/ shared/ || true
 	@ruff check --fix services/ shared/ || true
 	@echo "$(GREEN)✓ Code formatted$(NC)"
 
@@ -146,14 +110,6 @@ clean:
 	@find . -type d -name "htmlcov" -exec rm -rf {} + 2>/dev/null || true
 	@find . -type f -name ".coverage" -delete 2>/dev/null || true
 	@echo "$(GREEN)✓ Cleanup complete$(NC)"
-
-logs:
-	@if [ -z "$(SERVICE)" ]; then \
-		echo "$(YELLOW)Usage: make logs SERVICE=sensor-fusion$(NC)"; \
-		exit 1; \
-	fi
-	@docker-compose -f docker-compose.dev.yml logs -f $(SERVICE) 2>/dev/null || \
-		echo "$(YELLOW)Service logs not available (not running in Docker)$(NC)"
 
 structure:
 	@echo "$(BLUE)ATMS Project Structure:$(NC)"
@@ -213,18 +169,6 @@ secrets-rotate-recipients: _secrets_require_tools
 
 # Lightweight check that runs without sops/age: confirms every committed
 # `*.sops*` file under deploy/secrets/ doesn't look like plaintext.
-# ---------------------------------------------------------------------------
-# Simulation (Phase C3 — SUMO harness, ADR-0016)
-# ---------------------------------------------------------------------------
-
-SCENARIO ?= rush-hour
-
-simulate:
-	@if [ -z "$(SCENARIO)" ]; then echo "$(YELLOW)Usage: make simulate SCENARIO=rush-hour$(NC)"; exit 1; fi
-	@echo "$(YELLOW)Running SUMO scenario: $(SCENARIO)$(NC)"
-	@python -m simulation $(SCENARIO)
-
-
 secrets-check:
 	@bad=0; \
 	for f in $$(find deploy/secrets -type f -name '*.sops*' 2>/dev/null); do \
@@ -234,8 +178,3 @@ secrets-check:
 	done; \
 	if [ $$bad -eq 0 ]; then echo "$(GREEN)✓ all secrets files look encrypted (or are explicit placeholders)$(NC)"; fi; \
 	exit $$bad
-
-backup-db:
-	@echo "$(YELLOW)Backing up Postgres (BACKUP_DIR/RETENTION_DAYS overridable)...$(NC)"
-	@./scripts/backup_postgres.sh
-

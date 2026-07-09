@@ -17,8 +17,6 @@ extend-exclude = [
     "multiview_training_data",
     "infrastructure",
     "ai_decision_system.py",
-    # Moved from repo root (gap H3); still legacy-quality internally.
-    "services/video-processor/tools",
 ]
 
 [tool.ruff.lint]
@@ -85,7 +83,6 @@ exclude = [
     "__pycache__",
     "tests/.*",   # tests use fixtures/private-attr access; we don't need strict types there
     "docs/archived",
-    "services/video-processor/tools/.*",  # legacy processors moved from repo root (H3)
 ]
 
 # Allow legacy modules to import without forcing types yet.
@@ -93,9 +90,6 @@ exclude = [
 module = [
     "ai_decision_system",
     "ai.*",
-    "atms_core.*",
-    "youtube_decision_processor",
-    "realtime_video_processor",
 ]
 ignore_errors = true
 
