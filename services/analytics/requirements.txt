@@ -1,6 +1,0 @@
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-pydantic==2.5.0
-numpy>=1.26.0,<2.0.0  # Python 3.12 compatible (1.24.3 has no cp312 wheels)
-aiokafka==0.10.0
-python-multipart==0.0.6

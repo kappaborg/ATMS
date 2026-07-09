@@ -75,9 +75,9 @@ jobs:
       - name: Install ruff
         run: pip install "ruff==${{ env.RUFF_VERSION }}"
       - name: Ruff check
-        run: ruff check shared/atms_common services/traffic-controller/src services/decision-engine/src services/v2x-interface/src tools
+        run: ruff check shared/atms_common services/traffic-controller/src services/decision-engine/src tools
       - name: Ruff format check
-        run: ruff format --check shared/atms_common services/traffic-controller/src services/decision-engine/src services/v2x-interface/src tools
+        run: ruff format --check shared/atms_common services/traffic-controller/src services/decision-engine/src tools
       - name: Safety-clock lint (ADR-0017 §rule)
         run: python tools/lint_safety_clock.py
 
@@ -106,8 +106,6 @@ jobs:
         run: mypy services/traffic-controller/src
       - name: Mypy — decision-engine
         run: mypy services/decision-engine/src
-      - name: Mypy — v2x-interface
-        run: mypy services/v2x-interface/src
 
   # ---------------------------------------------------------------------------
   # Unit + integration tests with coverage gate
@@ -193,17 +191,8 @@ jobs:
       fail-fast: false
       matrix:
         service:
-          - ai-perception
-          - analytics
-          - api-gateway
-          - dashboard
-          - data-aggregator
           - decision-engine
-          - intersection-coordinator
-          - ntcip-interface
-          - sensor-fusion
           - traffic-controller
-          - video-processor
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -250,17 +239,8 @@ jobs:
       fail-fast: false
       matrix:
         service:
-          - ai-perception
-          - analytics
-          - api-gateway
-          - dashboard
-          - data-aggregator
           - decision-engine
-          - intersection-coordinator
-          - ntcip-interface
-          - sensor-fusion
           - traffic-controller
-          - video-processor
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -305,17 +285,8 @@ jobs:
       fail-fast: false
       matrix:
         service:
-          - ai-perception
-          - analytics
-          - api-gateway
-          - dashboard
-          - data-aggregator
           - decision-engine
-          - intersection-coordinator
-          - ntcip-interface
-          - sensor-fusion
           - traffic-controller
-          - video-processor
     steps:
       - uses: actions/download-artifact@v4
         with:

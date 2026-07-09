@@ -1,8 +1,0 @@
-# SUMO simulation harness — Phase C3 (ADR-0016).
-# `traci` and `sumolib` are Python bindings; the SUMO binary itself must be
-# installed separately:
-#   macOS: brew install sumo
-#   Linux: apt install sumo sumo-tools sumo-doc
-eclipse-sumo>=1.20
-traci>=1.20
-sumolib>=1.20
