@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Fast pre-commit gate: frontend type-check (the full suite runs on pre-push).
+cd "$(git rev-parse --show-toplevel)/panel" && ./node_modules/.bin/svelte-check --tsconfig ./tsconfig.json

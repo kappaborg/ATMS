@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Mandatory pre-push gate: full prod-safe verify (type-check + all test suites).
+bash "$(git rev-parse --show-toplevel)/scripts/verify.sh"
