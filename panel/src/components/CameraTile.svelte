@@ -2,6 +2,7 @@
   import { onDestroy } from "svelte";
   import { connectVideo, removeCamera } from "../lib/gateway";
   import type { FrameEvent } from "../lib/types";
+  import Icon from "./Icon.svelte";
 
   let {
     camera_id,
@@ -16,8 +17,9 @@
   const stop = connectVideo(camera_id, (url) => (src = url));
   onDestroy(stop);
 
-  const phaseColour = (p?: string) =>
-    p === "GREEN" ? "#2ecc71" : p === "YELLOW" ? "#f1c40f" : p === "ALL_RED" || p === "RED" ? "#e74c3c" : "#888";
+  const phaseVar = (p?: string) =>
+    p === "GREEN" ? "var(--color-sig-green)" : p === "YELLOW" ? "var(--color-sig-amber)" : "var(--color-sig-red)";
+  const phaseClass = (p?: string) => (p === "GREEN" ? "p-green" : p === "YELLOW" ? "p-amber" : "p-red");
 
   // Digital zoom + pan on the video (inspect a plate / an incident).
   let vbox = $state<HTMLDivElement>();
@@ -36,7 +38,6 @@
     const cy = e.clientY - r.top;
     const prev = scale;
     const next = clamp(scale * (e.deltaY < 0 ? 1.15 : 1 / 1.15), 1, 6);
-    // keep the point under the cursor fixed while zooming
     panX = cx - ((cx - panX) * next) / prev;
     panY = cy - ((cy - panY) * next) / prev;
     scale = next;
@@ -70,78 +71,112 @@
     {:else}
       <div class="placeholder">connecting {camera_id}…</div>
     {/if}
-    <div class="srcbadge" class:live>{live ? "● LIVE" : "FILE"} · {kind.toUpperCase()}</div>
-    {#if scale > 1}
-      <button class="zoomreset" onclick={reset} title="Reset zoom">{scale.toFixed(1)}× ✕</button>
-    {/if}
-    <div class="badge">
-      <span class="dot" style="background:{phaseColour(event?.decision.phase)}"></span>
-      {camera_id}
+
+    <!-- top overlays -->
+    <div class="ov-top">
+      <span class="badge" class:live>{#if live}<span class="dot"></span>{/if}{live ? "LIVE" : "FILE"} · {kind.toUpperCase()}</span>
+      <span class="spacer"></span>
       {#if event}
-        <span class="stat">🚗 {event.counts.vehicles}</span>
-        <span class="stat">🚶 {event.counts.pedestrians}</span>
-        <span class="stat">{event.fps.toFixed(0)} fps</span>
-        <span class="stat lat">{event.pipeline_latency_ms.toFixed(0)} ms</span>
+        <span class="phase-chip {phaseClass(event.decision.phase)}"><span class="d"></span> {event.decision.phase}</span>
       {/if}
+      <button class="remove" title="Remove camera" onclick={() => removeCamera(camera_id)}><Icon name="close" size={13} stroke={2.2} /></button>
     </div>
+
+    {#if scale > 1}
+      <button class="zoomreset" onclick={reset} title="Reset zoom">{scale.toFixed(1)}× <Icon name="close" size={11} stroke={2.2} /></button>
+    {/if}
+
     {#if event?.violations?.length}
       <div class="violations">
         {#each event.violations.slice(0, 3) as v}
           <div class="vio {v.type}">
-            {#if v.type === "drift"}💨 DRIFT <span>#{v.track_id} · {v.lateral_g}g{v.plate ? " · " + v.plate : ""}</span>
-            {:else if v.type === "wrong_way"}⛔ WRONG-WAY <span>#{v.track_id}{v.plate ? " · " + v.plate : ""}</span>
-            {:else if v.type === "red_light"}🚦 RAN RED <span>#{v.track_id} · {v.approach?.toUpperCase()}{v.plate ? " · " + v.plate : ""}</span>
-            {:else if v.type === "reckless"}🌀 RECKLESS <span>#{v.track_id}{v.plate ? " · " + v.plate : ""}</span>
-            {:else if v.type === "speeding"}⚡ SPEEDING <span>#{v.track_id} · {v.speed_kmh?.toFixed(0)}/{v.limit_kmh} km/h{v.plate ? " · " + v.plate : ""}</span>
-            {:else}⚠ STOPPED <span>#{v.track_id} · {v.seconds?.toFixed(0)}s</span>{/if}
+            {#if v.type === "drift"}<Icon name="drift" size={13} stroke={2} />DRIFT <span>#{v.track_id} · {v.lateral_g}g{v.plate ? " · " + v.plate : ""}</span>
+            {:else if v.type === "wrong_way"}<Icon name="no-entry" size={13} stroke={2} />WRONG-WAY <span>#{v.track_id}{v.plate ? " · " + v.plate : ""}</span>
+            {:else if v.type === "red_light"}<Icon name="signal" size={13} stroke={2} />RAN RED <span>#{v.track_id} · {v.approach?.toUpperCase()}{v.plate ? " · " + v.plate : ""}</span>
+            {:else if v.type === "reckless"}<Icon name="reckless" size={13} stroke={2} />RECKLESS <span>#{v.track_id}{v.plate ? " · " + v.plate : ""}</span>
+            {:else if v.type === "speeding"}<Icon name="speed" size={13} stroke={2} />SPEEDING <span>#{v.track_id} · {v.speed_kmh?.toFixed(0)}/{v.limit_kmh} km/h{v.plate ? " · " + v.plate : ""}</span>
+            {:else}<Icon name="warning" size={13} stroke={2} />STOPPED <span>#{v.track_id} · {v.seconds?.toFixed(0)}s</span>{/if}
           </div>
         {/each}
       </div>
     {/if}
-    <button class="remove" title="Remove camera" onclick={() => removeCamera(camera_id)}>✕</button>
+
+    <!-- bottom metric strip -->
+    <div class="ov-bot">
+      <span class="camid">{camera_id}</span>
+      {#if event}
+        <span class="spacer"></span>
+        <div class="m"><b>{event.counts.vehicles}</b><i>veh</i></div>
+        <div class="m"><b>{event.counts.pedestrians}</b><i>ped</i></div>
+        <div class="m"><b>{event.fps.toFixed(0)}</b><i>fps</i></div>
+        <div class="m lat"><b>{event.pipeline_latency_ms.toFixed(0)}</b><i>ms</i></div>
+      {/if}
+    </div>
   </div>
 </div>
 
 <style>
-  .tile { background: #0d0f14; border: 1px solid #1e2230; border-radius: 8px; overflow: hidden; }
+  .tile { background: var(--color-surface-1); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
   .video { position: relative; aspect-ratio: 16 / 9; background: #000; overflow: hidden; }
   img { width: 100%; height: 100%; object-fit: contain; display: block; will-change: transform; }
-  .srcbadge {
-    position: absolute; top: 8px; left: 8px; font-size: 0.62rem; font-weight: 600;
-    letter-spacing: 0.04em; padding: 3px 7px; border-radius: 4px;
-    background: rgba(0,0,0,0.6); color: #9aa4b2;
-  }
-  .srcbadge.live { color: #2ecc71; }
-  .zoomreset {
-    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
-    background: rgba(0,0,0,0.65); color: #cfe8ff; border: 1px solid #2b6ea3;
-    border-radius: 4px; padding: 3px 8px; font-size: 0.68rem; cursor: pointer;
-  }
-  .placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: #667; font-size: 0.85rem; }
-  .violations { position: absolute; top: 8px; left: 8px; display: flex; flex-direction: column; gap: 4px; }
-  .vio {
-    display: flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 6px;
-    font-size: 0.72rem; font-weight: 700; color: #fff;
-    animation: incpulse 1.2s ease-in-out infinite;
-  }
-  .vio span { font-weight: 400; opacity: 0.85; }
-  .vio.stopped_vehicle { background: rgba(231,76,60,0.92); box-shadow: 0 0 12px rgba(231,76,60,0.6); }
-  .vio.wrong_way { background: rgba(200,0,200,0.92); box-shadow: 0 0 12px rgba(200,0,200,0.6); }
-  .vio.red_light { background: rgba(180,20,20,0.95); box-shadow: 0 0 12px rgba(180,20,20,0.7); }
-  .vio.reckless { background: rgba(155,30,120,0.92); box-shadow: 0 0 12px rgba(155,30,120,0.6); }
-  .vio.drift { background: rgba(0,180,190,0.92); box-shadow: 0 0 12px rgba(0,180,190,0.6); }
-  .vio.speeding { background: rgba(230,126,34,0.92); box-shadow: 0 0 12px rgba(230,126,34,0.5); }
-  @keyframes incpulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+  .placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: var(--color-dim); font-size: 0.85rem; }
+
+  /* top overlay row */
+  .ov-top { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; align-items: center; gap: 7px; }
+  .ov-top .spacer { flex: 1; }
   .badge {
-    position: absolute; left: 8px; bottom: 8px; display: flex; align-items: center; gap: 8px;
-    background: rgba(0,0,0,0.55); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; color: #dfe6ee;
+    display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 100px;
+    font-size: 0.66rem; font-weight: 700; letter-spacing: 0.03em;
+    background: rgba(12, 14, 20, 0.72); backdrop-filter: blur(6px); color: #cdd6e2; border: 1px solid rgba(255,255,255,0.08);
   }
-  .dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 6px currentColor; }
-  .stat { opacity: 0.9; }
-  .stat.lat { color: #7fd1ff; }
+  .badge.live { color: #6be2a8; }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+  .phase-chip {
+    display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 100px;
+    font-size: 0.66rem; font-weight: 700; background: rgba(12, 14, 20, 0.72); backdrop-filter: blur(6px);
+  }
+  .phase-chip .d { width: 8px; height: 8px; border-radius: 50%; }
+  .p-green { color: #5fe0a0; } .p-green .d { background: var(--color-sig-green); box-shadow: 0 0 8px var(--color-sig-green); }
+  .p-amber { color: #f2c46a; } .p-amber .d { background: var(--color-sig-amber); box-shadow: 0 0 8px var(--color-sig-amber); }
+  .p-red { color: #f28a94; } .p-red .d { background: var(--color-sig-red); box-shadow: 0 0 8px var(--color-sig-red); }
   .remove {
-    position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.5); color: #fff; border: none;
-    border-radius: 4px; width: 24px; height: 24px; cursor: pointer; opacity: 0; transition: opacity .15s;
+    width: 22px; height: 22px; flex: none; display: grid; place-items: center; border-radius: 6px;
+    background: rgba(12, 14, 20, 0.6); color: #fff; border: none; cursor: pointer; opacity: 0; transition: opacity 0.15s; font-size: 0.7rem;
   }
   .tile:hover .remove { opacity: 1; }
+
+  .zoomreset {
+    position: absolute; top: 38px; left: 50%; transform: translateX(-50%);
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(12, 14, 20, 0.7); color: #eef2f7; border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 6px; padding: 3px 8px; font-size: 0.68rem; cursor: pointer;
+  }
+
+  /* live violation banners — high-visibility on video, but no neon glow */
+  .violations { position: absolute; top: 40px; left: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .vio {
+    display: flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 6px;
+    font-size: 0.72rem; font-weight: 700; color: #fff; animation: incpulse 1.4s ease-in-out infinite;
+  }
+  .vio :global(svg) { flex: none; }
+  .vio span { font-weight: 400; opacity: 0.85; }
+  .vio.stopped_vehicle { background: #c0392b; }
+  .vio.wrong_way { background: #a23596; }
+  .vio.red_light { background: #b32020; }
+  .vio.reckless { background: #8e2c6e; }
+  .vio.drift { background: #157f86; }
+  .vio.speeding { background: #b5732a; }
+  @keyframes incpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.78; } }
+
+  /* bottom metric strip */
+  .ov-bot {
+    position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: flex-end; gap: 13px;
+    padding: 20px 12px 9px; background: linear-gradient(0deg, rgba(8, 10, 14, 0.86), transparent);
+  }
+  .ov-bot .spacer { flex: 1; }
+  .camid { font-size: 0.74rem; font-weight: 600; color: #eef2f7; }
+  .ov-bot .m { display: flex; flex-direction: column; gap: 1px; align-items: flex-start; }
+  .ov-bot .m b { font-size: 0.86rem; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+  .ov-bot .m i { font-style: normal; font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
+  .ov-bot .m.lat b { color: #8fd8ff; }
 </style>

@@ -123,22 +123,24 @@
 <style>
   .corridors { padding: 0 16px 20px; }
   .head { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
-  h2 { font-size: 0.9rem; color: #cfe8ff; margin: 0; }
-  .head button { background: #1b3a52; border: 1px solid #2b6ea3; color: #cfe8ff; border-radius: 5px; padding: 4px 10px; cursor: pointer; font-size: 0.74rem; }
-  .form { background: #0d0f14; border: 1px solid #1e2230; border-radius: 8px; padding: 12px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }
+  h2 { font-size: 0.9rem; color: var(--color-accent); margin: 0; }
+  .head button { background: var(--color-surface-2); border: 1px solid var(--color-border-2); color: var(--color-text); border-radius: var(--radius-sm); padding: 4px 10px; cursor: pointer; font-size: 0.74rem; }
+  .head button:hover { background: var(--color-surface-3); }
+  .form { background: var(--color-surface-1); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 12px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }
   .row { display: flex; gap: 8px; }
-  .row input, .row select, .strow input, .strow select { background: #11151d; border: 1px solid #232838; border-radius: 5px; padding: 5px 8px; color: #eaf1f8; font-size: 0.8rem; }
-  .row label { display: flex; flex-direction: column; font-size: 0.66rem; color: #8b95a7; gap: 2px; flex: 1; }
+  .row input, .row select, .strow input, .strow select { background: var(--color-surface-2); border: 1px solid var(--color-border-2); border-radius: var(--radius-sm); padding: 5px 8px; color: var(--color-text); font-size: 0.8rem; }
+  .row label { display: flex; flex-direction: column; font-size: 0.66rem; color: var(--color-muted); gap: 2px; flex: 1; }
   .row label input { width: 100%; }
   .stops { display: flex; flex-direction: column; gap: 6px; }
-  .hint { font-size: 0.68rem; color: #7a8494; }
+  .hint { font-size: 0.68rem; color: var(--color-muted); }
   .strow { display: flex; gap: 6px; align-items: center; }
-  .strow .x { background: none; border: none; color: #e74c3c; cursor: pointer; }
-  .addstop { align-self: flex-start; background: none; border: 1px dashed #2b3547; color: #8b95a7; border-radius: 5px; padding: 3px 8px; cursor: pointer; font-size: 0.72rem; }
-  .apply { background: #1b5233; border: 1px solid #2ecc71; color: #d6ffe6; border-radius: 6px; padding: 7px; cursor: pointer; font-size: 0.82rem; }
-  .err { color: #e74c3c; font-size: 0.74rem; margin: 0; }
-  .corr { background: #0d0f14; border: 1px solid #1e2230; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
-  .chead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.85rem; color: #eaf1f8; }
-  .del { background: none; border: 1px solid #3a1c1c; color: #e6a4a4; border-radius: 5px; padding: 2px 8px; cursor: pointer; font-size: 0.7rem; }
-  .none { color: #667; font-size: 0.78rem; }
+  .strow .x { background: none; border: none; color: var(--color-critical); cursor: pointer; }
+  .addstop { align-self: flex-start; background: none; border: 1px dashed var(--color-border-2); color: var(--color-muted); border-radius: var(--radius-sm); padding: 3px 8px; cursor: pointer; font-size: 0.72rem; }
+  .apply { background: var(--color-accent); border: 1px solid var(--color-accent); color: #fff; border-radius: var(--radius-sm); padding: 7px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+  .apply:hover { background: var(--color-accent-dim); }
+  .err { color: var(--color-critical); font-size: 0.74rem; margin: 0; }
+  .corr { background: var(--color-surface-1); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 10px; margin-bottom: 10px; }
+  .chead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.85rem; color: var(--color-text); }
+  .del { background: none; border: 1px solid var(--color-border-2); color: var(--color-critical); border-radius: var(--radius-sm); padding: 2px 8px; cursor: pointer; font-size: 0.7rem; }
+  .none { color: var(--color-dim); font-size: 0.78rem; }
 </style>

@@ -1,5 +1,88 @@
+@import "tailwindcss";
+
+/* Dark mode driven by [data-theme="dark"] on <html> (toggle, not OS-only). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ------------------------------------------------------------------ *
+ * ATMS design tokens — single source of truth (Tailwind v4 @theme).
+ *   --color-*  -> bg-* / text-* / border-*
+ *   --text-*   -> text-<name> (font-size scale)
+ *   --radius-* -> rounded-<name>
+ * Light is the default set; [data-theme="dark"] overrides the values,
+ * so every utility + component var switches at runtime.
+ * ------------------------------------------------------------------ */
+@theme {
+  /* control-room light theme (default) — neutral cool greys, one blue accent.
+     Green/amber/red are reserved for signal + alert states, never decoration. */
+  --color-bg: #f7f8fa;
+  --color-surface-1: #ffffff;
+  --color-surface-2: #f2f4f7;
+  --color-surface-3: #e9edf2;
+  --color-border: #e4e7ec;
+  --color-border-2: #d3d9e1;
+  --color-text: #1c2430;
+  --color-muted: #5b6472;
+  --color-dim: #98a1ae;
+  --color-accent: #2f6fed;
+  --color-accent-dim: #1f52c0; /* darker accent — text/labels on light surfaces */
+  --color-accent-wash: #eaf1fe;
+  --color-warm: #5b6472; /* de-emphasised: neutral slate, no orange */
+  --color-warm-2: #414b59;
+  --color-ok: #1a8f5c;
+  --color-warn: #c9871a;
+  --color-critical: #d24b4b;
+  --color-sig-green: #1a8f5c;
+  --color-sig-amber: #d08a1a;
+  --color-sig-red: #d24b4b;
+
+  --radius-sm: 6px;
+  --radius: 9px;
+  --radius-lg: 12px;
+
+  /* type scale */
+  --text-2xs: 0.72rem;
+  --text-xs: 0.8rem;
+  --text-sm: 0.86rem;
+  --text-base: 0.95rem;
+  --text-lg: 1.15rem;
+  --text-xl: 1.4rem;
+}
+
+/* dark — control-room night: deep slate-navy, same one blue accent */
+:root[data-theme="dark"] {
+  --color-bg: #0f1216;
+  --color-surface-1: #171b21;
+  --color-surface-2: #1d222a;
+  --color-surface-3: #262c36;
+  --color-border: #2a303a;
+  --color-border-2: #3a414d;
+  --color-text: #e6e9ee;
+  --color-muted: #98a1af;
+  --color-dim: #626b79;
+  --color-accent: #4d86f7;
+  --color-accent-dim: #8fb4fb; /* lighter accent — text/labels on dark surfaces */
+  --color-accent-wash: #172438;
+  --color-warm: #8892a0;
+  --color-warm-2: #6b7686;
+  --color-ok: #35b37e;
+  --color-warn: #d99a2b;
+  --color-critical: #e0575f;
+  --color-sig-green: #35b37e;
+  --color-sig-amber: #d99a2b;
+  --color-sig-red: #e0575f;
+}
+
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-ui: -apple-system, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* elevation (soft in light, deeper in dark) */
+  --sh-1: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+  --sh-2: 0 8px 24px rgba(16,24,40,.10);
+  color-scheme: light;
+  font-family: var(--font-ui);
+}
+:root[data-theme="dark"] {
+  --sh-1: 0 1px 2px rgba(0,0,0,.4), 0 2px 6px rgba(0,0,0,.3);
+  --sh-2: 0 10px 30px rgba(0,0,0,.5);
   color-scheme: dark;
 }
 
@@ -8,11 +91,25 @@
 html, body, #app {
   margin: 0;
   height: 100%;
-  background: #070809;
-  color: #eaf1f8;
+  background: var(--color-bg);
+  color: var(--color-text);
   overflow: hidden;
 }
 
-button { font-family: inherit; }
+button { font-family: inherit; cursor: pointer; color: inherit; }
+
+/* Tabular figures so streaming metrics don't jitter width tick-to-tick. */
+:where(.tabular-nums, .metric, td, th) { font-variant-numeric: tabular-nums; }
+
+/* Animated theme switch (circular wipe from the toggle via View Transitions). */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2; }
+
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: #1e2230; border-radius: 5px; }
+::-webkit-scrollbar-thumb { background: var(--color-border-2); border-radius: 6px; border: 2px solid var(--color-bg); }
+::-webkit-scrollbar-thumb:hover { background: var(--color-dim); }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}

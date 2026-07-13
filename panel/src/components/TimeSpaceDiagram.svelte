@@ -35,11 +35,11 @@
   {corridor.direction === "north_south" ? "N–S" : "E–W"}</p>
 
 <style>
-  .tsd { width: 100%; height: auto; background: #0b0e13; border: 1px solid #1e2230; border-radius: 8px; }
-  .axis { stroke: #2b3547; stroke-width: 1; }
-  .green { fill: rgba(46,204,113,0.7); }
-  .veh { stroke: #7fd1ff; stroke-width: 2; stroke-dasharray: 4 3; }
-  .lbl { fill: #5a6576; font-size: 8px; }
-  .itag { fill: #8b95a7; font-size: 8px; }
-  .cap { margin: 4px 2px 0; font-size: 0.66rem; color: #7a8494; }
+  .tsd { width: 100%; height: auto; background: var(--color-surface-1); border: 1px solid var(--color-border); border-radius: 8px; }
+  .axis { stroke: var(--color-border-2); stroke-width: 1; }
+  .green { fill: color-mix(in srgb, var(--color-sig-green) 70%, transparent); }
+  .veh { stroke: var(--color-accent); stroke-width: 2; stroke-dasharray: 4 3; }
+  .lbl { fill: var(--color-dim); font-size: 8px; }
+  .itag { fill: var(--color-muted); font-size: 8px; }
+  .cap { margin: 4px 2px 0; font-size: 0.66rem; color: var(--color-muted); }
 </style>

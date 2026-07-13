@@ -40,23 +40,25 @@
 </div>
 
 <style>
-  .scrim { position: fixed; inset: 0; display: grid; place-items: center; background: #06080c; z-index: 100; }
+  .scrim { position: fixed; inset: 0; display: grid; place-items: center; background: var(--color-bg); z-index: 100; }
   .card {
     width: 320px; display: flex; flex-direction: column; gap: 12px;
-    background: #0d0f14; border: 1px solid #1e2230; border-radius: 12px; padding: 28px;
+    background: var(--color-surface-1); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 28px;
+    box-shadow: var(--sh-2);
   }
-  h1 { margin: 0; font-size: 1.2rem; color: #eaf1f8; }
-  .sub { margin: 0 0 6px; font-size: 0.82rem; color: #7a8494; }
-  label { display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; color: #8b95a7; }
+  h1 { margin: 0; font-size: 1.2rem; color: var(--color-text); }
+  .sub { margin: 0 0 6px; font-size: 0.82rem; color: var(--color-muted); }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; color: var(--color-muted); }
   input {
-    background: #11151d; border: 1px solid #232838; border-radius: 6px; padding: 8px 10px;
-    color: #eaf1f8; font-size: 0.9rem;
+    background: var(--color-surface-2); border: 1px solid var(--color-border-2); border-radius: var(--radius-sm); padding: 8px 10px;
+    color: var(--color-text); font-size: 0.9rem;
   }
-  input:focus { outline: none; border-color: #2b6ea3; }
-  .err { margin: 0; color: #e74c3c; font-size: 0.78rem; }
+  input:focus { outline: none; border-color: var(--color-accent); }
+  .err { margin: 0; color: var(--color-critical); font-size: 0.78rem; }
   button {
-    margin-top: 6px; background: #1b3a52; border: 1px solid #2b6ea3; color: #cfe8ff;
-    border-radius: 6px; padding: 9px; cursor: pointer; font-size: 0.85rem;
+    margin-top: 6px; background: var(--color-accent); border: 1px solid var(--color-accent); color: #fff;
+    border-radius: var(--radius-sm); padding: 9px; cursor: pointer; font-size: 0.85rem; font-weight: 600;
   }
+  button:hover:not(:disabled) { background: var(--color-accent-dim); }
   button:disabled { opacity: 0.6; cursor: default; }
 </style>
