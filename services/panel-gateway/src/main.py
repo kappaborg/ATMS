@@ -66,6 +66,9 @@ hub = Hub()
 system = SystemState()
 manager = CameraManager(hub, system=system)
 rate_limiter = RateLimiter()
+# Dedicated, much stricter budget for /auth/login (brute-force defence), keyed
+# by IP+username. Configurable via PANEL_LOGIN_RATE (default 5 attempts / 60s).
+login_limiter = RateLimiter(os.getenv("PANEL_LOGIN_RATE", "5/60"))
 ws_limiter = WSLimiter()
 _stop = asyncio.Event()
 app = FastAPI(title="ATMS Panel Gateway", version="1.0.0")
@@ -151,12 +154,22 @@ async def _startup() -> None:
     log = logging.getLogger("uvicorn")
     host = os.getenv("PANEL_HOST", "127.0.0.1")
     loopback = host in ("127.0.0.1", "localhost", "::1")
+    insecure_ok = os.getenv("PANEL_ALLOW_INSECURE_BIND", "").lower() in ("1", "true", "yes")
     if not loopback and not auth_enabled():
+        if not insecure_ok:
+            # Fail closed: refuse to expose an unauthenticated gateway on the
+            # network. Every mutating endpoint (add-camera → SSRF, preempt,
+            # plate query, CSV export) would otherwise be open to anyone who can
+            # reach it.
+            raise RuntimeError(
+                f"Refusing to start: PANEL_HOST={host} is not loopback but no auth "
+                "is configured. Set PANEL_USERS (multi-operator RBAC) or "
+                "PANEL_API_TOKEN, or bind to 127.0.0.1. To override at your own "
+                "risk, set PANEL_ALLOW_INSECURE_BIND=1."
+            )
         log.warning(
-            "⚠ Panel gateway bound to %s with NO auth — it is reachable on the "
-            "network and UNAUTHENTICATED. Set PANEL_USERS (multi-operator RBAC) "
-            "or PANEL_API_TOKEN, or bind to 127.0.0.1.",
-            host,
+            "⚠ Panel gateway bound to %s with NO auth (PANEL_ALLOW_INSECURE_BIND "
+            "set) — reachable and UNAUTHENTICATED on the network.", host,
         )
     hub.bind_loop(asyncio.get_running_loop())
     n = manager.restore()
@@ -224,11 +237,15 @@ class LoginIn(BaseModel):
 @app.post("/auth/login")
 async def login(body: LoginIn, request: Request, __: None = _RATE) -> dict:
     """Exchange operator credentials for a signed session token."""
+    ip = request.client.host if request.client else "unknown"
+    # Strict per-(IP, username) throttle so credential stuffing can't ride the
+    # looser mutating-request budget.
+    if not login_limiter.allow(f"{ip}:{body.username}"):
+        raise HTTPException(status_code=429, detail="too many login attempts — try again shortly")
     p = authenticate(body.username, body.password)
     if p is None:
         import logging
 
-        ip = request.client.host if request.client else "unknown"
         logging.getLogger("panel.audit").warning(
             "AUDIT login-failed user=%s ip=%s", body.username, ip
         )
@@ -358,13 +375,20 @@ async def camera_report(camera_id: str, format: str = "csv", _: Principal = _VIE
 @app.get("/violations")
 async def list_violations(
     hours: float = 24.0, camera_id: str | None = None, type: str | None = None,
-    plate: str | None = None, limit: int = 500, _: Principal = _VIEWER,
+    plate: str | None = None, limit: int = 500, p: Principal = _VIEWER,
 ) -> dict:
     """The persisted violation evidence log (type, plate, detail, snapshot).
     `plate` filter supports data-subject access requests (DSAR)."""
     import time as _time
 
     import violations_log
+
+    # A targeted plate lookup is a DSAR-grade query over personal data — require
+    # operator, and audit it (least privilege for PII; plain browsing stays viewer).
+    if plate:
+        if not p.has_role("operator"):
+            raise HTTPException(status_code=403, detail="plate lookup requires 'operator' role")
+        _audit(p, "violations_plate_lookup", f"plate={plate}")
 
     hours = max(0.0, min(hours, 24 * 366))
     now = int(_time.time())
@@ -406,14 +430,16 @@ async def violation_snapshot(vid: int, _: Principal = _VIEWER):
 
 
 @app.get("/violations/export")
-async def export_violations(hours: float = 168.0, _: Principal = _VIEWER):
-    """CSV export of the violation log (for enforcement / audit)."""
+async def export_violations(hours: float = 168.0, p: Principal = _OPERATOR, __: None = _RATE):
+    """CSV export of the violation log (for enforcement / audit). Bulk PII
+    export — restricted to operators and audited."""
     import csv
     import io
     import time as _time
 
     import violations_log
 
+    _audit(p, "violations_export", f"hours={hours}")
     hours = max(0.0, min(hours, 24 * 366))
     now = int(_time.time())
     rows = violations_log.get_log().query(now - int(hours * 3600), now, None, None, 5000)
