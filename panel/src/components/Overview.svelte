@@ -51,11 +51,17 @@
     p === "GREEN" ? "var(--color-sig-green)" : p === "YELLOW" ? "var(--color-sig-amber)" : "var(--color-sig-red)";
 
   // --- KPIs ---
-  const totalVehicles = $derived(Object.values(events).reduce((s, e) => s + e.counts.vehicles, 0));
+  // "Right now" figures must reflect only cameras that are currently live — a
+  // camera that has gone offline keeps its last frame in `events`, so counting
+  // raw events would freeze stale numbers into the network totals.
+  const liveEvents = $derived(
+    cameras.filter((c) => c.live).map((c) => events[c.camera_id]).filter((e): e is FrameEvent => !!e),
+  );
+  const totalVehicles = $derived(liveEvents.reduce((s, e) => s + e.counts.vehicles, 0));
   const liveCams = $derived(cameras.filter((c) => c.live).length);
-  const incidents = $derived(Object.values(events).reduce((s, e) => s + e.incidents.length + e.violations.length, 0));
+  const incidents = $derived(liveEvents.reduce((s, e) => s + e.incidents.length + e.violations.length, 0));
   const co2Pct = $derived.by(() => {
-    const es = Object.values(events).map((e) => e.emissions).filter((x): x is NonNullable<typeof x> => !!x);
+    const es = liveEvents.map((e) => e.emissions).filter((x): x is NonNullable<typeof x> => !!x);
     if (!es.length) return 0;
     return Math.round((es.reduce((s, e) => s + e.savings_ratio, 0) / es.length) * 100);
   });
@@ -129,7 +135,7 @@
   let timer: ReturnType<typeof setInterval>;
   onMount(() => {
     timer = setInterval(() => {
-      const es = Object.values(events);
+      const es = liveEvents;
       const veh = es.reduce((s, e) => s + e.counts.vehicles, 0);
       const co2 = es.reduce((s, e) => s + (e.emissions?.rate_kg_h ?? 0), 0);
       flow = [...flow.slice(1), veh];
@@ -258,4 +264,13 @@
   .legend { display: flex; gap: 15px; margin-top: 10px; }
   .legend .it { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--color-muted); }
   .legend .it i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; } .legend .it i.ln { width: 13px; height: 4px; border-radius: 2px; }
+
+  @media (max-width: 1024px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .grid { grid-template-columns: 1fr; }
+    .map-panel { grid-row: auto; }
+  }
+  @media (max-width: 560px) {
+    .kpis { grid-template-columns: 1fr; }
+  }
 </style>

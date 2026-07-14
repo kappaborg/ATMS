@@ -22,7 +22,7 @@
   --color-border-2: #d3d9e1;
   --color-text: #1c2430;
   --color-muted: #5b6472;
-  --color-dim: #98a1ae;
+  --color-dim: #6b7280; /* WCAG-AA (~4.6:1 on white) — used for small captions/labels */
   --color-accent: #2f6fed;
   --color-accent-dim: #1f52c0; /* darker accent — text/labels on light surfaces */
   --color-accent-wash: #eaf1fe;
@@ -58,7 +58,7 @@
   --color-border-2: #3a414d;
   --color-text: #e6e9ee;
   --color-muted: #98a1af;
-  --color-dim: #626b79;
+  --color-dim: #808a9a; /* WCAG-AA (~4.7:1 on dark surface) */
   --color-accent: #4d86f7;
   --color-accent-dim: #8fb4fb; /* lighter accent — text/labels on dark surfaces */
   --color-accent-wash: #172438;
@@ -97,6 +97,10 @@ html, body, #app {
 }
 
 button { font-family: inherit; cursor: pointer; color: inherit; }
+
+/* Consistent, visible keyboard focus everywhere (mouse clicks stay ring-free). */
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 3px; }
+:focus:not(:focus-visible) { outline: none; }
 
 /* Tabular figures so streaming metrics don't jitter width tick-to-tick. */
 :where(.tabular-nums, .metric, td, th) { font-variant-numeric: tabular-nums; }

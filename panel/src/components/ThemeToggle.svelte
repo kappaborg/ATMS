@@ -4,13 +4,16 @@
   // (View Transitions API), falling back to an instant switch where unsupported
   // or when the user prefers reduced motion.
   type Theme = "dark" | "light";
-  const initial = (document.documentElement.getAttribute("data-theme") as Theme) || "dark";
+  const STORE_KEY = "atms_theme";
+  const stored = (() => { try { return localStorage.getItem(STORE_KEY) as Theme | null; } catch { return null; } })();
+  const initial: Theme = stored || (document.documentElement.getAttribute("data-theme") as Theme) || "dark";
   let theme = $state<Theme>(initial);
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function apply(next: Theme) {
     theme = next;
     document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem(STORE_KEY, next); } catch { /* private mode / storage disabled */ }
   }
 
   function toggle(e: MouseEvent) {

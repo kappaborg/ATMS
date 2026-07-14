@@ -3,6 +3,9 @@
   import { getViolations, violationSnapshotUrl, exportViolations, type ViolationRecord } from "../lib/gateway";
   import Icon, { type IconName } from "./Icon.svelte";
 
+  // CSV export is operator-only server-side (bulk PII); hide it from viewers.
+  let { canOperate = false }: { canOperate?: boolean } = $props();
+
   let rows = $state<ViolationRecord[]>([]);
   let filterType = $state("");
   let hours = $state(24);
@@ -34,7 +37,8 @@
 
   let timer: ReturnType<typeof setInterval>;
   onMount(() => {
-    load();
+    // Initial fetch is owned by the $effect below (it runs once on mount too),
+    // so onMount only needs to set up the periodic refresh.
     timer = setInterval(load, 5000);
   });
   onDestroy(() => clearInterval(timer));
@@ -44,6 +48,8 @@
     load();
   });
 </script>
+
+<svelte:window onkeydown={(e) => { if (e.key === "Escape" && zoom !== null) zoom = null; }} />
 
 <div class="wrap">
   <div class="bar">
@@ -57,7 +63,7 @@
         <option value={168}>last 7 days</option>
         <option value={720}>last 30 days</option>
       </select>
-      <button class="export" onclick={exportViolations}><Icon name="download" size={14} />Export CSV</button>
+      {#if canOperate}<button class="export" onclick={exportViolations}><Icon name="download" size={14} />Export CSV</button>{/if}
     </div>
     <div class="chips">
       <button class="chip" class:on={filterType === ""} onclick={() => (filterType = "")}>Everything</button>

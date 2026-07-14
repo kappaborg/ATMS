@@ -42,6 +42,11 @@
   async function refresh() {
     try {
       cameras = await listCameras();
+      // Drop buffered/stored frames for cameras that no longer exist, so the
+      // Overview KPIs and live charts stop counting removed cameras.
+      const ids = new Set(cameras.map((c) => c.camera_id));
+      for (const k of Object.keys(events)) if (!ids.has(k)) delete events[k];
+      for (const k of Object.keys(latest)) if (!ids.has(k)) delete latest[k];
       intersections = await listIntersections();
       corridors = await listCorridors();
       if (!selected && cameras.length) selected = cameras[0].camera_id;
@@ -99,9 +104,13 @@
       },
       (c) => (connected = c),
     );
-    // Flush the newest buffered frames into reactive state a few times a second.
+    // Flush the newest buffered frames into reactive state a few times a second,
+    // then empty the buffer so we only re-render when fresh frames actually arrive.
     const flush = setInterval(() => {
-      if (Object.keys(latest).length) events = { ...events, ...latest };
+      if (Object.keys(latest).length) {
+        events = { ...events, ...latest };
+        latest = {};
+      }
     }, DISPLAY_MS);
     const poll = setInterval(refresh, 3000);
     const hz = setInterval(() => {
@@ -121,6 +130,7 @@
     stopFns.forEach((f) => f());
     stopFns = [];
     events = {};
+    latest = {};
     cameras = [];
     selected = null;
     me = null;
@@ -213,7 +223,7 @@
         <CorridorsPanel {corridors} {intersections} {canOperate} onchange={refresh} />
       </div>
     {:else if view === "violations"}
-      <ViolationsLog />
+      <ViolationsLog {canOperate} />
     {:else}
       <div class="cams">
         {#if activeIntersection}
@@ -343,7 +353,7 @@
   .who b { font-size: 13px; font-weight: 600; }
   .who i { font-style: normal; font-size: 11px; color: var(--color-muted); text-transform: capitalize; }
   .who .role-admin { color: var(--color-warn); }
-  .who .role-operator { color: var(--color-accent); }
+  .who .role-operator { color: var(--color-accent-dim); }
   .who .role-viewer { color: var(--color-ok); }
   .signout {
     background: var(--color-surface-2); border: 1px solid var(--color-border-2); color: var(--color-muted);
@@ -389,8 +399,9 @@
     grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
     gap: 14px; padding: 14px; align-content: start; overflow: auto;
   }
-  .cell { cursor: pointer; border-radius: var(--radius-lg); outline: 2px solid transparent; transition: outline-color 0.15s; }
+  .cell { cursor: pointer; border-radius: var(--radius-lg); outline: 2px solid transparent; outline-offset: 2px; transition: outline-color 0.15s; }
   .cell.sel { outline-color: var(--color-accent); }
+  .cell:focus-visible { outline-color: var(--color-accent); }
   .dock { border-left: 1px solid var(--color-border); background: var(--color-surface-1); overflow: auto; display: flex; flex-direction: column; }
   .sel-bar { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; border-bottom: 1px solid var(--color-border); font-size: 13px; color: var(--color-accent-dim); }
   .sel-actions { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -417,4 +428,18 @@
   .statusbar .s b.ok { color: var(--color-ok); }
   .statusbar .spacer { flex: 1; }
   .statusbar .dot { width: 7px; height: 7px; }
+
+  /* Narrow windows: collapse the rail to icons and shrink the dock so nothing
+     gets clipped by the fixed shell. The camera grid already reflows (auto-fit). */
+  @media (max-width: 1024px) {
+    .app { grid-template-columns: 60px 1fr; }
+    .rail { padding: 12px 8px; }
+    .rail .nav { justify-content: center; padding: 0; gap: 0; }
+    .rail .nav span, .rail .tip { display: none; }
+    .body { grid-template-columns: 1fr 280px; }
+  }
+  @media (max-width: 760px) {
+    .pills { display: none; }
+    .body { grid-template-columns: 1fr 240px; }
+  }
 </style>

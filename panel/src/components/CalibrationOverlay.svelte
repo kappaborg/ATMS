@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import { setScene, snapshotFrame, type SceneInfo } from "../lib/gateway";
+  import Icon from "./Icon.svelte";
 
   let { camera_id, onclose }: { camera_id: string; onclose: () => void } = $props();
 
@@ -174,10 +175,29 @@
   }
 
   const zoneColour = (dir: string) => (dir === "ns" ? "var(--color-ok)" : "var(--color-warn)");
+
+  // Keyboard-accessible modal: focus the sheet on open, close on Escape, and
+  // trap Tab so focus can't wander to the page behind the overlay.
+  let sheetEl = $state<HTMLDivElement>();
+  onMount(() => sheetEl?.focus());
+  function onKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape") { e.preventDefault(); onclose(); return; }
+    if (e.key !== "Tab" || !sheetEl) return;
+    const focusable = Array.from(
+      sheetEl.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'),
+    ).filter((el) => !el.hasAttribute("disabled") && el.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+  }
 </script>
 
-<div class="modal" role="dialog" aria-modal="true">
-  <div class="sheet">
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<div class="modal" role="dialog" aria-modal="true" aria-label="Camera calibration" tabindex="-1" onkeydown={onKeydown}>
+  <div class="sheet" bind:this={sheetEl} tabindex="-1">
     <header>
       <h2>Calibrate — {camera_id}</h2>
       <div class="tabs">
@@ -185,7 +205,7 @@
         <button class:active={mode === "zones"} onclick={() => (mode = "zones")}>Approach zones</button>
         <button class:active={mode === "stoplines"} onclick={() => (mode = "stoplines")}>Stop-lines</button>
       </div>
-      <button class="close" onclick={onclose}>✕</button>
+      <button class="close" onclick={onclose} aria-label="Close calibration"><Icon name="close" size={16} /></button>
     </header>
 
     <div class="content">
@@ -348,7 +368,8 @@
   .tabs { display: flex; gap: 6px; margin-left: 8px; }
   .tabs button, .dirs button { padding: 6px 12px; background: var(--color-surface-2); border: 1px solid var(--color-border); color: var(--color-muted); border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
   .tabs button.active, .dirs button.active { background: var(--color-surface-3); border-color: var(--color-accent-dim); color: var(--color-accent); }
-  .close { margin-left: auto; background: none; border: none; color: var(--color-muted); font-size: 1.1rem; cursor: pointer; }
+  .close { margin-left: auto; display: inline-flex; align-items: center; background: none; border: none; color: var(--color-muted); cursor: pointer; }
+  .close:hover { color: var(--color-text); }
   .content { flex: 1; display: grid; grid-template-columns: 1fr 320px; min-height: 0; }
   .stage-wrap { padding: 14px; display: flex; flex-direction: column; align-items: center; min-height: 0; }
   /* The stage shrinks to the rendered image (any aspect/orientation), so the

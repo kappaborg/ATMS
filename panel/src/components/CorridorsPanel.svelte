@@ -2,6 +2,7 @@
   import type { Corridor, IntersectionInfo } from "../lib/types";
   import { addCorridor, removeCorridor } from "../lib/gateway";
   import TimeSpaceDiagram from "./TimeSpaceDiagram.svelte";
+  import Icon from "./Icon.svelte";
 
   let {
     corridors,
@@ -66,7 +67,7 @@
 
 <div class="corridors">
   <div class="head">
-    <h2>🌊 Green-wave corridors</h2>
+    <h2>Green-wave corridors</h2>
     {#if canOperate}
       <button onclick={() => (show = !show)}>{show ? "Cancel" : "+ New corridor"}</button>
     {/if}
@@ -97,7 +98,7 @@
               {/each}
             </select>
             <input type="number" bind:value={s.distance_m} placeholder="m" />
-            {#if stops.length > 2}<button class="x" onclick={() => removeStop(i)}>×</button>{/if}
+            {#if stops.length > 2}<button class="x" onclick={() => removeStop(i)} aria-label="remove stop"><Icon name="close" size={13} /></button>{/if}
           </div>
         {/each}
         <button class="addstop" onclick={addStop}>+ stop</button>
@@ -123,7 +124,8 @@
 <style>
   .corridors { padding: 0 16px 20px; }
   .head { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
-  h2 { font-size: 0.9rem; color: var(--color-accent); margin: 0; }
+  h2 { font-size: 0.9rem; color: var(--color-accent-dim); margin: 0; }
+  .strow .x { display: inline-flex; align-items: center; }
   .head button { background: var(--color-surface-2); border: 1px solid var(--color-border-2); color: var(--color-text); border-radius: var(--radius-sm); padding: 4px 10px; cursor: pointer; font-size: 0.74rem; }
   .head button:hover { background: var(--color-surface-3); }
   .form { background: var(--color-surface-1); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 12px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }

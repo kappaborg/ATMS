@@ -59,5 +59,5 @@
   stroke-linejoin="round"
   aria-hidden="true"
 >
-  {@html P[name]}
+  {@html P[name] ?? ""}
 </svg>

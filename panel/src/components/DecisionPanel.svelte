@@ -186,28 +186,29 @@
   /* Reserve two lines so a 1↔2 line reason never shifts the rows below it. */
   .reason { font-size: 0.78rem; color: var(--color-muted); line-height: 1.4; min-height: 2.24rem; }
   .preempt-banner {
-    margin: 10px 16px 0; padding: 8px 12px; border-radius: 6px; text-align: center;
-    background: #e74c3c; color: #fff; font-weight: 700; font-size: 0.8rem;
-    animation: ppulse 1s ease-in-out infinite; box-shadow: 0 0 16px rgba(231,76,60,0.7);
+    margin: 10px 16px 0; padding: 8px 12px; border-radius: var(--radius-sm); text-align: center;
+    background: var(--color-critical); color: #fff; font-weight: 700; font-size: 0.8rem;
+    animation: ppulse 1s ease-in-out infinite;
   }
   .ped-banner {
-    margin: 10px 16px 0; padding: 8px 12px; border-radius: 6px; text-align: center;
-    background: #f39c12; color: #1a1206; font-weight: 700; font-size: 0.78rem;
+    margin: 10px 16px 0; padding: 8px 12px; border-radius: var(--radius-sm); text-align: center;
+    background: var(--color-warn); color: #1a1206; font-weight: 700; font-size: 0.78rem;
     animation: ppulse 1.1s ease-in-out infinite;
   }
   .ped-note { margin: 10px 16px 0; padding: 6px 12px; border-radius: 6px; background: var(--color-surface-2); color: var(--color-warn); font-size: 0.74rem; text-align: center; }
   @keyframes ppulse { 0%,100% { opacity: 1; } 50% { opacity: 0.65; } }
   .ev-banner {
-    margin: 10px 16px 0; padding: 8px 12px; border-radius: 6px; text-align: center;
-    background: #1a6ee0; color: #fff; font-weight: 700; font-size: 0.78rem;
-    animation: ppulse 0.8s ease-in-out infinite; box-shadow: 0 0 16px rgba(26,110,224,0.7);
+    margin: 10px 16px 0; padding: 8px 12px; border-radius: var(--radius-sm); text-align: center;
+    background: var(--color-accent); color: #fff; font-weight: 700; font-size: 0.78rem;
+    animation: ppulse 0.8s ease-in-out infinite;
     display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
   }
-  .ev-banner button { background: #fff; color: #1a6ee0; border: none; border-radius: 5px; padding: 4px 12px; font-weight: 700; cursor: pointer; font-size: 0.76rem; }
+  /* fixed white button on the solid-blue safety banner — dark-blue text stays legible in both themes */
+  .ev-banner button { background: #fff; color: #1f52c0; border: none; border-radius: 5px; padding: 4px 12px; font-weight: 700; cursor: pointer; font-size: 0.76rem; }
   .preempt-ctl { display: flex; align-items: center; justify-content: space-between; margin: 10px 16px 0; padding: 8px 12px; background: var(--color-surface-1); border: 1px solid var(--color-border-2); border-radius: 8px; font-size: 0.74rem; color: var(--color-critical); }
   .preempt-ctl .pbtns { display: flex; gap: 6px; }
   .preempt-ctl button { background: var(--color-surface-2); border: 1px solid var(--color-border-2); color: var(--color-critical); border-radius: 5px; padding: 4px 10px; cursor: pointer; font-size: 0.74rem; }
-  .preempt-ctl button.on { background: #e74c3c; color: #fff; border-color: #e74c3c; }
+  .preempt-ctl button.on { background: var(--color-critical); color: #fff; border-color: var(--color-critical); }
   .preempt-ctl button.clear { border-color: var(--color-border-2); color: var(--color-muted); background: none; }
   .perr { margin: 6px 16px 0; color: var(--color-critical); font-size: 0.72rem; }
   .carbon { margin-top: 14px; padding: 10px 12px; background: var(--color-surface-1); border: 1px solid var(--color-border-2); border-radius: 8px; }
@@ -234,13 +235,13 @@
   .fbar .flbl { font-size: 0.72rem; color: var(--color-muted); }
   .fbar .track { height: 8px; background: var(--color-surface-2); border-radius: 4px; overflow: hidden; }
   .fbar .fill { height: 100%; background: var(--color-accent); }
-  .fbar .fpct { font-size: 0.72rem; color: var(--color-accent); text-align: right; }
+  .fbar .fpct { font-size: 0.72rem; color: var(--color-accent-dim); text-align: right; }
   .approaches { display: flex; gap: 8px; margin-top: 14px; }
   .appr { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: 6px; }
   .appr.active { border-color: var(--color-ok); background: var(--color-surface-2); }
   .appr .lbl { font-size: 0.72rem; color: var(--color-muted); letter-spacing: 0.05em; }
   .appr .veh { font-size: 1.05rem; color: var(--color-text); font-weight: 600; }
-  .appr .spd { font-size: 0.78rem; color: var(--color-accent); }
+  .appr .spd { font-size: 0.78rem; color: var(--color-accent-dim); }
   .uncal { margin: 8px 0 0; font-size: 0.68rem; color: var(--color-warn); line-height: 1.35; }
   .note { margin-top: 14px; font-size: 0.7rem; color: var(--color-dim); line-height: 1.4; }
   .empty { color: var(--color-dim); font-size: 0.85rem; }
