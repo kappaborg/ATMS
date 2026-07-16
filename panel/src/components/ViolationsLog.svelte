@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { getViolations, violationSnapshotUrl, exportViolations, type ViolationRecord } from "../lib/gateway";
+  import { getViolations, violationSnapshotUrl, exportViolations, deleteViolation, type ViolationRecord } from "../lib/gateway";
   import Icon, { type IconName } from "./Icon.svelte";
 
   // CSV export is operator-only server-side (bulk PII); hide it from viewers.
@@ -21,8 +21,32 @@
     reckless: "reckless", drift: "drift", stopped_vehicle: "warning",
   };
 
+  let pending = $state<number | null>(null); // id awaiting delete confirmation
+  let busy = $state<number | null>(null);
+  let delErr = $state("");
+
   async function load() {
     rows = await getViolations(hours, undefined, filterType || undefined);
+  }
+
+  // Deleting erases the record AND its snapshot file server-side, so it is
+  // irreversible — hence the two-step confirm, unlike CorridorsPanel's one-click
+  // remove. Confirmation is inline rather than a native confirm() dialog, which
+  // some Tauri webviews suppress.
+  async function del(id: number) {
+    busy = id;
+    delErr = "";
+    const prev = rows;
+    rows = rows.filter((r) => r.id !== id); // optimistic: the 5s poll is too slow to feel responsive
+    try {
+      await deleteViolation(id);
+    } catch (e) {
+      rows = prev; // restore — the evidence is still there
+      delErr = e instanceof Error ? e.message : "delete failed";
+    } finally {
+      busy = null;
+      pending = null;
+    }
   }
   const fmt = (ts: number) => new Date(ts * 1000).toLocaleString();
   function detailStr(r: ViolationRecord) {
@@ -65,6 +89,7 @@
       </select>
       {#if canOperate}<button class="export" onclick={exportViolations}><Icon name="download" size={14} />Export CSV</button>{/if}
     </div>
+    {#if delErr}<p class="delerr"><Icon name="warning" size={13} />Could not delete: {delErr}</p>{/if}
     <div class="chips">
       <button class="chip" class:on={filterType === ""} onclick={() => (filterType = "")}>Everything</button>
       {#each TYPES as t}
@@ -76,7 +101,7 @@
   <div class="tablewrap">
     <table>
       <thead>
-        <tr><th>Snapshot</th><th>Time</th><th>Type</th><th>Plate</th><th>Detail</th><th>Camera</th><th>Int</th></tr>
+        <tr><th>Snapshot</th><th>Time</th><th>Type</th><th>Plate</th><th>Detail</th><th>Camera</th><th>Int</th>{#if canOperate}<th></th>{/if}</tr>
       </thead>
       <tbody>
         {#each rows as r (r.id)}
@@ -94,9 +119,20 @@
             <td class="det">{detailStr(r)}</td>
             <td>{r.camera_id}</td>
             <td>{r.intersection_id}</td>
+            {#if canOperate}
+              <td class="act">
+                {#if pending === r.id}
+                  <span class="conf">Erase evidence?</span>
+                  <button class="yes" onclick={() => del(r.id)} disabled={busy === r.id}>{busy === r.id ? "…" : "Delete"}</button>
+                  <button class="no" onclick={() => (pending = null)}>Cancel</button>
+                {:else}
+                  <button class="del" onclick={() => (pending = r.id)} aria-label="delete this alert">remove</button>
+                {/if}
+              </td>
+            {/if}
           </tr>
         {:else}
-          <tr><td colspan="7" class="empty">No violations logged in this window.</td></tr>
+          <tr><td colspan={canOperate ? 8 : 7} class="empty">No violations logged in this window.</td></tr>
         {/each}
       </tbody>
     </table>
@@ -140,6 +176,16 @@
   .type.wrong_way { color: var(--color-critical); } .type.drift { color: var(--color-accent-dim); }
   .type.reckless { color: #8a6fbf; } .type.stopped_vehicle { color: var(--color-critical); }
   .empty { text-align: center; color: var(--color-dim); padding: 30px; }
+  .act { white-space: nowrap; text-align: right; }
+  .del { background: none; border: 1px solid var(--color-border-2); color: var(--color-critical); border-radius: var(--radius-sm); padding: 2px 8px; cursor: pointer; font-size: 0.7rem; }
+  .del:hover { background: var(--color-surface-2); }
+  .conf { font-size: 0.7rem; color: var(--color-muted); margin-right: 6px; }
+  .yes, .no { border-radius: var(--radius-sm); padding: 2px 8px; cursor: pointer; font-size: 0.7rem; border: 1px solid var(--color-border-2); }
+  .yes { background: var(--color-critical); border-color: var(--color-critical); color: #fff; font-weight: 600; }
+  .yes:disabled { opacity: 0.6; cursor: default; }
+  .no { background: none; color: var(--color-muted); margin-left: 5px; }
+  .no:hover { background: var(--color-surface-2); color: var(--color-text); }
+  .delerr { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.75rem; color: var(--color-critical); }
   .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: grid; place-items: center; z-index: 100; cursor: zoom-out; }
   .lightbox img { max-width: 80vw; max-height: 80vh; border: 1px solid var(--color-border-2); border-radius: 6px; }
 </style>

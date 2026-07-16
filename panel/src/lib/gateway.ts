@@ -256,6 +256,14 @@ export async function getViolations(hours = 24, camera_id?: string, type?: strin
   return (await r.json()).violations;
 }
 
+/** Erase one violation record and its snapshot. Operator-only, audited
+ * server-side. Throws on failure — a silently-dropped delete would leave the
+ * operator believing evidence was erased when it was not. */
+export async function deleteViolation(id: number): Promise<void> {
+  const r = await fetch(`${BASE}/violations/${id}`, { method: "DELETE", headers: authHeaders() });
+  if (!r.ok) throw new Error(`deleteViolation ${r.status}`);
+}
+
 /** Snapshot image URL (token passed as query since <img> can't set headers). */
 export function violationSnapshotUrl(id: number): string {
   return `${BASE}/violations/${id}/snapshot${TOKEN ? `?token=${encodeURIComponent(TOKEN)}` : ""}`;
