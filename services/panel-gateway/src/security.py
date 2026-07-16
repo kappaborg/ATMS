@@ -46,6 +46,14 @@ def _allow_loopback() -> bool:
     return os.getenv("ATMS_ALLOW_LOOPBACK_SOURCES", "").lower() in ("1", "true", "yes")
 
 
+def _allow_private_http() -> bool:
+    # RTSP cameras legitimately live on private LAN ranges, but an http(s)
+    # source pointed at a private address is an SSRF vector (an operator — or
+    # anyone, if auth is off — can probe internal web services / metadata).
+    # Blocked by default; opt in for genuine LAN HTTP(S) streams.
+    return os.getenv("ATMS_ALLOW_PRIVATE_HTTP", "").lower() in ("1", "true", "yes")
+
+
 def _strict_live() -> bool:
     return os.getenv("ATMS_STRICT_LIVE", "").lower() in ("1", "true", "yes")
 
@@ -87,13 +95,19 @@ def validate_source(source: str) -> str | int:
 
 
 def _validate_url(url: str) -> str:
-    host = urlparse(url).hostname
+    parsed = urlparse(url)
+    host = parsed.hostname
     if not host:
         raise SourceRejected("URL has no host")
+    is_http = parsed.scheme in ("http", "https")
     try:
         infos = socket.getaddrinfo(host, None)
     except socket.gaierror as e:
         raise SourceRejected(f"cannot resolve host '{host}'") from e
+    # NOTE: this validates the addresses the host resolves to *now*; FFmpeg/
+    # yt-dlp re-resolve at connect time, so a DNS-rebinding attacker can still
+    # move a name to an internal IP after this check. Pinning the vetted IP at
+    # connect time is the remaining hardening (tracked separately).
     for info in infos:
         ip = ipaddress.ip_address(info[4][0])
         if ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
@@ -102,6 +116,11 @@ def _validate_url(url: str) -> str:
             raise SourceRejected(
                 f"loopback source {ip} blocked "
                 "(set ATMS_ALLOW_LOOPBACK_SOURCES=1 for local test streams)"
+            )
+        if is_http and ip.is_private and not (ip.is_loopback and _allow_loopback()) and not _allow_private_http():
+            raise SourceRejected(
+                f"private-range HTTP source {ip} blocked (SSRF guard) — "
+                "set ATMS_ALLOW_PRIVATE_HTTP=1 to allow LAN HTTP(S) streams"
             )
     return url
 

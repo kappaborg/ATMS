@@ -66,9 +66,20 @@ def auth_enabled() -> bool:
     return bool(_users()) or bool(_api_token())
 
 
+_SHORT_SECRET_WARNED = False
+
+
 def _secret() -> bytes:
     s = os.getenv("PANEL_AUTH_SECRET", "")
     if s:
+        if len(s.encode()) < 32:
+            global _SHORT_SECRET_WARNED
+            if not _SHORT_SECRET_WARNED:
+                _SHORT_SECRET_WARNED = True
+                log.warning(
+                    "PANEL_AUTH_SECRET is only %d bytes; use >= 32 bytes of entropy "
+                    "for a strong session-token HMAC key.", len(s.encode()),
+                )
         return s.encode()
     # Ephemeral per-process secret: sessions won't survive a restart. Fine for
     # a single desktop instance; set PANEL_AUTH_SECRET for stable sessions.
@@ -82,11 +93,43 @@ def _secret() -> bytes:
 
 # --- password check ---
 
+_PBKDF2_ITERS = 200_000
+_WEAK_HASH_WARNED = False
+
+
+def hash_password(password: str, *, iterations: int = _PBKDF2_ITERS) -> str:
+    """Produce a salted PBKDF2-HMAC-SHA256 credential for PANEL_USERS:
+    ``pbkdf2:<iterations>:<salt_hex>:<hash_hex>``. Run as a CLI:
+    ``python -m panel_auth <password>``."""
+    salt = secrets.token_bytes(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, iterations)
+    return f"pbkdf2:{iterations}:{salt.hex()}:{dk.hex()}"
+
+
 def _password_ok(supplied: str, stored: str) -> bool:
+    if stored.startswith("pbkdf2:"):
+        try:
+            _, iters, salt_hex, hash_hex = stored.split(":", 3)
+            dk = hashlib.pbkdf2_hmac("sha256", supplied.encode(), bytes.fromhex(salt_hex), int(iters))
+            return hmac.compare_digest(dk.hex(), hash_hex)
+        except (ValueError, TypeError):
+            return False
     if stored.startswith("sha256:"):
+        _warn_weak_hash("sha256 (unsalted)")
         digest = hashlib.sha256(supplied.encode()).hexdigest()
         return hmac.compare_digest(digest, stored[len("sha256:"):])
+    _warn_weak_hash("plaintext")
     return hmac.compare_digest(supplied, stored)
+
+
+def _warn_weak_hash(kind: str) -> None:
+    global _WEAK_HASH_WARNED
+    if not _WEAK_HASH_WARNED:
+        _WEAK_HASH_WARNED = True
+        log.warning(
+            "PANEL_USERS contains a %s password — prefer salted 'pbkdf2:...' "
+            "credentials (generate with: python -m panel_auth <password>).", kind,
+        )
 
 
 def authenticate(username: str, password: str) -> Principal | None:
@@ -132,3 +175,13 @@ def principal_from_token(token: str | None) -> Principal | None:
         return Principal(sub=str(payload["sub"]), role=str(payload["role"]))
     except Exception:  # noqa: BLE001
         return None
+
+
+if __name__ == "__main__":
+    # Credential helper: `python -m panel_auth <password>` prints a salted
+    # pbkdf2 hash to paste into a PANEL_USERS entry (user:role:<hash>).
+    import getpass
+    import sys
+
+    pw = sys.argv[1] if len(sys.argv) > 1 else getpass.getpass("password: ")
+    print(hash_password(pw))
