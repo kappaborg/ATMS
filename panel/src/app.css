@@ -110,10 +110,32 @@ button { font-family: inherit; cursor: pointer; color: inherit; }
 ::view-transition-old(root) { z-index: 1; }
 ::view-transition-new(root) { z-index: 2; }
 
+/* Palette cross-fade — the fallback for webviews without View Transitions
+   (WebKitGTK and older WKWebView, i.e. what Tauri ships on Linux/macOS), where
+   the wipe above never runs. Every surface reads var(--color-*) off :root, so
+   flipping [data-theme] re-resolves all 17 tokens in one frame: without this,
+   the switch is a hard cut.
+
+   Only active while ThemeToggle holds [data-theme-animating] (keep --theme-fade
+   and its FADE_MS in sync). A permanent global transition would make every
+   hover feel laggy. */
+:root { --theme-fade: 260ms cubic-bezier(.4, 0, .2, 1); }
+:root[data-theme-animating],
+:root[data-theme-animating] :where(*, *::before, *::after) {
+  transition:
+    background-color var(--theme-fade), color var(--theme-fade),
+    border-color var(--theme-fade), outline-color var(--theme-fade),
+    box-shadow var(--theme-fade), fill var(--theme-fade), stroke var(--theme-fade);
+}
+
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--color-border-2); border-radius: 6px; border: 2px solid var(--color-bg); }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-dim); }
 
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+  /* ThemeToggle also guards this in JS; belt and braces, since the attribute
+     could outlive a preference change mid-switch. */
+  :root[data-theme-animating],
+  :root[data-theme-animating] :where(*, *::before, *::after) { transition: none; }
 }

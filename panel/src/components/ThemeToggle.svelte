@@ -1,14 +1,31 @@
 <script lang="ts">
   // Animated light/dark switch. The theme lives as [data-theme] on <html>;
   // the change is wiped in with a circular reveal from the click point
-  // (View Transitions API), falling back to an instant switch where unsupported
-  // or when the user prefers reduced motion.
+  // (View Transitions API). Where that API is missing — WebKitGTK and older
+  // WKWebView, i.e. Tauri's own webviews — fall back to a palette cross-fade
+  // (see --theme-fade in app.css) rather than a hard cut. Reduced motion gets
+  // an instant switch either way.
+  import { onDestroy } from "svelte";
+
   type Theme = "dark" | "light";
   const STORE_KEY = "atms_theme";
+  const FADE_MS = 260; // keep in sync with --theme-fade in app.css
   const stored = (() => { try { return localStorage.getItem(STORE_KEY) as Theme | null; } catch { return null; } })();
   const initial: Theme = stored || (document.documentElement.getAttribute("data-theme") as Theme) || "dark";
   let theme = $state<Theme>(initial);
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Tracked live: reading .matches once at init would ignore an OS-level
+  // preference change until reload.
+  const motion = matchMedia("(prefers-reduced-motion: reduce)");
+  let reduce = $state(motion.matches);
+  const onMotionChange = (e: MediaQueryListEvent) => (reduce = e.matches);
+  motion.addEventListener("change", onMotionChange);
+
+  let fadeTimer: ReturnType<typeof setTimeout> | undefined;
+  onDestroy(() => {
+    motion.removeEventListener("change", onMotionChange);
+    clearTimeout(fadeTimer);
+  });
 
   function apply(next: Theme) {
     theme = next;
@@ -16,11 +33,26 @@
     try { localStorage.setItem(STORE_KEY, next); } catch { /* private mode / storage disabled */ }
   }
 
+  // Cross-fade every token-driven surface for the length of the switch. Timed
+  // rather than transitionend-driven: that event fires per property per element,
+  // so there is no single "done" to listen for.
+  function fade(next: Theme) {
+    const root = document.documentElement;
+    root.setAttribute("data-theme-animating", "");
+    apply(next);
+    clearTimeout(fadeTimer);
+    fadeTimer = setTimeout(() => root.removeAttribute("data-theme-animating"), FADE_MS);
+  }
+
   function toggle(e: MouseEvent) {
     const next: Theme = theme === "dark" ? "light" : "dark";
     const doc = document as Document & { startViewTransition?: (cb: () => void) => { ready: Promise<void> } };
-    if (reduce || !doc.startViewTransition) {
+    if (reduce) {
       apply(next);
+      return;
+    }
+    if (!doc.startViewTransition) {
+      fade(next);
       return;
     }
     const x = e.clientX;
