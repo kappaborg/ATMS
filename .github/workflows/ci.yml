@@ -142,7 +142,7 @@ jobs:
           coverage xml
       - name: Upload coverage
         if: matrix.python-version == '3.11'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-xml-${{ matrix.service }}
           path: services/${{ matrix.service }}/coverage.xml
@@ -212,7 +212,7 @@ jobs:
           mkdir -p /tmp/images
           docker save atms/${{ matrix.service }}:ci-${{ github.sha }} \
             -o /tmp/images/${{ matrix.service }}.tar
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: image-${{ matrix.service }}
           path: /tmp/images/${{ matrix.service }}.tar
@@ -266,7 +266,7 @@ jobs:
           category: trivy-${{ matrix.service }}
       - name: Upload SARIF artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: trivy-${{ matrix.service }}
           path: trivy-${{ matrix.service }}.sarif
@@ -299,7 +299,7 @@ jobs:
           image: atms/${{ matrix.service }}:ci-${{ github.sha }}
           format: spdx-json
           output-file: sbom-${{ matrix.service }}.spdx.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sbom-${{ matrix.service }}
           path: sbom-${{ matrix.service }}.spdx.json
