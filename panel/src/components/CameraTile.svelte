@@ -9,7 +9,8 @@
     event,
     live = true,
     kind = "file",
-  }: { camera_id: string; event: FrameEvent | undefined; live?: boolean; kind?: string } = $props();
+    canOperate = false,
+  }: { camera_id: string; event: FrameEvent | undefined; live?: boolean; kind?: string; canOperate?: boolean } = $props();
 
   let src = $state<string>("");
   // camera_id is fixed per tile instance (the grid keys tiles by id).
@@ -79,7 +80,9 @@
       {#if event}
         <span class="phase-chip {phaseClass(event.decision.phase)}"><span class="d"></span> {event.decision.phase}</span>
       {/if}
-      <button class="remove" title="Remove camera" onclick={() => removeCamera(camera_id)}><Icon name="close" size={13} stroke={2.2} /></button>
+      {#if canOperate}
+        <button class="remove" title="Remove camera" onclick={() => removeCamera(camera_id)}><Icon name="close" size={13} stroke={2.2} /></button>
+      {/if}
     </div>
 
     {#if scale > 1}

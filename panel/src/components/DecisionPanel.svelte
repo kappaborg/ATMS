@@ -151,7 +151,7 @@
           <div class="cm"><b>{event.emissions.avg_g_per_km.toFixed(0)}<i>g/km</i></b><span>avg intensity</span></div>
           <div class="cm saved"><b>{co2Saved?.v}<i>{co2Saved?.unit}</i></b><span>est. saved</span></div>
         </div>
-        <p class="cnote">Est. saved = measured idle CO₂ × {(event.emissions.savings_ratio * 100).toFixed(0)}% (adaptive-control model; adjustable).</p>
+        <p class="cnote">Est. saved = measured idle CO₂ × {(event.emissions.savings_ratio * 100).toFixed(0)}% (adaptive-control model, set in the gateway config — an estimate, not a measurement).</p>
       </div>
     {:else if event && !event.calibrated}
       <p class="cuncal"><Icon name="leaf" size={13} />Calibrate this camera to measure CO₂ emissions (needs real speed).</p>

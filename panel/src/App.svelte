@@ -193,7 +193,6 @@
     <div class="pills">
       <span class="pill"><span class="dot" class:on={connected} class:off={!connected}></span>{connected ? "Connected" : "Offline"}</span>
       <span class="pill"><span class="num">{liveCount}</span>/{cameras.length} cameras</span>
-      <span class="pill"><span class="num">{dataHz}</span> Hz</span>
     </div>
 
     <div class="spacer"></div>
@@ -244,7 +243,7 @@
             {#each shownCameras as cam (cam.camera_id)}
               <div class="cell" class:sel={selected === cam.camera_id} onclick={() => (selected = cam.camera_id)}
                 onkeydown={(e) => (e.key === "Enter" || e.key === " ") && (selected = cam.camera_id)} role="button" tabindex="0">
-                <CameraTile camera_id={cam.camera_id} event={events[cam.camera_id]} live={cam.live} kind={cam.kind} />
+                <CameraTile camera_id={cam.camera_id} event={events[cam.camera_id]} live={cam.live} kind={cam.kind} {canOperate} />
               </div>
             {:else}
               <div class="hint">
@@ -288,7 +287,7 @@
 
   <footer class="statusbar">
     <span class="s"><span class="dot" class:on={connected} class:off={!connected}></span>{connected ? "Connected to gateway" : "Gateway offline"}</span>
-    <span class="s">Watching <b>{cameras.length} {cameras.length === 1 ? "junction" : "junctions"}</b></span>
+    <span class="s">Watching <b>{intersections.length} {intersections.length === 1 ? "junction" : "junctions"}</b></span>
     <span class="s"><b>{dataHz}</b> updates/s</span>
     <span class="spacer"></span>
     {#if me}<span class="s">Signed in as <b>{me.username}</b></span>{/if}
