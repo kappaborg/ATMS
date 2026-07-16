@@ -20,6 +20,19 @@
     }
   }
 
+  // Session CO2 totals are routinely far below 1 kg — a car crossing a ~50 m
+  // field of view at 40 km/h accrues ~7 g — so a fixed 2-decimal kg rendering
+  // collapses real readings to "0.00". The gateway keeps 4 decimals (emissions.py)
+  // precisely so the UI can show them; drop to grams under 1 kg.
+  function mass(kg: number): { v: string; unit: string } {
+    if (kg >= 1) return { v: kg.toFixed(2), unit: "kg" };
+    const g = kg * 1000;
+    return { v: g < 10 ? g.toFixed(1) : g.toFixed(0), unit: "g" };
+  }
+  const co2Total = $derived(event?.emissions ? mass(event.emissions.total_co2_kg) : null);
+  const co2Rate = $derived(event?.emissions ? mass(event.emissions.rate_kg_h) : null);
+  const co2Saved = $derived(event?.emissions ? mass(event.emissions.est_saved_kg) : null);
+
   const d = $derived(event?.decision);
   const sys = $derived(event?.system);
   const colour = (p?: string) =>
@@ -133,15 +146,19 @@
       <div class="carbon">
         <div class="chead"><Icon name="leaf" size={13} />Emissions <span>this session</span></div>
         <div class="cgrid">
-          <div class="cm"><b>{event.emissions.total_co2_kg.toFixed(2)}<i>kg</i></b><span>CO₂ measured</span></div>
-          <div class="cm"><b>{event.emissions.rate_kg_h.toFixed(1)}<i>kg/h</i></b><span>rate</span></div>
+          <div class="cm"><b>{co2Total?.v}<i>{co2Total?.unit}</i></b><span>CO₂ measured</span></div>
+          <div class="cm"><b>{co2Rate?.v}<i>{co2Rate?.unit}/h</i></b><span>rate</span></div>
           <div class="cm"><b>{event.emissions.avg_g_per_km.toFixed(0)}<i>g/km</i></b><span>avg intensity</span></div>
-          <div class="cm saved"><b>{event.emissions.est_saved_kg.toFixed(2)}<i>kg</i></b><span>est. saved</span></div>
+          <div class="cm saved"><b>{co2Saved?.v}<i>{co2Saved?.unit}</i></b><span>est. saved</span></div>
         </div>
         <p class="cnote">Est. saved = measured idle CO₂ × {(event.emissions.savings_ratio * 100).toFixed(0)}% (adaptive-control model; adjustable).</p>
       </div>
     {:else if event && !event.calibrated}
       <p class="cuncal"><Icon name="leaf" size={13} />Calibrate this camera to measure CO₂ emissions (needs real speed).</p>
+    {:else if event}
+      <!-- Calibrated, but the gateway has measured nothing yet (no moving vehicle
+           seen since the worker started), so `emissions` is null rather than 0. -->
+      <p class="cuncal"><Icon name="leaf" size={13} />No emissions measured yet — waiting for the first vehicle.</p>
     {/if}
 
     {#if history30 && history30.vehicles > 0}

@@ -60,10 +60,17 @@
   const totalVehicles = $derived(liveEvents.reduce((s, e) => s + e.counts.vehicles, 0));
   const liveCams = $derived(cameras.filter((c) => c.live).length);
   const incidents = $derived(liveEvents.reduce((s, e) => s + e.incidents.length + e.violations.length, 0));
+  // Share of measured CO2 the adaptive-control model attributes to saved idling:
+  // sum(est_saved_kg) / sum(total_co2_kg) across live cameras. Averaging
+  // `savings_ratio` instead would only echo PANEL_ADAPTIVE_SAVINGS_RATIO, a
+  // config constant that never moves with traffic.
+  // null = nothing measured (emissions need a calibrated camera) — distinct
+  // from 0%, which would claim we measured and found no saving.
   const co2Pct = $derived.by(() => {
     const es = liveEvents.map((e) => e.emissions).filter((x): x is NonNullable<typeof x> => !!x);
-    if (!es.length) return 0;
-    return Math.round((es.reduce((s, e) => s + e.savings_ratio, 0) / es.length) * 100);
+    const total = es.reduce((s, e) => s + e.total_co2_kg, 0);
+    if (!es.length || total <= 0) return null;
+    return Math.round((es.reduce((s, e) => s + e.est_saved_kg, 0) / total) * 100);
   });
 
   const busyCount = $derived(nodes.filter((n) => n.cong > 0.66).length);
@@ -171,7 +178,7 @@
   <div class="kpis">
     <div class="kpi"><div class="k"><span class="label">Vehicles right now</span></div><div class="v num">{totalVehicles}</div><div class="d muted">across the network</div></div>
     <div class="kpi"><div class="k"><span class="label">Cameras live</span></div><div class="v num">{liveCams}<u>/{cameras.length}</u></div><div class="d muted">feeding detections</div></div>
-    <div class="kpi"><div class="k"><span class="label">CO₂ saved</span></div><div class="v num">{co2Pct}<u>%</u></div><div class="d ok">less idling vs fixed timers</div></div>
+    <div class="kpi"><div class="k"><span class="label">CO₂ saved</span></div>{#if co2Pct === null}<div class="v num dim">—</div><div class="d muted">needs a calibrated camera</div>{:else}<div class="v num">{co2Pct}<u>%</u></div><div class="d ok">less idling vs fixed timers</div>{/if}</div>
     <div class="kpi"><div class="k"><span class="label">Needs attention</span></div><div class="v num">{incidents}</div><div class="d" class:warn={incidents > 0}>{incidents ? "active incidents" : "all clear"}</div></div>
   </div>
 
@@ -230,7 +237,7 @@
   .ov { padding: 18px; }
   .num { font-variant-numeric: tabular-nums; }
   .label { font-size: 11.5px; font-weight: 600; color: var(--color-dim); }
-  .muted { color: var(--color-muted); } .ok { color: var(--color-ok); } .warn { color: var(--color-warn); }
+  .muted { color: var(--color-muted); } .ok { color: var(--color-ok); } .warn { color: var(--color-warn); } .dim { color: var(--color-dim); }
 
   .welcome { display: flex; align-items: center; gap: 16px; padding: 16px 20px; margin-bottom: 16px;
     border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--sh-1);
