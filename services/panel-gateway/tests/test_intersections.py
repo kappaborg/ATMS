@@ -14,10 +14,11 @@ def _manager_with(workers):
     return m
 
 
-def _w(cam_id, iid, src="videos/x.mp4", sahi=False):
+def _w(cam_id, iid, src="videos/x.mp4", sahi=False, approach=None):
     return SimpleNamespace(
         cam_id=cam_id, intersection_id=iid, source=src, loop_file=True,
         status="running", error=None, fps=30.0, sahi_enabled=sahi, min_confidence=0.25,
+        approach=approach,
         scene=SimpleNamespace(to_payload=lambda: {}, info=lambda: {}),
     )
 
@@ -28,8 +29,8 @@ def test_intersections_grouped_and_sorted():
     })
     got = m.intersections()
     assert got == [
-        {"intersection_id": "1", "cameras": ["a", "b"]},
-        {"intersection_id": "2", "cameras": ["c"]},
+        {"intersection_id": "1", "cameras": ["a", "b"], "name": None, "city": None},
+        {"intersection_id": "2", "cameras": ["c"], "name": None, "city": None},
     ]
 
 
@@ -84,6 +85,59 @@ def test_add_rejects_bad_intersection_id():
 def test_camera_list_includes_min_confidence():
     m = _manager_with({"a": _w("a", "1")})
     assert "min_confidence" in m.list()[0]
+
+
+def test_camera_list_includes_approach():
+    m = _manager_with({"a": _w("a", "1", approach="north"), "b": _w("b", "1")})
+    by_id = {c["camera_id"]: c["approach"] for c in m.list()}
+    assert by_id == {"a": "north", "b": None}
+
+
+def test_set_junction_names_and_surfaces_in_intersections():
+    m = _manager_with({"a": _w("a", "1")})
+    m._persist = lambda: None
+    m.set_junction("1", "Marijin Dvor", "Sarajevo")
+    got = m.intersections()[0]
+    assert got["name"] == "Marijin Dvor"
+    assert got["city"] == "Sarajevo"
+
+
+def test_set_junction_clearing_falls_back_to_id():
+    m = _manager_with({"a": _w("a", "1")})
+    m._persist = lambda: None
+    m.set_junction("1", "Marijin Dvor", "Sarajevo")
+    m.set_junction("1", "  ", "")  # cleared
+    got = m.intersections()[0]
+    assert got["name"] is None and got["city"] is None
+
+
+def test_named_junction_without_cameras_still_listed():
+    """Naming a site then losing its camera must not erase the site."""
+    m = _manager_with({})
+    m._persist = lambda: None
+    m.set_junction("9", "Skenderija", "Sarajevo")
+    got = m.intersections()
+    assert got == [{"intersection_id": "9", "cameras": [], "name": "Skenderija", "city": "Sarajevo"}]
+
+
+def test_set_junction_rejects_path_traversal_id():
+    import pytest
+
+    m = _manager_with({})
+    m._persist = lambda: None
+    for bad in ["../../etc", "a/b", "x" * 65, ""]:
+        with pytest.raises(ValueError):
+            m.set_junction(bad, "n", "c")
+
+
+def test_add_rejects_bad_approach():
+    import pytest
+
+    m = _manager_with({})
+    m._persist = lambda: None
+    m._detector_lazy = lambda: None
+    with pytest.raises(ValueError):
+        m.add("cam1", "videos/x.mp4", approach="northwest")
 
 
 def test_set_min_confidence_clamps():

@@ -77,6 +77,12 @@ class CameraManager:
         self._detector: Detector | None = None
         self._workers: dict[str, CameraWorker] = {}
         self._corridors: dict = {}  # corridor_id -> Corridor
+        # Junction display names, keyed by intersection_id: {"name", "city"}.
+        # Kept here rather than on the cameras: a junction's name belongs to the
+        # junction, and duplicating it per-camera lets two cameras on the same
+        # junction disagree about where they are. Entries are independent of
+        # cameras, so naming a junction survives its cameras being swapped out.
+        self._junctions: dict[str, dict[str, str]] = {}
 
     def _detector_lazy(self) -> Detector:
         if self._detector is None:
@@ -85,10 +91,12 @@ class CameraManager:
 
     _ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
+    APPROACHES = ("north", "south", "east", "west")
+
     def add(
         self, cam_id: str, source: str | int, *,
         loop_file: bool = True, intersection_id: str = "1", sahi: bool = False,
-        min_confidence: float | None = None,
+        min_confidence: float | None = None, approach: str | None = None,
     ) -> None:
         # Single chokepoint (API + restore): ids build filesystem/route paths,
         # so reject anything outside a safe charset (path-traversal defence).
@@ -98,10 +106,12 @@ class CameraManager:
             raise ValueError(f"invalid intersection_id '{intersection_id}'")
         if cam_id in self._workers:
             raise ValueError(f"camera '{cam_id}' already exists")
+        if approach is not None and approach not in self.APPROACHES:
+            raise ValueError(f"invalid approach '{approach}'")
         worker = CameraWorker(
             cam_id, source, self._detector_lazy(), self.hub,
             loop_file=loop_file, intersection_id=intersection_id, system=self.system,
-            sahi=sahi, min_confidence=min_confidence,
+            sahi=sahi, min_confidence=min_confidence, approach=approach,
         )
         self._workers[cam_id] = worker
         worker.start()
@@ -149,17 +159,28 @@ class CameraManager:
                 "sahi": w.sahi_enabled,
                 "min_confidence": w.min_confidence,
             }
+            if w.approach:
+                entry["approach"] = w.approach
             payload = w.scene.to_payload()
             if payload:
                 entry["scene"] = payload
             cams.append(entry)
-        store.save({"cameras": cams})
+        store.save({"cameras": cams, "junctions": self._junctions})
 
     def restore(self) -> int:
         """Re-create cameras and re-apply scenes from the saved state.
         Returns the number of cameras restored. Never raises on a bad entry."""
         restored = 0
-        for entry in store.load().get("cameras", []):
+        saved = store.load()
+        # Junctions first: cameras restored below are grouped under them, and a
+        # camera that fails to restore must not take its junction's name with it.
+        for iid, meta in (saved.get("junctions") or {}).items():
+            if isinstance(meta, dict):
+                self._junctions[str(iid)] = {
+                    "name": str(meta.get("name", ""))[:64],
+                    "city": str(meta.get("city", ""))[:64],
+                }
+        for entry in saved.get("cameras", []):
             try:
                 cam_id = entry["camera_id"]
                 safe = validate_source(entry["source"])  # re-vet on load (tamper defence)
@@ -170,6 +191,7 @@ class CameraManager:
                     intersection_id=str(entry.get("intersection_id", "1")),
                     sahi=bool(entry.get("sahi", False)),
                     min_confidence=entry.get("min_confidence"),
+                    approach=entry.get("approach"),
                 )
                 if entry.get("scene"):
                     self.set_scene(cam_id, SceneConfig.from_payload(entry["scene"]))
@@ -190,6 +212,7 @@ class CameraManager:
                 "kind": source_kind(w.source),
                 "live": is_live_source(w.source),
                 "intersection_id": w.intersection_id,
+                "approach": w.approach,
                 "sahi": w.sahi_enabled,
                 "min_confidence": round(w.min_confidence, 2),
                 "status": w.status,
@@ -232,13 +255,35 @@ class CameraManager:
     def list_corridors(self) -> list[dict]:
         return [c.to_dict() for c in self._corridors.values()]
 
+    def set_junction(self, iid: str, name: str, city: str) -> dict[str, str]:
+        """Name a junction. Accepts an id with no cameras yet — an operator can
+        name the site before pointing a camera at it."""
+        if not self._ID_RE.match(str(iid)):
+            raise ValueError(f"invalid intersection_id '{iid}'")
+        meta = {"name": name.strip()[:64], "city": city.strip()[:64]}
+        if not meta["name"] and not meta["city"]:
+            self._junctions.pop(str(iid), None)  # cleared -> fall back to the id
+        else:
+            self._junctions[str(iid)] = meta
+        self._persist()
+        return meta
+
     def intersections(self) -> list[dict[str, Any]]:
         """Group cameras by intersection for the network overview console."""
         groups: dict[str, list[str]] = {}
         for w in self._workers.values():
             groups.setdefault(w.intersection_id, []).append(w.cam_id)
+        # A named junction with no cameras still belongs on the map — otherwise
+        # naming a site then losing its camera would silently erase it.
+        for iid in self._junctions:
+            groups.setdefault(iid, [])
         return [
-            {"intersection_id": iid, "cameras": sorted(cams)}
+            {
+                "intersection_id": iid,
+                "cameras": sorted(cams),
+                "name": self._junctions.get(iid, {}).get("name") or None,
+                "city": self._junctions.get(iid, {}).get("city") or None,
+            }
             for iid, cams in sorted(groups.items())
         ]
 

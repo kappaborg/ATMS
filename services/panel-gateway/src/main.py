@@ -23,6 +23,7 @@ import asyncio
 import os
 import sys
 from pathlib import Path
+from typing import Literal
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -91,8 +92,19 @@ class CameraIn(BaseModel):
     source: str  # "rtsp://...", "http://...", "0" (USB), or a file path
     loop_file: bool = True
     intersection_id: str = Field(default="1", pattern=r"^[A-Za-z0-9_-]{1,64}$")
+    # Which arm of the junction the camera watches. Display metadata: it is what
+    # distinguishes two cameras on the same junction in the UI.
+    approach: Literal["north", "south", "east", "west"] | None = None
     sahi: bool = False  # sliced inference for aerial/small-object views (slower)
     min_confidence: float | None = Field(default=None, ge=0.05, le=0.95)
+
+
+class JunctionIn(BaseModel):
+    # Free text, unlike the ids above: never used to build a path, and rendered
+    # as text content (Svelte escapes it), so it is not a traversal or XSS
+    # vector. Length-capped to keep the map legible and the state file bounded.
+    name: str = Field(default="", max_length=64)
+    city: str = Field(default="", max_length=64)
 
 
 def _resolve_principal(authorization: str | None, token: str | None) -> Principal | None:
@@ -305,7 +317,7 @@ async def add_camera(cam: CameraIn, p: Principal = _OPERATOR, __: None = _RATE) 
         manager.add(
             cam.camera_id, safe_source, loop_file=cam.loop_file,
             intersection_id=cam.intersection_id, sahi=cam.sahi,
-            min_confidence=cam.min_confidence,
+            min_confidence=cam.min_confidence, approach=cam.approach,
         )
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
@@ -452,6 +464,20 @@ async def export_violations(hours: float = 168.0, p: Principal = _OPERATOR, __: 
                     r["type"], r["plate"] or "", r["detail"], r["has_snapshot"]])
     return Response(content=out.getvalue(), media_type="text/csv",
                     headers={"Content-Disposition": 'attachment; filename="atms-violations.csv"'})
+
+
+@app.put("/intersections/{iid}")
+async def set_junction(
+    iid: str, body: JunctionIn, p: Principal = _OPERATOR, __: None = _RATE
+) -> dict:
+    """Name a junction (e.g. city "Sarajevo", name "Marijin Dvor") so the map
+    reads as places rather than ids. Sending both fields empty clears the name."""
+    try:
+        meta = manager.set_junction(iid, body.name, body.city)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    _audit(p, "set_junction", f"id={iid}")
+    return {"intersection_id": iid, **meta}
 
 
 @app.get("/intersections")

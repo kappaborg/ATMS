@@ -1,4 +1,4 @@
-import type { CameraInfo, FrameEvent, IntersectionInfo, Corridor } from "./types";
+import type { Approach, CameraInfo, FrameEvent, IntersectionInfo, Corridor } from "./types";
 
 const BASE = import.meta.env.VITE_GATEWAY ?? "http://127.0.0.1:8090";
 const WS_BASE = BASE.replace(/^http/, "ws");
@@ -89,11 +89,33 @@ export async function removeCorridor(id: string): Promise<void> {
   await fetch(`${BASE}/corridors/${encodeURIComponent(id)}`, { method: "DELETE", headers: authHeaders() });
 }
 
-export async function addCamera(camera_id: string, source: string, loop_file = true) {
+/** Name a junction so the map reads as places, not ids. Both fields empty
+ * clears the name. Operator-only, audited server-side. */
+export async function setJunction(intersection_id: string, name: string, city: string): Promise<void> {
+  const r = await fetch(`${BASE}/intersections/${encodeURIComponent(intersection_id)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ name, city }),
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail ?? `setJunction ${r.status}`);
+}
+
+export async function addCamera(
+  camera_id: string,
+  source: string,
+  loop_file = true,
+  opts: { intersection_id?: string; approach?: Approach | null } = {},
+) {
   const r = await fetch(`${BASE}/cameras`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ camera_id, source, loop_file }),
+    body: JSON.stringify({
+      camera_id,
+      source,
+      loop_file,
+      ...(opts.intersection_id ? { intersection_id: opts.intersection_id } : {}),
+      ...(opts.approach ? { approach: opts.approach } : {}),
+    }),
   });
   if (!r.ok) throw new Error((await r.json()).detail ?? `addCamera ${r.status}`);
   return r.json();

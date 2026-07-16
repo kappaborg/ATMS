@@ -92,12 +92,17 @@ export interface FrameEvent {
   system: SystemDecision | null;
 }
 
+export type Approach = "north" | "south" | "east" | "west";
+
 export interface CameraInfo {
   camera_id: string;
   source: string;
   kind: "rtsp" | "http" | "usb" | "file";
   live: boolean;
   intersection_id: string;
+  /** Which arm of the junction this camera watches — what tells two cameras on
+   * the same junction apart. Null on cameras added before naming existed. */
+  approach: Approach | null;
   sahi: boolean;
   min_confidence: number;
   status: string;
@@ -108,6 +113,10 @@ export interface CameraInfo {
 export interface IntersectionInfo {
   intersection_id: string;
   cameras: string[];
+  /** Operator-given place name, e.g. "Marijin Dvor" / "Sarajevo". Null until
+   * named — callers fall back to the id. */
+  name: string | null;
+  city: string | null;
   system: SystemDecision | null;
 }
 

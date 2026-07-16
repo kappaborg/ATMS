@@ -2,6 +2,7 @@
   import { onDestroy, onMount } from "svelte";
   import { connectData, listCameras, listIntersections, listCorridors, downloadReport, authRequired, getMe, logout, getHistory, setSahi, setConfidence, type Me, type HistoryTotals } from "./lib/gateway";
   import type { CameraInfo, FrameEvent, IntersectionInfo, Corridor } from "./lib/types";
+  import { cameraLabel } from "./lib/naming";
   import CameraTile from "./components/CameraTile.svelte";
   import DecisionPanel from "./components/DecisionPanel.svelte";
   import CameraManager from "./components/CameraManager.svelte";
@@ -36,6 +37,13 @@
 
   // Operators/admins can mutate; viewers (and auth-disabled dev) accordingly.
   const canOperate = $derived(!authReq || me?.role === "operator" || me?.role === "admin");
+
+  // Place name where the junction has been named; the raw id is kept on the
+  // title attribute, since that is still what the operator types into configs.
+  const selectedLabel = $derived.by(() => {
+    const cam = cameras.find((c) => c.camera_id === selected);
+    return cam ? cameraLabel(cam, intersections) : (selected ?? "");
+  });
 
   let history30 = $state<HistoryTotals | null>(null);
 
@@ -248,7 +256,7 @@
           <aside class="dock">
             {#if selected}
               <div class="sel-bar">
-                <span>{selected}</span>
+                <span title={selected}>{selectedLabel}</span>
                 <div class="sel-actions">
                   <button onclick={() => downloadReport(selected!)} title="Export session report (CSV)"><Icon name="download" size={14} />Report</button>
                   {#if canOperate}
@@ -268,7 +276,7 @@
             {/if}
             <DecisionPanel event={selectedEvent} camera_id={selected} {canOperate} {history30} />
             {#if canOperate}
-              <CameraManager onchange={refresh} />
+              <CameraManager onchange={refresh} {intersections} />
             {:else}
               <p class="readonly">Viewer role — monitoring only. Camera and calibration controls require an operator account.</p>
             {/if}

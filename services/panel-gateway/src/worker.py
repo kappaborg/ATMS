@@ -104,12 +104,17 @@ class CameraWorker:
         *,
         loop_file=True,
         intersection_id: str = "1",
+        approach: str | None = None,
         system=None,
         sahi: bool = False,
         min_confidence: float | None = None,
     ):
         self.cam_id = cam_id
         self.source = source
+        # Which arm of the junction this camera watches (north/south/east/west).
+        # Display metadata only — nothing in the detection path reads it; it is
+        # what lets the operator tell two cameras on one junction apart.
+        self.approach = approach
         self.detector = detector
         self.hub = hub
         self.loop_file = loop_file

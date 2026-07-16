@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import type { FrameEvent, IntersectionInfo, CameraInfo } from "../lib/types";
+  import { cameraShortLabel, junctionLabel } from "../lib/naming";
 
   let {
     intersections,
@@ -17,7 +18,7 @@
   const cssVar = (n: string) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
   // --- per-intersection live rollup from its cameras' latest frames ---
-  type Node = { id: string; vehicles: number; phase: string; cong: number; cams: number; x: number; y: number };
+  type Node = { id: string; label: string; vehicles: number; phase: string; cong: number; cams: string[]; x: number; y: number };
 
   function phaseOf(id: string): string {
     const it = intersections.find((i) => i.intersection_id === id);
@@ -42,7 +43,22 @@
     intersections.map((it, i) => {
       const v = vehiclesOf(it.intersection_id);
       const pos = layout(i, intersections.length);
-      return { id: it.intersection_id, vehicles: v, phase: phaseOf(it.intersection_id), cong: Math.min(1, v / 24), cams: it.cameras.length, x: pos.x, y: pos.y };
+      // Name each camera by the arm it watches, so a node with two cameras reads
+      // "North · South" rather than leaving the operator to guess from ids.
+      const cams = it.cameras.map((id) => {
+        const cam = cameras.find((c) => c.camera_id === id);
+        return cam ? cameraShortLabel(cam) : id;
+      });
+      return {
+        id: it.intersection_id,
+        label: junctionLabel(it),
+        vehicles: v,
+        phase: phaseOf(it.intersection_id),
+        cong: Math.min(1, v / 24),
+        cams,
+        x: pos.x,
+        y: pos.y,
+      };
     }),
   );
 
@@ -203,8 +219,9 @@
             {/each}
           </svg>
           {#each nodes as n (n.id)}
-            <button class="mlabel" style="left:{n.x}%;top:{n.y}%" onclick={() => onselect(n.id)}>
-              <b>Int {n.id}</b><span>{n.vehicles} veh</span>
+            <button class="mlabel" style="left:{n.x}%;top:{n.y}%" onclick={() => onselect(n.id)} title={n.cams.length ? `Cameras: ${n.cams.join(", ")}` : "No cameras on this junction"}>
+              <span class="top"><b>{n.label}</b><span class="veh">{n.vehicles} veh</span></span>
+              <em>{n.cams.length ? n.cams.join(" · ") : "no camera"}</em>
             </button>
           {/each}
           {#if !nodes.length}<div class="mempty">No junctions to map yet.</div>{/if}
@@ -263,8 +280,13 @@
   .map { width: 100%; height: 100%; display: block; }
   .mnode { cursor: pointer; }
   .mlabel { position: absolute; transform: translate(-50%, 10px); background: color-mix(in srgb, var(--color-surface-1) 82%, transparent); backdrop-filter: blur(4px);
-    border: 1px solid var(--color-border); border-radius: 100px; padding: 3px 9px; display: flex; gap: 6px; align-items: baseline; cursor: pointer; box-shadow: var(--sh-1); }
-  .mlabel b { font-size: 11.5px; font-weight: 650; } .mlabel span { font-size: 10.5px; color: var(--color-muted); font-variant-numeric: tabular-nums; }
+    border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 4px 9px; display: flex; flex-direction: column; gap: 1px;
+    align-items: flex-start; cursor: pointer; box-shadow: var(--sh-1); max-width: 210px; text-align: left; }
+  .mlabel .top { display: flex; gap: 6px; align-items: baseline; max-width: 100%; }
+  .mlabel b { font-size: 11.5px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mlabel .veh { font-size: 10.5px; color: var(--color-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  /* The camera line is the point of the label — it says which camera this is. */
+  .mlabel em { font-size: 10px; font-style: normal; color: var(--color-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .mempty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--color-dim); font-size: 13px; }
 
   .chart-wrap { position: relative; height: 150px; } .chart-wrap canvas { width: 100%; height: 100%; display: block; }
