@@ -13,6 +13,7 @@ import re
 from typing import Any
 
 import store
+from corridor import build_corridor
 from detection import Detector
 from scene import SceneConfig
 from security import is_live_source, source_kind, validate_source
@@ -165,7 +166,11 @@ class CameraManager:
             if payload:
                 entry["scene"] = payload
             cams.append(entry)
-        store.save({"cameras": cams, "junctions": self._junctions})
+        store.save({
+            "cameras": cams,
+            "junctions": self._junctions,
+            "corridors": [c.to_payload() for c in self._corridors.values()],
+        })
 
     def restore(self) -> int:
         """Re-create cameras and re-apply scenes from the saved state.
@@ -200,6 +205,20 @@ class CameraManager:
                 import logging
                 logging.getLogger("panel.hub").warning(
                     "restore skipped camera %s: %s", entry.get("camera_id"), e
+                )
+                continue
+        # Corridors last: _apply_coordination matches stops against live workers,
+        # so restoring a corridor before its cameras exist would silently push the
+        # green-wave offset onto nothing.
+        for entry in saved.get("corridors", []):
+            try:
+                corr = build_corridor(entry)  # re-validates (>=2 stops, positive speed/cycle/green)
+                self._corridors[corr.corridor_id] = corr
+                self._apply_coordination(corr)
+            except Exception as e:  # noqa: BLE001 — one bad corridor must not block the rest
+                import logging
+                logging.getLogger("panel.hub").warning(
+                    "restore skipped corridor %s: %s", entry.get("corridor_id"), e
                 )
                 continue
         return restored
@@ -239,11 +258,10 @@ class CameraManager:
                     )
 
     def add_corridor(self, payload: dict) -> dict:
-        from corridor import build_corridor
-
         corr = build_corridor(payload)
         self._corridors[corr.corridor_id] = corr
         self._apply_coordination(corr)
+        self._persist()
         return corr.to_dict()
 
     def remove_corridor(self, corridor_id: str) -> None:
@@ -251,6 +269,7 @@ class CameraManager:
         if corr is None:
             raise KeyError(corridor_id)
         self._apply_coordination(corr, clear=True)
+        self._persist()
 
     def list_corridors(self) -> list[dict]:
         return [c.to_dict() for c in self._corridors.values()]

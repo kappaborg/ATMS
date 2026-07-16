@@ -89,6 +89,26 @@ class Corridor:
         t_end = min(total_t, total_d / self.speed_mps)
         return [[0.0, 0.0], [round(t_end, 2), round(t_end * self.speed_mps, 1)]]
 
+    def to_payload(self) -> dict:
+        """What to persist: the build_corridor() input shape.
+
+        Deliberately not to_dict() — that is the *display* representation
+        (computed offsets/bands/trajectory) and cannot be fed back in, because
+        it carries no `stops`. green_s is already clamped to cycle_s in
+        __init__, so this round-trips stable.
+        """
+        return {
+            "corridor_id": self.corridor_id,
+            "direction": self.direction,
+            "design_speed_kmh": self.design_speed_kmh,
+            "cycle_s": self.cycle_s,
+            "green_s": self.green_s,
+            "stops": [
+                {"intersection_id": s.intersection_id, "distance_m": s.distance_m}
+                for s in self.stops
+            ],
+        }
+
     def to_dict(self) -> dict:
         return {
             "corridor_id": self.corridor_id,

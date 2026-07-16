@@ -67,3 +67,25 @@ def test_build_from_payload_and_coordination_hint():
     assert hint["direction"] == "north_south"
     assert hint["cycle_s"] == 90.0
     assert c.coordination_for("nope", "ns") is None
+
+
+def test_to_payload_round_trips_through_build_corridor():
+    """to_dict() is the display shape and has no `stops`, so it cannot be fed
+    back in — persistence must use to_payload()."""
+    c = _corr(direction="east_west")
+    back = build_corridor(c.to_payload())
+    assert back.corridor_id == c.corridor_id
+    assert back.direction == c.direction
+    assert back.design_speed_kmh == c.design_speed_kmh
+    assert back.cycle_s == c.cycle_s
+    assert back.green_s == c.green_s
+    assert [(s.intersection_id, s.distance_m) for s in back.stops] == [
+        (s.intersection_id, s.distance_m) for s in c.stops
+    ]
+    assert back.offsets() == c.offsets()  # the thing that actually matters
+
+
+def test_to_dict_cannot_round_trip():
+    """Guards the mistake this replaced: to_dict() carries no stops."""
+    with pytest.raises(KeyError):
+        build_corridor(_corr().to_dict())
