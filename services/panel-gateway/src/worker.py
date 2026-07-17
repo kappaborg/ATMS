@@ -163,7 +163,14 @@ class CameraWorker:
         self.drift = DriftDetector()
         self.emergency = EmergencyVehicleDetector()
         self.plate_reader = plates.PlateReader() if plates.enabled() else None
-        self._logged_viol: set[tuple[int, str]] = set()  # (track_id, type) already logged
+        # (track_id, type) -> evidence-log row id (None if the insert failed).
+        # Holds the id, not just the key, so a plate that only reaches consensus
+        # after the row was written can still be back-filled onto it.
+        self._logged_viol: dict[tuple[int, str], int | None] = {}
+        # Keys whose plate has been back-filled — the violation stays in the
+        # frame's list while the track is flagged, so without this we would fire
+        # a redundant UPDATE every frame for the rest of its life.
+        self._plated_viol: set[tuple[int, str]] = set()
         # Teleport gate: last center + time per track, to catch identity
         # glitches (occlusion box-jumps, ID switches) before they poison the
         # trajectory detectors (fake speeding/reckless/red-light).
@@ -203,7 +210,8 @@ class CameraWorker:
         if self.plate_reader is not None:
             self.plate_reader.remove(tid)
         for _vt in ("speeding", "wrong_way", "red_light", "reckless", "drift"):
-            self._logged_viol.discard((tid, _vt))
+            self._logged_viol.pop((tid, _vt), None)
+            self._plated_viol.discard((tid, _vt))
 
     def _reset_track(self, tid: int, scene) -> None:
         """Wipe all per-track state after a teleport (identity glitch): the
@@ -261,8 +269,10 @@ class CameraWorker:
             ev["fps"] = round(self.fps, 1)
             self.hub.publish_event(ev)
 
-    def _log_violation(self, viol: dict, bbox, frame, t_now: float) -> None:
-        """Persist one violation to the evidence log with a cropped snapshot."""
+    def _log_violation(self, viol: dict, bbox, frame, t_now: float) -> int | None:
+        """Persist one violation to the evidence log with a cropped snapshot.
+        Returns the row id so a plate can be back-filled onto it later, or None
+        if the write failed."""
         snap_path = None
         try:
             if bbox is not None:
@@ -283,12 +293,12 @@ class CameraWorker:
             snap_path = None
         detail = {k: v for k, v in viol.items() if k not in ("type", "track_id", "plate")}
         try:
-            violations_log.get_log().record(
+            return violations_log.get_log().record(
                 int(t_now), self.cam_id, self.intersection_id, viol["track_id"],
                 viol["type"], viol.get("plate"), detail, snap_path,
             )
         except Exception:  # noqa: BLE001 — logging must never break the loop
-            pass
+            return None
 
     def _flush_history(self, t_now: float) -> None:
         """Every HISTORY_FLUSH_S, persist the metrics accrued in the interval
@@ -588,9 +598,25 @@ class CameraWorker:
             for viol in violations:
                 key = (viol["track_id"], viol["type"])
                 if key in self._logged_viol:
+                    # Already recorded. A plate needs several agreeing reads
+                    # (PANEL_PLATE_MIN_AGREEMENT) and the violation is logged the
+                    # moment it is seen, so the row was very likely written before
+                    # the plate existed — back-fill it now rather than leave the
+                    # evidence plateless forever. set_plate only fills a NULL.
+                    vid = self._logged_viol[key]
+                    if vid is not None and viol.get("plate") and key not in self._plated_viol:
+                        self._plated_viol.add(key)
+                        try:
+                            violations_log.get_log().set_plate(vid, viol["plate"])
+                        except Exception:  # noqa: BLE001 — logging must never break the loop
+                            pass
                     continue
-                self._logged_viol.add(key)
-                self._log_violation(viol, bbox_by_id.get(viol["track_id"]), frame, t_now)
+                # Record first, plate or not: a track can vanish before consensus
+                # lands, and losing the violation entirely is worse than a row
+                # whose plate arrives a moment later.
+                self._logged_viol[key] = self._log_violation(
+                    viol, bbox_by_id.get(viol["track_id"]), frame, t_now
+                )
 
             # Carbon: accumulate real CO2 from measured speed (needs calibration).
             dt = (t_now - self._prev_t) if self._prev_t is not None else 0.0

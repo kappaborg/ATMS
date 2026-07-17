@@ -95,6 +95,24 @@ class ViolationsLog:
             })
         return out
 
+    def set_plate(self, vid: int, plate: str) -> int:
+        """Back-fill a plate onto an already-logged violation. Returns rows
+        updated.
+
+        Needed because a violation is logged the moment it is seen, while a
+        plate needs several agreeing reads across frames — so the row is very
+        often written before the plate exists.
+
+        Only fills a NULL: a plate already on the record is evidence, and a
+        later read disagreeing with it must not silently rewrite it.
+        """
+        with self._lock:
+            cur = self._conn.execute(
+                "UPDATE violations SET plate=? WHERE id=? AND plate IS NULL", (plate, vid)
+            )
+            self._conn.commit()
+            return int(cur.rowcount)
+
     def delete(self, vid: int) -> int:
         """Erase a single record (DSAR erasure). Returns rows deleted."""
         with self._lock:

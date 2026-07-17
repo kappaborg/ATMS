@@ -87,3 +87,30 @@ def test_single_record_erasure(tmp_path):
     assert log.delete(vid) == 1
     assert log.query(0, 3000, plate="ABC123") == []
     assert log.delete(vid) == 0  # already gone
+
+
+def test_set_plate_backfills_a_plateless_row(tmp_path):
+    """A violation is logged the moment it is seen, but a plate needs several
+    agreeing reads across frames — so the row is usually written with plate=None
+    and must be back-fillable, or Alerts shows '—' forever."""
+    log = ViolationsLog(str(tmp_path / "v.db"))
+    vid = log.record(1000, "cam", "1", 7, "speeding", None, {"speed_kmh": 80}, None)
+    assert log.query(0, 9999)[0]["plate"] is None
+
+    assert log.set_plate(vid, "AB-123-CD") == 1
+    assert log.query(0, 9999)[0]["plate"] == "AB-123-CD"
+
+
+def test_set_plate_never_overwrites_existing_evidence(tmp_path):
+    """A plate already on the record is evidence. A later, disagreeing read must
+    not silently rewrite it."""
+    log = ViolationsLog(str(tmp_path / "v.db"))
+    vid = log.record(1000, "cam", "1", 7, "speeding", "AB-123-CD", {}, None)
+
+    assert log.set_plate(vid, "XY-999-ZZ") == 0  # refused
+    assert log.query(0, 9999)[0]["plate"] == "AB-123-CD"
+
+
+def test_set_plate_on_a_missing_row_is_a_noop(tmp_path):
+    log = ViolationsLog(str(tmp_path / "v.db"))
+    assert log.set_plate(9999, "AB-123-CD") == 0
