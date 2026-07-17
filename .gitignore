@@ -133,3 +133,6 @@ panel_violations.db
 panel_history.db
 violation_snaps/
 videos/test_downloads/
+
+# Local Claude Code settings (machine-specific, never shared)
+.claude/
