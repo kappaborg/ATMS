@@ -124,18 +124,43 @@ def test_forward_vehicle_not_wrong_way():
 
 
 def test_detections_flags_match_violation_list():
-    """The worker sets d.stopped/speeding/wrong_way from the same ids used to
-    build the violations list — verify they can't disagree."""
+    """The worker sets d.speeding/wrong_way from the same ids used to build the
+    violations list — verify they can't disagree.
+
+    Stalls are deliberately excluded: a stopped vehicle is an incident, not a
+    violation, so it is annotated (d.stopped, from `stopped`) without earning a
+    logged record. That asymmetry is the point — see test_stalls_are_not_violations.
+    """
     inc = IncidentDetector(stop_seconds=2.0)
     beh = DriverBehavior(speed_limit_kmh=50)
     # one speeder (id 1), one forward (id 2)
     vehicles = [V(1, (0, 0), speed_kmh=80), V(2, (10, 0), speed_kmh=30)]
-    incidents, stopped = inc.update(vehicles, 0.0)
+    inc.update(vehicles, 0.0)
     bviol, speeding, wrong = beh.update(vehicles, 0.0)
-    violations = [{"type": "stopped_vehicle", "track_id": i["track_id"]} for i in incidents] + bviol
-    flagged_ids = stopped | speeding | wrong
+    violations = bviol  # mirrors worker.py: stalls are not folded in
+    flagged_ids = speeding | wrong
     listed_ids = {v["track_id"] for v in violations}
     assert flagged_ids == listed_ids  # perfect agreement
+
+
+def test_stalls_are_not_violations():
+    """A stalled vehicle must be reported as an incident and NOT as a violation:
+    it earns no evidence record, no plate, no snapshot."""
+    inc = IncidentDetector(stop_seconds=5.0, move_threshold_px=18.0)
+    beh = DriverBehavior(speed_limit_kmh=50)
+    # Must be seen driving before it can stall — a vehicle stationary from birth
+    # is parked, not stalled (the PARKED gate in incidents.py).
+    incidents, stopped = [], set()
+    for k in range(14):
+        pos = (100.0 + min(k, 4) * 50.0, 100.0) if k < 4 else (300.0, 100.0)
+        incidents, stopped = inc.update([V(1, pos, speed_kmh=0)], k * 1.0)
+
+    assert any(x["type"] == "stopped_vehicle" and x["track_id"] == 1 for x in incidents)
+    assert 1 in stopped  # still annotated on the tile
+
+    bviol, speeding, wrong = beh.update([V(1, (300.0, 100.0), speed_kmh=0)], 14.0)
+    violations = bviol  # mirrors worker.py: stalls are not folded in
+    assert 1 not in {v["track_id"] for v in violations}  # but not enforcement
 
 
 def _run_erratic(path):

@@ -11,14 +11,19 @@
   let hours = $state(24);
   let zoom = $state<number | null>(null); // id of snapshot to enlarge
 
-  const TYPES = ["speeding", "red_light", "wrong_way", "reckless", "drift", "stopped_vehicle"];
+  // Filter chips — the types that can still be logged.
+  const TYPES = ["speeding", "red_light", "wrong_way", "reckless", "drift"];
   const label: Record<string, string> = {
     speeding: "Speeding", red_light: "Ran red", wrong_way: "Wrong-way",
-    reckless: "Reckless", drift: "Drift", stopped_vehicle: "Stopped",
+    reckless: "Reckless", drift: "Drift",
+    // Stalls are no longer logged as violations (they are incidents, not
+    // enforcement evidence), but rows recorded before that change are still in
+    // the evidence log and must read as words rather than a raw identifier.
+    stopped_vehicle: "Stopped",
   };
   const icon: Record<string, IconName> = {
     speeding: "speed", red_light: "signal", wrong_way: "no-entry",
-    reckless: "reckless", drift: "drift", stopped_vehicle: "warning",
+    reckless: "reckless", drift: "drift",
   };
 
   let pending = $state<number | null>(null); // id awaiting delete confirmation
@@ -54,7 +59,6 @@
     if (r.type === "speeding") return `${d.speed_kmh}/${d.limit_kmh} km/h`;
     if (r.type === "drift") return `${d.lateral_g} g`;
     if (r.type === "red_light") return String(d.approach ?? "").toUpperCase();
-    if (r.type === "stopped_vehicle") return `${d.seconds}s`;
     if (r.type === "reckless") return `${d.reversals ?? ""} rev`;
     return "";
   }
@@ -174,7 +178,7 @@
   .type { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; background: var(--color-surface-2); }
   .type.speeding { color: var(--color-warn); } .type.red_light { color: var(--color-critical); }
   .type.wrong_way { color: var(--color-critical); } .type.drift { color: var(--color-accent-dim); }
-  .type.reckless { color: #8a6fbf; } .type.stopped_vehicle { color: var(--color-critical); }
+  .type.reckless { color: #8a6fbf; }
   .empty { text-align: center; color: var(--color-dim); padding: 30px; }
   .act { white-space: nowrap; text-align: right; }
   .del { background: none; border: 1px solid var(--color-border-2); color: var(--color-critical); border-radius: var(--radius-sm); padding: 2px 8px; cursor: pointer; font-size: 0.7rem; }

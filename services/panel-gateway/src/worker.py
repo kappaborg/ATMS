@@ -202,7 +202,7 @@ class CameraWorker:
         that is truly gone (or whose identity is no longer trustworthy)."""
         if self.plate_reader is not None:
             self.plate_reader.remove(tid)
-        for _vt in ("stopped_vehicle", "speeding", "wrong_way", "red_light", "reckless", "drift"):
+        for _vt in ("speeding", "wrong_way", "red_light", "reckless", "drift"):
             self._logged_viol.discard((tid, _vt))
 
     def _reset_track(self, tid: int, scene) -> None:
@@ -562,20 +562,21 @@ class CameraWorker:
                     emergency_dir = (
                         "east_west" if dir_by_id.get(d.track_id) == "ew" else "north_south"
                     )
-            violations = [
-                {"type": "stopped_vehicle", "track_id": i["track_id"], "seconds": i["seconds"]}
-                for i in incidents
-            ] + bviol + rlviol + eviol + dviol
+            # Stalls are NOT violations: a stopped vehicle is an operational
+            # signal, not enforcement evidence, so it does not earn a logged
+            # record with a plate and a snapshot. It still reaches the operator
+            # as an incident (see `incidents` in the event payload) and is still
+            # drawn on the tile via `stopped_ids`.
+            violations = bviol + rlviol + eviol + dviol
 
             bbox_by_id = {d.track_id: d.bbox for d in result.detections} if violations else {}
 
             # License-plate capture for flagged violators (enforcement evidence).
-            # Only for moving-vehicle violations (not stalls); capped + cached.
+            # Capped + cached. Stalls no longer reach this list, so there is
+            # nothing to skip.
             if self.plate_reader is not None and violations:
                 self.plate_reader.begin_frame()
                 for viol in violations:
-                    if viol["type"] == "stopped_vehicle":
-                        continue
                     tid = viol["track_id"]
                     plate = self.plate_reader.cached(tid)
                     if plate is None and tid in bbox_by_id:

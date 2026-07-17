@@ -58,9 +58,8 @@ export interface Incident {
 }
 
 export interface Violation {
-  type: "stopped_vehicle" | "speeding" | "wrong_way" | "red_light" | "reckless" | "drift";
+  type: "speeding" | "wrong_way" | "red_light" | "reckless" | "drift";
   track_id: number;
-  seconds?: number;
   speed_kmh?: number;
   limit_kmh?: number;
   approach?: string;

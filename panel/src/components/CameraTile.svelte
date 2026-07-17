@@ -97,8 +97,7 @@
             {:else if v.type === "wrong_way"}<Icon name="no-entry" size={13} stroke={2} />WRONG-WAY <span>#{v.track_id}{v.plate ? " · " + v.plate : ""}</span>
             {:else if v.type === "red_light"}<Icon name="signal" size={13} stroke={2} />RAN RED <span>#{v.track_id} · {v.approach?.toUpperCase()}{v.plate ? " · " + v.plate : ""}</span>
             {:else if v.type === "reckless"}<Icon name="reckless" size={13} stroke={2} />RECKLESS <span>#{v.track_id}{v.plate ? " · " + v.plate : ""}</span>
-            {:else if v.type === "speeding"}<Icon name="speed" size={13} stroke={2} />SPEEDING <span>#{v.track_id} · {v.speed_kmh?.toFixed(0)}/{v.limit_kmh} km/h{v.plate ? " · " + v.plate : ""}</span>
-            {:else}<Icon name="warning" size={13} stroke={2} />STOPPED <span>#{v.track_id} · {v.seconds?.toFixed(0)}s</span>{/if}
+            {:else if v.type === "speeding"}<Icon name="speed" size={13} stroke={2} />SPEEDING <span>#{v.track_id} · {v.speed_kmh?.toFixed(0)}/{v.limit_kmh} km/h{v.plate ? " · " + v.plate : ""}</span>{/if}
           </div>
         {/each}
       </div>
@@ -163,7 +162,6 @@
   }
   .vio :global(svg) { flex: none; }
   .vio span { font-weight: 400; opacity: 0.85; }
-  .vio.stopped_vehicle { background: #c0392b; }
   .vio.wrong_way { background: #a23596; }
   .vio.red_light { background: #b32020; }
   .vio.reckless { background: #8e2c6e; }
