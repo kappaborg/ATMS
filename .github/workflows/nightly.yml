@@ -39,7 +39,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: aquasecurity/trivy-action@0.28.0
+      # Keep in step with the pin in ci.yml. Upstream stopped publishing
+      # un-prefixed tags: `0.28.0` 404s (only `v0.28.0` exists), which is what
+      # failed this workflow every night.
+      - uses: aquasecurity/trivy-action@0.35.0
         with:
           scan-type: fs
           scan-ref: .
