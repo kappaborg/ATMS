@@ -18,13 +18,20 @@ services:
       - atms-panel-data:/data
       # Optional: expose recorded videos to the FILE camera source:
       # - /path/to/videos:/videos:ro
+      # REQUIRED when PANEL_READ_PLATES=1 — the plate model is not baked into
+      # the image (weights are not in this repo). Without it, plates stay empty
+      # and the gateway only logs "plate detector unavailable" once.
+      # - /path/to/best.pt:/models/plate.pt:ro
     environment:
       # --- access control (REQUIRED for network deployments) ---
       # PANEL_USERS: "chief:admin:sha256:<hex>,op1:operator:pw,view:viewer:pw"
       # PANEL_AUTH_SECRET: "change-me-32-chars-minimum"
       # --- region / features ---
       PANEL_PLATE_COUNTRY: "ba"
+      # Plates need BOTH this flag and a mounted model (see volumes above).
+      # The flag alone reads no plates — it fails quiet, not loud.
       PANEL_READ_PLATES: "1"
+      # PANEL_PLATE_MODEL: "/models/plate.pt"
       PANEL_ALWAYS_RECORD: "1"      # keep detecting with no viewer attached
       PANEL_RECORD_FPS: "6"
       PANEL_VIOLATION_RETENTION_DAYS: "30"

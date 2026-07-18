@@ -29,9 +29,13 @@ COPY ai_decision_system.py ai_decision_system.py
 COPY ai/ ai/
 # Detection weights: baked in so the container works offline.
 COPY yolov8n.pt yolov8n.pt
-# Plate-detector weights (only used when PANEL_READ_PLATES=1).
-COPY models/license_plate_training/outputs/license_plate_model/weights/best.pt \
-     models/license_plate_training/outputs/license_plate_model/weights/best.pt
+# Plate-detector weights are NOT baked in: they are not in this repo (weights
+# are binary artifacts, kept out of git like other media), so an unconditional
+# COPY here failed the whole image build — not just plates.
+# Docker has no optional COPY: a glob matching nothing errors just the same.
+# So when PANEL_READ_PLATES=1, mount the model and point PANEL_PLATE_MODEL at
+# it — see deploy/docker-compose.panel.yml. Without it plates stay empty
+# (plates.py logs "plate detector unavailable" and yields no plate).
 
 # Durable state lives in /data (mount a volume).
 ENV PANEL_HOST=0.0.0.0 \
