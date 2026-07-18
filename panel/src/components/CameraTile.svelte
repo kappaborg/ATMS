@@ -22,14 +22,28 @@
     p === "GREEN" ? "var(--color-sig-green)" : p === "YELLOW" ? "var(--color-sig-amber)" : "var(--color-sig-red)";
   const phaseClass = (p?: string) => (p === "GREEN" ? "p-green" : p === "YELLOW" ? "p-amber" : "p-red");
 
-  // Digital zoom + pan on the video (inspect a plate / an incident).
+  // Digital zoom + pan on the video (inspect a plate / an incident). Most
+  // useful fullscreen, where a 720p frame has real detail to spend rather than
+  // upscaling blur in a ~340px tile.
   let vbox = $state<HTMLDivElement>();
   let scale = $state(1);
   let panX = $state(0);
   let panY = $state(0);
   let dragging = $state(false);
+  let isFullscreen = $state(false);
   let dragStart = { x: 0, y: 0, panX: 0, panY: 0 };
   const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+  // Keep the image covering the viewport: pan is bounded so a zoomed frame
+  // can't be dragged off into black. Without this a 6x pan could leave the
+  // view empty — and could survive back into the tile after fullscreen.
+  function clampPan() {
+    if (!vbox) return;
+    const w = vbox.clientWidth;
+    const h = vbox.clientHeight;
+    panX = clamp(panX, -(scale - 1) * w, 0);
+    panY = clamp(panY, -(scale - 1) * h, 0);
+  }
 
   function onwheel(e: WheelEvent) {
     if (!vbox) return;
@@ -43,6 +57,7 @@
     panY = cy - ((cy - panY) * next) / prev;
     scale = next;
     if (scale <= 1.001) reset();
+    else clampPan();
   }
   function onmousedown(e: MouseEvent) {
     if (scale <= 1) return;
@@ -53,14 +68,32 @@
     if (!dragging) return;
     panX = dragStart.panX + (e.clientX - dragStart.x);
     panY = dragStart.panY + (e.clientY - dragStart.y);
+    clampPan();
   }
   function reset() {
     scale = 1;
     panX = 0;
     panY = 0;
   }
+
+  async function toggleFullscreen() {
+    if (!vbox) return;
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await vbox.requestFullscreen();
+    } catch {
+      /* webview without the Fullscreen API — leave the tile as-is */
+    }
+  }
+  // Reset zoom whenever fullscreen changes: a 6x pan tuned to a 1920px screen
+  // is meaningless (and off-screen) back in a 340px tile.
+  function onFsChange() {
+    isFullscreen = document.fullscreenElement === vbox;
+    reset();
+  }
 </script>
 
+<svelte:document onfullscreenchange={onFsChange} />
 <svelte:window onmouseup={() => (dragging = false)} onmousemove={onmousemove} />
 
 <div class="tile">
@@ -80,6 +113,9 @@
       {#if event}
         <span class="phase-chip {phaseClass(event.decision.phase)}"><span class="d"></span> {event.decision.phase}</span>
       {/if}
+      <button class="fs" title={isFullscreen ? "Exit fullscreen" : "Fullscreen"} onclick={toggleFullscreen}>
+        <Icon name={isFullscreen ? "collapse" : "expand"} size={13} stroke={2.2} />
+      </button>
       {#if canOperate}
         <button class="remove" title="Remove camera" onclick={() => removeCamera(camera_id)}><Icon name="close" size={13} stroke={2.2} /></button>
       {/if}
@@ -141,11 +177,17 @@
   .p-green { color: #5fe0a0; } .p-green .d { background: var(--color-sig-green); box-shadow: 0 0 8px var(--color-sig-green); }
   .p-amber { color: #f2c46a; } .p-amber .d { background: var(--color-sig-amber); box-shadow: 0 0 8px var(--color-sig-amber); }
   .p-red { color: #f28a94; } .p-red .d { background: var(--color-sig-red); box-shadow: 0 0 8px var(--color-sig-red); }
-  .remove {
+  .remove, .fs {
     width: 22px; height: 22px; flex: none; display: grid; place-items: center; border-radius: 6px;
     background: rgba(12, 14, 20, 0.6); color: #fff; border: none; cursor: pointer; opacity: 0; transition: opacity 0.15s; font-size: 0.7rem;
   }
-  .tile:hover .remove { opacity: 1; }
+  .tile:hover .remove, .tile:hover .fs { opacity: 1; }
+  /* Fullscreen: the video div fills the screen, so drop the 16/9 tile framing
+     and give zoom real pixels to work with. */
+  .video:fullscreen { aspect-ratio: auto; width: 100vw; height: 100vh; }
+  .video:fullscreen img { object-fit: contain; }
+  /* In fullscreen there is no .tile:hover, so keep the controls reachable. */
+  .video:fullscreen .fs, .video:fullscreen .remove { opacity: 1; }
 
   .zoomreset {
     position: absolute; top: 38px; left: 50%; transform: translateX(-50%);

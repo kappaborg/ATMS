@@ -5,7 +5,8 @@
   export type IconName =
     | "signal" | "no-entry" | "speed" | "drift" | "reckless" | "warning"
     | "siren" | "pedestrian" | "bus" | "leaf" | "chart" | "forecast"
-    | "download" | "gear" | "close" | "arrow-right" | "swap";
+    | "download" | "gear" | "close" | "arrow-right" | "swap"
+    | "expand" | "collapse";
 
   const P: Record<IconName, string> = {
     // traffic light — ran-red
@@ -40,6 +41,8 @@
     close: '<path d="M6 6l12 12M18 6 6 18"/>',
     "arrow-right": '<path d="M5 12h13M12 6l6 6-6 6"/>',
     swap: '<path d="M7 8h11l-3-3M17 16H6l3 3"/>',
+    expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+    collapse: '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>',
   };
 </script>
 
