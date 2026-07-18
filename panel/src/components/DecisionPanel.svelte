@@ -9,16 +9,33 @@
     history30 = null,
   }: { event: FrameEvent | undefined; camera_id?: string | null; canOperate?: boolean; history30?: HistoryTotals | null } = $props();
 
+  const DIR_LABEL = { north_south: "North–South", east_west: "East–West" } as const;
+  type Dir = "north_south" | "east_west";
+
   let preemptErr = $state("");
-  async function preempt(direction: "north_south" | "east_west", active: boolean) {
+  // The request that has been sent but whose green the state machine has not
+  // reached yet. Pressing "give green" does NOT turn the light green at once:
+  // the gateway still runs yellow → all-red before switching (worker/engine
+  // enforce clearance, it cannot be skipped), so the light shows red for a few
+  // seconds first. Without saying so, a non-expert reads that as broken. We
+  // hold `requested` until the engine confirms via event.preemption.
+  let requested = $state<Dir | null>(null);
+  async function preempt(direction: Dir, active: boolean) {
     preemptErr = "";
     if (!camera_id) return;
+    requested = active ? direction : null;
     try {
       await setPreemption(camera_id, direction, active);
     } catch (e) {
       preemptErr = e instanceof Error ? e.message : "failed";
+      requested = null;
     }
   }
+  // Once the engine reports the preemption active, the request is fulfilled —
+  // drop the "clearing" state. Also clears if someone else cancels it.
+  $effect(() => {
+    if (event?.preemption === requested || !event?.preemption) requested = null;
+  });
 
   // Session CO2 totals are routinely far below 1 kg — a car crossing a ~50 m
   // field of view at 40 km/h accrues ~7 g — so a fixed 2-decimal kg rendering
@@ -32,6 +49,11 @@
   const co2Total = $derived(event?.emissions ? mass(event.emissions.total_co2_kg) : null);
   const co2Rate = $derived(event?.emissions ? mass(event.emissions.rate_kg_h) : null);
   const co2Saved = $derived(event?.emissions ? mass(event.emissions.est_saved_kg) : null);
+
+  // Advanced readouts (priority/confidence/reason, intensity, rate) stay one
+  // click away rather than crowding the default view — plain for a newcomer,
+  // full depth for an engineer who opens it. See #66.
+  let showAdvanced = $state(false);
 
   const d = $derived(event?.decision);
   const sys = $derived(event?.system);
@@ -65,7 +87,7 @@
         <span class="mdot"></span>
         <div>
           <div class="mlabel">{mode.label}</div>
-          <div class="msub">failsafe mode</div>
+          <div class="msub">backup control</div>
         </div>
       </div>
     {/if}
@@ -80,16 +102,20 @@
     {#if sys.stale}
       <p class="uncal"><Icon name="warning" size={13} />No fresh command from the controller — it may have fallen back to fixed-time.</p>
     {/if}
-    <p class="src">real decision-engine output. Panel estimate below.</p>
     <hr />
   {/if}
-  {#if event?.preemption}
-    <div class="preempt-banner"><Icon name="siren" size={15} stroke={2} />EMERGENCY PREEMPTION ACTIVE — {event.preemption === "north_south" ? "N–S" : "E–W"} cleared</div>
+  {#if requested && !event?.preemption}
+    <!-- Request sent, green not reached yet. Name the clearance so the red the
+         operator is about to see reads as safety, not a fault. -->
+    <div class="preempt-banner clearing"><Icon name="siren" size={15} stroke={2} />
+      Clearing the way for {DIR_LABEL[requested]} — cross traffic goes yellow, then all-red, then green. A few seconds.</div>
+  {:else if event?.preemption}
+    <div class="preempt-banner"><Icon name="siren" size={15} stroke={2} />{DIR_LABEL[event.preemption]} has the green — emergency override active</div>
   {:else if event?.emergency_vehicle}
     <div class="ev-banner">
-      <Icon name="siren" size={15} stroke={2} />EMERGENCY VEHICLE DETECTED — {event.emergency_vehicle.direction === "north_south" ? "N–S" : "E–W"} (flashing lights)
+      <Icon name="siren" size={15} stroke={2} />Emergency vehicle approaching on {DIR_LABEL[event.emergency_vehicle.direction]} (flashing lights)
       {#if canOperate && camera_id}
-        <button onclick={() => preempt(event!.emergency_vehicle!.direction, true)}>Preempt {event.emergency_vehicle.direction === "north_south" ? "N–S" : "E–W"}</button>
+        <button onclick={() => preempt(event!.emergency_vehicle!.direction, true)}>Give it the green</button>
       {/if}
     </div>
   {/if}
@@ -100,29 +126,31 @@
   {/if}
   {#if canOperate && camera_id}
     <div class="preempt-ctl">
-      <span><Icon name="siren" size={13} />Emergency preempt</span>
+      <span><Icon name="siren" size={13} />Clear the way for an emergency</span>
       <div class="pbtns">
-        <button class:on={event?.preemption === "north_south"} onclick={() => preempt("north_south", event?.preemption !== "north_south")}>N–S</button>
-        <button class:on={event?.preemption === "east_west"} onclick={() => preempt("east_west", event?.preemption !== "east_west")}>E–W</button>
-        {#if event?.preemption}<button class="clear" onclick={() => preempt(event!.preemption!, false)}>Clear</button>{/if}
+        <button class:on={event?.preemption === "north_south"} onclick={() => preempt("north_south", event?.preemption !== "north_south")}>North–South</button>
+        <button class:on={event?.preemption === "east_west"} onclick={() => preempt("east_west", event?.preemption !== "east_west")}>East–West</button>
+        {#if event?.preemption}<button class="clear" onclick={() => preempt(event!.preemption!, false)}>Back to normal</button>{/if}
       </div>
     </div>
+    <p class="phint">The signal still runs yellow and all-red before the green — it will not skip straight to green.</p>
     {#if preemptErr}<p class="perr">{preemptErr}</p>{/if}
   {/if}
-  <h2>{sys ? "Panel estimate" : "Decision"}</h2>
   {#if d}
-    <div class="phase" style="--c:{colour(d.phase)}">
-      <div class="lamp"></div>
-      <div>
-        <div class="phase-name">{d.phase}</div>
-        <div class="dir">{d.active_direction.replace("_", "–")}</div>
+    {#if !sys}
+      <!-- No controller connected: this panel's own read is the only signal
+           state there is, so show it as the decision. When a controller IS
+           connected, its lamp above is authoritative and a second lamp for the
+           same junction only confuses — the panel's estimate moves to Details. -->
+      <h2>Decision</h2>
+      <div class="phase" style="--c:{colour(d.phase)}">
+        <div class="lamp"></div>
+        <div>
+          <div class="phase-name">{d.phase}</div>
+          <div class="dir">{d.active_direction.replace("_", "–")}</div>
+        </div>
       </div>
-    </div>
-    <dl>
-      <dt>Priority</dt><dd>{d.priority}</dd>
-      <dt>Confidence</dt><dd>{(d.confidence * 100).toFixed(0)}%</dd>
-      <dt>Reason</dt><dd class="reason">{d.reason}</dd>
-    </dl>
+    {/if}
 
     {#if event?.approaches}
       <div class="approaches">
@@ -147,8 +175,6 @@
         <div class="chead"><Icon name="leaf" size={13} />Emissions <span>this session</span></div>
         <div class="cgrid">
           <div class="cm"><b>{co2Total?.v}<i>{co2Total?.unit}</i></b><span>CO₂ measured</span></div>
-          <div class="cm"><b>{co2Rate?.v}<i>{co2Rate?.unit}/h</i></b><span>rate</span></div>
-          <div class="cm"><b>{event.emissions.avg_g_per_km.toFixed(0)}<i>g/km</i></b><span>avg intensity</span></div>
           <div class="cm saved"><b>{co2Saved?.v}<i>{co2Saved?.unit}</i></b><span>est. saved</span></div>
         </div>
         <p class="cnote">Est. saved = measured idle CO₂ × {(event.emissions.savings_ratio * 100).toFixed(0)}% (adaptive-control model, set in the gateway config — an estimate, not a measurement).</p>
@@ -163,7 +189,7 @@
 
     {#if history30 && history30.vehicles > 0}
       <div class="hist">
-        <div class="hhead"><Icon name="chart" size={13} />Persisted history <span>last 30 days</span></div>
+        <div class="hhead"><Icon name="chart" size={13} />Last 30 days</div>
         <div class="hrow">
           <b>{history30.vehicles.toLocaleString()}</b> vehicles ·
           <b>{history30.saved_kg.toFixed(1)} kg</b> CO₂ saved ·
@@ -182,7 +208,27 @@
       </div>
     {/if}
 
-    <p class="note">Advisory only — the failsafe controller enforces signal safety.</p>
+    <div class="adv">
+      <button class="advtoggle" onclick={() => (showAdvanced = !showAdvanced)} aria-expanded={showAdvanced}>
+        <Icon name={showAdvanced ? "swap" : "gear"} size={13} />Details {showAdvanced ? "−" : "+"}
+      </button>
+      {#if showAdvanced}
+        <dl>
+          {#if sys}
+            <dt>Panel estimate</dt><dd>{d.phase} · {d.active_direction.replace("_", "–")}</dd>
+          {/if}
+          <dt>Priority</dt><dd>{d.priority}</dd>
+          <dt>Confidence</dt><dd>{(d.confidence * 100).toFixed(0)}%</dd>
+          <dt>Reason</dt><dd class="reason">{d.reason}</dd>
+          {#if event?.emissions}
+            <dt>Emission rate</dt><dd>{co2Rate?.v} {co2Rate?.unit}/h</dd>
+            <dt>Avg intensity</dt><dd>{event.emissions.avg_g_per_km.toFixed(0)} g/km</dd>
+          {/if}
+        </dl>
+      {/if}
+    </div>
+
+    <p class="note">Advisory only — the backup controller enforces signal safety.</p>
   {:else}
     <p class="empty">Waiting for a camera…</p>
   {/if}
@@ -197,16 +243,25 @@
   .lamp { width: 34px; height: 34px; border-radius: 50%; background: var(--c); box-shadow: 0 0 16px var(--c); }
   .phase-name { font-size: 1.3rem; font-weight: 700; color: var(--c); }
   .dir { font-size: 0.8rem; color: var(--color-muted); }
+  .adv { margin: 12px 16px 0; }
+  .advtoggle { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; padding: 4px 0; color: var(--color-muted); font-size: 0.76rem; cursor: pointer; }
+  .advtoggle:hover { color: var(--color-text); }
+  .adv dl { margin-top: 8px; }
   dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; font-size: 0.85rem; }
   dt { color: var(--color-muted); }
   dd { margin: 0; color: var(--color-text); }
   /* Reserve two lines so a 1↔2 line reason never shifts the rows below it. */
   .reason { font-size: 0.78rem; color: var(--color-muted); line-height: 1.4; min-height: 2.24rem; }
   .preempt-banner {
-    margin: 10px 16px 0; padding: 8px 12px; border-radius: var(--radius-sm); text-align: center;
+    margin: 10px 16px 0; padding: 8px 12px; border-radius: var(--radius-sm);
+    display: flex; align-items: center; gap: 8px; line-height: 1.35;
     background: var(--color-critical); color: #fff; font-weight: 700; font-size: 0.8rem;
     animation: ppulse 1s ease-in-out infinite;
   }
+  /* While clearance runs the light is red on purpose — amber, not the alarm
+     red, so it reads as "working" rather than "wrong". */
+  .preempt-banner.clearing { background: var(--color-warn); color: #1a1206; }
+  .phint { margin: 6px 16px 0; color: var(--color-muted); font-size: 0.7rem; line-height: 1.4; }
   .ped-banner {
     margin: 10px 16px 0; padding: 8px 12px; border-radius: var(--radius-sm); text-align: center;
     background: var(--color-warn); color: #1a1206; font-weight: 700; font-size: 0.78rem;
@@ -241,7 +296,6 @@
   .cuncal { margin-top: 14px; font-size: 0.72rem; color: var(--color-ok); }
   .hist { margin-top: 10px; padding: 8px 12px; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: 8px; }
   .hhead { font-size: 0.72rem; color: var(--color-muted); margin-bottom: 4px; }
-  .hhead span { color: var(--color-dim); }
   .hrow { font-size: 0.74rem; color: var(--color-text); }
   .hrow b { color: var(--color-text); }
   .forecast { margin-top: 14px; padding: 10px 12px; background: var(--color-surface-3); border: 1px solid var(--color-border); border-radius: 8px; }
@@ -264,7 +318,6 @@
   .empty { color: var(--color-dim); font-size: 0.85rem; }
   .badge { font-size: 0.6rem; padding: 2px 6px; border-radius: 10px; background: var(--color-surface-2); color: var(--color-ok); border: 1px solid var(--color-ok); vertical-align: middle; text-transform: none; letter-spacing: 0; }
   .badge.stale { background: var(--color-surface-2); color: var(--color-warn); border-color: var(--color-warn); }
-  .src { margin: 8px 0 0; font-size: 0.68rem; color: var(--color-dim); }
   hr { border: none; border-top: 1px solid var(--color-border); margin: 14px 0; }
   .mode { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 14px; border-radius: 8px; background: color-mix(in srgb, var(--mc) 12%, var(--color-surface-1)); border: 1px solid var(--mc); }
   .mode.alarm { animation: pulse 1s ease-in-out infinite; }
